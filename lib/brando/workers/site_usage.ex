@@ -74,9 +74,8 @@ defmodule Brando.Worker.SiteUsage do
       end
 
     :ok = Usage.put_measurement(site.id, today, measurement)
-    with :ok <- Usage.broadcast_measured(site.id) do
-      if scope == :manual, do: Usage.broadcast_overview(site.id), else: :ok
-    end
+    if scope == :manual, do: Usage.broadcast_overview(site.id)
+    Usage.broadcast_measured(site.id)
   rescue
     error ->
       Logger.error("[Brando.Sites.Usage] Could not measure #{site.key}: #{Exception.message(error)}")

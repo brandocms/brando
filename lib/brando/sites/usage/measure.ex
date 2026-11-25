@@ -25,11 +25,14 @@ defmodule Brando.Sites.Usage.Measure do
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Storage
 
+  @type measurement :: %{media_bytes: non_neg_integer(), builds_bytes: non_neg_integer(), databases: [map()]}
+
   @doc "The site's sizes, as `Brando.Sites.Usage.put_measurement/3` takes them."
-  @spec site(Site.t()) :: %{media_bytes: non_neg_integer(), builds_bytes: non_neg_integer(), databases: [map()]}
+  @spec site(Site.t()) :: measurement()
   def site(%Site{} = site), do: site(site, tenant_schemas())
 
   @doc "Measures a site against a schema inventory from `tenant_schemas/0`."
+  @spec site(Site.t(), [String.t()]) :: measurement()
   def site(%Site{} = site, schemas) do
     %{
       media_bytes: directory_bytes(Storage.media_root(site)),
