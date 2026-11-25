@@ -267,6 +267,24 @@ defmodule Brando.SSG.PublishingTest do
       assert [_one] = Builds.list_builds(c.site)
     end
 
+    test "a deploy given up reads as failed while its job still executes; Try again as publishing", c do
+      {:ok, ready} = Publishing.publish(c.site, c.production, c.user, deploy: false)
+      manual(fn -> {:ok, _job} = Publishing.publish_build(c.site, c.production, ready.id, c.user) end)
+      [job] = jobs("Brando.Worker.SSGDeploy")
+      set_job_state(job, "executing")
+      assert %{state: :publishing, step: :deploying} = Publishing.status(site(c), c.production)
+
+      # The worker records the failure, and broadcasts it, before it returns to Oban
+      :ok = Publishing.deploy_failed(Builds.get_build(ready.id))
+      assert %{state: :failed, failed: :deploy} = Publishing.status(site(c), c.production)
+
+      manual(fn ->
+        assert {:ok, %Oban.Job{}} = Publishing.retry(c.site, c.production, c.user)
+        assert %{state: :publishing, step: :waiting} = Publishing.status(site(c), c.production)
+        assert {:error, :stale} = Publishing.retry(c.site, c.production, c.user)
+      end)
+    end
+
     test "Try again when nothing failed starts nothing", c do
       assert {:error, :stale} = Publishing.retry(c.site, c.production, c.user)
       assert Builds.list_builds(c.site) == []

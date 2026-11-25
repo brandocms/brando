@@ -192,16 +192,28 @@ defmodule Brando.SSG.Publishing do
     do: Builds.request_build(site, environment, creator_id: user.id, auto_deploy: deploy?)
 
   # It waits behind any build on the serial queue, and reports to `user` as
-  # a deploy from the Publishing screen does
+  # a deploy from the Publishing screen does. A failure recorded for the
+  # build is cleared with the queueing: the build owes this deploy now, and
+  # reads as publishing, not failed, while it waits.
   defp deploy(build, user) do
-    %{"build_id" => build.id, "action" => "deploy", "creator_id" => user.id, "unless_superseded" => true}
-    |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{build.site_id}"])
-    |> BrandoAdmin.Work.track(
-      user,
-      SSGBuild.work_key(build.id),
-      [global: true, timeout: to_timeout(hour: 1)] ++ SSGDeploy.work_messages("deploy", build.version)
-    )
-    |> Oban.insert()
+    job =
+      %{"build_id" => build.id, "action" => "deploy", "creator_id" => user.id, "unless_superseded" => true}
+      |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{build.site_id}"])
+      |> BrandoAdmin.Work.track(
+        user,
+        SSGBuild.work_key(build.id),
+        [global: true, timeout: to_timeout(hour: 1)] ++ SSGDeploy.work_messages("deploy", build.version)
+      )
+
+    Repo.transaction(fn ->
+      from(build in Build, where: build.id == ^build.id and not is_nil(build.deploy_failed_at))
+      |> Repo.update_all([set: [deploy_failed_at: nil, updated_at: DateTime.utc_now()]], @public_opts)
+
+      case Oban.insert(job) do
+        {:ok, job} -> job
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   ## Status
@@ -257,15 +269,17 @@ defmodule Brando.SSG.Publishing do
   end
 
   # Of the environment: queued or building, or ready with a deploy job or an
-  # automatic deploy owed
+  # automatic deploy owed. A deploy recorded as given up is not owed, also
+  # while its job still executes: the worker records and broadcasts the
+  # failure before it returns to Oban. The next deploy clears the record
+  # when it is queued from here, or when it starts.
   defp owes_work(environment) do
-    owed_deploy = dynamic([build, _job], build.auto_deploy and is_nil(build.deploy_failed_at))
-
     dynamic(
       [build, job],
       build.environment_id == ^environment.id and
         (build.status in [:queued, :building] or
-           (build.status == :ready and (job.worker == "Brando.Worker.SSGDeploy" or ^owed_deploy)))
+           (build.status == :ready and is_nil(build.deploy_failed_at) and
+              (job.worker == "Brando.Worker.SSGDeploy" or build.auto_deploy)))
     )
   end
 
