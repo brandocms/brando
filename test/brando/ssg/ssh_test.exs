@@ -198,6 +198,33 @@ defmodule Brando.SSG.SSHTest do
       refused_everything(c, editor)
       assert {:ok, _public_key} = SSH.ensure_key(c.site, c.superuser)
     end
+
+    # The Publishing screen opens for a build grant; the key and host keys are the deploy's
+    test "with capabilities, building alone is refused and deploying may", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      builder = publishing_member(c, "brando.publishing.build")
+      assert Builds.can_manage?(builder, c.site)
+
+      refused_everything(c, builder)
+      assert {:ok, _public_key} = SSH.ensure_key(c.site, publishing_member(c, "brando.publishing.deploy"))
+    end
+
+    defp publishing_member(c, capability) do
+      user = Brando.Factory.insert(:random_user, role: :editor)
+      {:ok, _} = Access.grant(user, c.site, :editor)
+      scope = Brando.Authorization.Scope.site(c.superuser, c.site)
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(
+          scope,
+          %{name: "Publishing #{System.unique_integer([:positive])}"},
+          ["brando.admin.access", "brando.publishing.read", capability]
+        )
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, user.id)
+      user
+    end
   end
 
   describe "a connection test" do

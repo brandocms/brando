@@ -18,8 +18,9 @@ defmodule Brando.SSG.SSH do
   from an empty directory, so nothing is sent or deleted).
   `accept_host_keys/3` stores the keys a test showed.
 
-  Each acts for someone who may manage the site's publishing
-  (`Brando.SSG.Builds.can_manage?/2`), on the site's settings as stored.
+  Each acts for someone who may deploy the site (with capabilities on;
+  otherwise who may manage its publishing, `Brando.SSG.Builds.can_manage?/2`),
+  on the site's settings as stored.
   Commands run through the deploy's runner (`:runner`, or the `:brando,
   :ssg_deploy_runner` config, `System.cmd/3` by default) with time limits.
   """
@@ -407,13 +408,23 @@ defmodule Brando.SSG.SSH do
 
   ## Who acts, and what is said
 
-  # The site as stored, for someone who may manage its publishing
+  # The site as stored, for someone who may change where it deploys
   defp acting(%Site{id: id}, actor, fun) do
     case Registry.get_site(id) do
-      %Site{} = site -> if Builds.can_manage?(actor, site), do: fun.(site), else: {:error, :forbidden}
+      %Site{} = site -> if may_act?(actor, site), do: fun.(site), else: {:error, :forbidden}
       nil -> {:error, :site_not_found}
     end
   end
+
+  # As saving the deployment settings asks: a build or schedule grant opens
+  # the Publishing screen, and only a deploy grant reaches the key
+  defp may_act?(%Brando.Users.User{} = user, site) do
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.site(user, site), :deploy, :publishing),
+      else: Builds.can_manage?(user, site)
+  end
+
+  defp may_act?(_actor, _site), do: false
 
   @doc """
   What a remote host said (rsync's or ssh's output), to show: cut to a
