@@ -373,6 +373,29 @@ defmodule Brando.SSG.SSHTest do
       assert File.read!(DeployFiles.path(c.site, :known_hosts)) == rebuilt <> "\n"
     end
 
+    # The source directory is the dry run's own: what is in it is not removed with it
+    test "removes only the empty directory it made", c do
+      :ok = DeployFiles.write(c.site, :known_hosts, keyscan_line("[example.test]:2222") <> "\n")
+
+      runner = fn
+        "ssh-keyscan", _args, _opts ->
+          {keyscan_line("[example.test]:2222"), 0}
+
+        "rsync", args, _opts ->
+          source = Enum.at(args, -2)
+          assert File.ls!(source) == []
+          File.write!(Path.join(source, "other"), "not the dry run's")
+          send(self(), {:source, source})
+          {"", 0}
+      end
+
+      {:ok, test} = SSH.test_connection(c.site, c.superuser, runner: runner)
+      assert test.dry_run == :ok
+      assert_received {:source, source}
+      assert File.read!(Path.join(source, "other")) == "not the dry run's"
+      File.rm_rf!(source)
+    end
+
     test "stores an IPv6 host as ssh looks it up, on port 22 and another", c do
       for {port, entry} <- [{22, "2001:db8::1"}, {2222, "[2001:db8::1]:2222"}] do
         {:ok, site} =

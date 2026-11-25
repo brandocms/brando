@@ -309,18 +309,20 @@ defmodule Brando.SSG.SSH do
 
   defp lines(text), do: text |> String.split(["\r\n", "\n"]) |> Enum.reject(&(String.trim(&1) == ""))
 
+  # From a directory of its own, made new under a random name; removed only
+  # while still empty
   defp dry_run(site, target, port, opts) do
-    empty = Path.join(System.tmp_dir!(), "brando-ssh-test-#{System.unique_integer([:positive])}")
+    empty = Path.join(System.tmp_dir!(), "brando-ssh-test-#{Base.url_encode64(:crypto.strong_rand_bytes(12))}")
 
-    try do
-      File.mkdir_p!(empty)
-
-      case rsync(site, target, port, ["-an", "--timeout=#{@test_io_timeout}", "--", empty <> "/", target], opts) do
-        {:ok, _output} -> :ok
-        {:error, _reason} = error -> error
+    with :ok <- File.mkdir(empty) do
+      try do
+        case rsync(site, target, port, ["-an", "--timeout=#{@test_io_timeout}", "--", empty <> "/", target], opts) do
+          {:ok, _output} -> :ok
+          {:error, _reason} = error -> error
+        end
+      after
+        File.rmdir(empty)
       end
-    after
-      File.rm_rf(empty)
     end
   end
 
