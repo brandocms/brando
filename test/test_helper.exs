@@ -4,9 +4,11 @@ alias BrandoIntegration.Repo, as: Repo
 
 # A second run of the same partition can outlive this one. Each removes only
 # the directory it created. Child processes use the same configured root.
-media_path = Path.join(System.tmp_dir!(), "brando-test-media-" <> Base.url_encode64(:crypto.strong_rand_bytes(12)))
+run_dir = Path.join(System.tmp_dir!(), "brando-test-" <> Base.url_encode64(:crypto.strong_rand_bytes(12)))
+File.mkdir!(run_dir)
+System.at_exit(fn _status -> File.rm_rf!(run_dir) end)
+media_path = Path.join(run_dir, "media")
 File.mkdir!(media_path)
-System.at_exit(fn _status -> File.rm_rf!(media_path) end)
 System.put_env("BRANDO_TEST_MEDIA_PATH", media_path)
 Application.put_env(:brando, :media_path, media_path)
 
