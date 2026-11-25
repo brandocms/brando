@@ -568,10 +568,10 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
 
     test "a key that cannot be written says so, on rotate and on save", context do
       Brando.endpoint().subscribe("user:#{context.current_user.id}")
-      # A file where the deploy directory goes
+      # No key to read, and nowhere to write one: the deploy directory is a link to nothing
       dir = Brando.SSG.DeployFiles.dir(context.site)
       File.mkdir_p!(Path.dirname(dir))
-      File.write!(dir, "")
+      File.ln_s!(Path.join(Path.dirname(dir), "missing/deploy"), dir)
 
       {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 
@@ -587,6 +587,24 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
       view |> element("#publishing-ssh button[phx-click=rotate_deploy_key]") |> render_click()
       assert_toast_said("could not be written")
+    end
+
+    # The panel says the key cannot be read, and to rotate it: nothing was written
+    test "a save beside a key that cannot be read reports no failed write", context do
+      Brando.endpoint().subscribe("user:#{context.current_user.id}")
+      {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{port: 22}})
+      key = Brando.SSG.DeployFiles.path(context.site, :key)
+      File.mkdir_p!(Path.dirname(key))
+      File.write!(key, "not a key")
+
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{"strategy" => "rsync", "target" => "deploy@example.test:/srv/www"}
+      })
+
+      assert render(view) =~ "publishing-ssh"
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}, 300
     end
 
     test "an accept over keys accepted since the test asks for a new test", context do

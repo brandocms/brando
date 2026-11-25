@@ -554,9 +554,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     with true <- can_manage?(user, socket.assigns.site),
          {:ok, site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
       # The key is made with the first rsync settings; where it may not be
-      # kept, the panel says why
+      # kept, or one is there that cannot be read, the panel says why
       with true <- rsync_saved?(site),
-           {:error, reason} when reason not in [:served, :unsafe_path] <- SSH.ensure_key(site, user),
+           {:error, reason} when reason not in [:served, :unsafe_path, :unreadable_key] <- SSH.ensure_key(site, user),
            do: toast_error(socket, key_error(reason))
 
       send(self(), {:toast, gettext("Static deployment settings saved")})
