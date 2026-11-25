@@ -230,6 +230,13 @@ defmodule BrandoAdmin.Sites.SiteUsageLiveTest do
     {:messages, messages} = Process.info(self(), :messages)
     # One inventory plus two overview queries and one detail query per viewer.
     assert {Enum.count(messages, &(&1 == :inventory_query)), usage_queries()} == {1, 6}
+
+    # A subsequent manual refresh updates both lists but only the selected detail.
+    File.write!(Path.join(Storage.media_root(acme), "photo"), String.duplicate("x", 768))
+    :ok = Brando.Worker.SiteUsage.perform(%Oban.Job{args: %{"site_id" => acme.id}})
+    assert has_element?(first, "#usage-storage-facts-#{acme.id}", "768 B")
+    assert has_element?(second, "#site-list-usage-#{acme.id}", "768 B")
+    assert usage_queries() == 5
   end
 
   test "before the usage table's migration has run, the screen opens and says so", %{conn: conn, acme: acme} do

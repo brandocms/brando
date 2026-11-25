@@ -60,9 +60,10 @@ defmodule Brando.Worker.SiteUsage do
     schemas = Measure.tenant_schemas()
     Enum.each(sites, &measure(&1, today, {:daily, schemas}))
     pruned = Usage.prune(today)
-    Usage.broadcast_overview(:all)
     Logger.info("==> [CRON] Measured site usage; deleted #{pruned} rows older than #{Usage.retention_months()} months")
     :ok
+  after
+    Usage.broadcast_overview(:all)
   end
 
   defp measure(site, today, scope \\ :manual) do
@@ -73,8 +74,9 @@ defmodule Brando.Worker.SiteUsage do
       end
 
     :ok = Usage.put_measurement(site.id, today, measurement)
-    :ok = Usage.broadcast_measured(site.id)
-    if scope == :manual, do: Usage.broadcast_overview(site.id), else: :ok
+    with :ok <- Usage.broadcast_measured(site.id) do
+      if scope == :manual, do: Usage.broadcast_overview(site.id), else: :ok
+    end
   rescue
     error ->
       Logger.error("[Brando.Sites.Usage] Could not measure #{site.key}: #{Exception.message(error)}")
