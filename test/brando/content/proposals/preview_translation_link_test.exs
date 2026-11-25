@@ -28,8 +28,12 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
 
   @handler __MODULE__
 
+  setup_all do
+    Brando.Test.Committed.template()
+  end
+
   setup tags do
-    :ok = Brando.Test.Committed.start()
+    :ok = Brando.Test.Committed.start(tags.template)
     root = Path.join(System.tmp_dir!(), "brando-preview-link-#{System.unique_integer([:positive])}")
     release = Path.join(root, "release")
     write_release(release, "aaaa")
@@ -119,8 +123,9 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
 
   # The repo's timeout, which a preview's render has
   defp put_deadline(ms) do
-    config = Application.fetch_env!(:brando, BrandoIntegration.Repo)
-    Support.put_test_env(BrandoIntegration.Repo, Keyword.put(config, :timeout, ms))
+    repo = Repo.repo()
+    config = Application.fetch_env!(:brando, repo)
+    Support.put_test_env(repo, Keyword.put(config, :timeout, ms))
   end
 
   # The renderer stops at its first query on `source` (`lock: true`, a row
@@ -132,7 +137,7 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
     :ok =
       :telemetry.attach(
         @handler,
-        BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query],
+        Repo.repo().config()[:telemetry_prefix] ++ [:query],
         &__MODULE__.barrier/4,
         config
       )
@@ -432,15 +437,12 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
       alpha = site("Link Alpha", "link-alpha")
       beta = site("Link Beta", "link-beta")
       alpha_live = environment(alpha, "production")
-      beta_live = environment(beta, "production")
+      environment(beta, "production")
       beta_staging = environment(beta, "staging")
 
       on_exit(fn ->
         Tenant.put_prefix(nil)
         Tenant.Cache.clear()
-
-        for {site, environment} <- [{alpha, alpha_live}, {beta, beta_live}, {beta, beta_staging}],
-            do: sql!(~s|DROP SCHEMA IF EXISTS "#{Tenant.prefix(site, environment)}" CASCADE|)
       end)
 
       for {environment, site, kicker} <- [

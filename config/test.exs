@@ -135,6 +135,7 @@ config :brando, Oban,
   queues: false,
   plugins: false,
   repo: BrandoIntegration.Repo,
+  get_dynamic_repo: &Brando.Test.Committed.oban_repo/0,
   testing: :inline
 
 # Webhook URLs, deploy hosts and served hosts are looked up in a stub, not real DNS
