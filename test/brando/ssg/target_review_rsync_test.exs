@@ -182,15 +182,15 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
 
     assert {:ok, _deployed} =
              c
-             |> ready_build([{"index.html", "1"}, {"old/page.html", "o"}, {"gone.html", "g"}])
+             |> ready_build([{"index.html", "first"}, {"old/page.html", "o"}, {"gone.html", "g"}])
              |> Deploy.deploy(runner: runner(c))
 
     assert on_target(c, "old/page.html")
 
-    assert {:ok, _deployed} = c |> ready_build([{"index.html", "2"}]) |> Deploy.deploy(runner: runner(c))
+    assert {:ok, _deployed} = c |> ready_build([{"index.html", "second build"}]) |> Deploy.deploy(runner: runner(c))
     refute on_target(c, "old")
     refute on_target(c, "gone.html")
-    assert File.read!(Path.join(c.remote, "index.html")) == "2"
+    assert File.read!(Path.join(c.remote, "index.html")) == "second build"
     assert unknown(c) == []
   end
 

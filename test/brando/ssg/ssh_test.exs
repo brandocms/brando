@@ -366,20 +366,37 @@ defmodule Brando.SSG.SSHTest do
     end
 
     test "runs with the site's own key and host keys, on the build's port", c do
-      Brando.SSGSSHFixtures.trust_hosts(c.site, ["[example.test]:2222"])
+      c.site
+      |> Brando.SSGSSHFixtures.trust_hosts(["[example.test]:2222"])
+      |> Brando.SSGSSHFixtures.review_target(@target, 2222)
+
       Brando.SSGSSHFixtures.trust_hosts(c.other, ["example.test"])
       build = ready_build(c.site, c.environment)
       # A later change of port is the next build's
       {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
 
       assert {:ok, %{status: :deployed}} = Deploy.deploy(build, runner: runner(""))
-      assert_received {:ran, "rsync", ["-e", ssh, "--timeout=300", "-az", "--delete", "--", _source, @target]}
+
+      assert_received {:ran, "rsync",
+                       [
+                         "-e",
+                         ssh,
+                         "--timeout=300",
+                         "-az",
+                         "--delete",
+                         "--from0",
+                         "--filter=merge " <> _,
+                         "--",
+                         _source,
+                         @target
+                       ]}
+
       assert ssh == expected_ssh(c.site, 2222)
       refute ssh =~ c.other.key
     end
 
     test "of a build from before the port goes to 22", c do
-      Brando.SSGSSHFixtures.trust_hosts(c.site, ["example.test"])
+      c.site |> Brando.SSGSSHFixtures.trust_hosts(["example.test"]) |> Brando.SSGSSHFixtures.review_target(@target)
       build = ready_build(c.site, c.environment)
       {:ok, build} = Builds.update(build, %{deploy_config: Map.delete(build.deploy_config, "port")})
 
@@ -404,7 +421,10 @@ defmodule Brando.SSG.SSHTest do
     end
 
     test "to a host whose key changed is refused and not retried", c do
-      Brando.SSGSSHFixtures.trust_hosts(c.site, ["[example.test]:2222"])
+      c.site
+      |> Brando.SSGSSHFixtures.trust_hosts(["[example.test]:2222"])
+      |> Brando.SSGSSHFixtures.review_target(@target, 2222)
+
       build = ready_build(c.site, c.environment)
 
       put_test_env(
@@ -433,7 +453,10 @@ defmodule Brando.SSG.SSHTest do
     end
 
     test "logs what the host said escaped and cut, on both paths", c do
-      Brando.SSGSSHFixtures.trust_hosts(c.site, ["[example.test]:2222"])
+      c.site
+      |> Brando.SSGSSHFixtures.trust_hosts(["[example.test]:2222"])
+      |> Brando.SSGSSHFixtures.review_target(@target, 2222)
+
       said = "denied\n[2026-01-01 00:00:00 UTC] Artifact deployed\e[31m" <> String.duplicate("x", 5_000)
       put_test_env(:ssg_deploy_runner, runner("", {said, 12}))
 

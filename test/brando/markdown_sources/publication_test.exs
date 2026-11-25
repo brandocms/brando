@@ -38,7 +38,10 @@ defmodule Brando.MarkdownSources.PublicationTest do
         deploy_config: %{strategy: :rsync, target: "deploy@example.test:/srv/docs"}
       })
 
-    Brando.SSGSSHFixtures.trust_hosts(site, ["example.test"])
+    site
+    |> Brando.SSGSSHFixtures.trust_hosts(["example.test"])
+    |> Brando.SSGSSHFixtures.review_target("deploy@example.test:/srv/docs")
+
     {:ok, environment} = Registry.create_environment(site, %{name: "Production", key: "production", live: true})
     prefix = Brando.Tenant.prefix(site, environment)
     # Clone the actual migrated content tables inside the sandbox transaction.
@@ -121,20 +124,16 @@ defmodule Brando.MarkdownSources.PublicationTest do
 
     put_test_env(:ssg_builder, Builder)
 
-    put_test_env(:ssg_deploy_runner, fn "rsync",
-                                        [
-                                          "-e",
-                                          _ssh,
-                                          _timeout,
-                                          "-az",
-                                          "--delete",
-                                          "--",
-                                          source,
-                                          "deploy@example.test:/srv/docs"
-                                        ],
-                                        _ ->
-      File.cp_r!(source, destination)
-      {"", 0}
+    # The real run; the listings before and after it find nothing
+    put_test_env(:ssg_deploy_runner, fn
+      "rsync",
+      ["-e", _ssh, _timeout, "-az", "--delete", "--from0", _filter, "--", source, "deploy@example.test:/srv/docs"],
+      _ ->
+        File.cp_r!(source, destination)
+        {"", 0}
+
+      "rsync", ["-e", _ssh, _timeout, "-an" | _args], _ ->
+        {"", 0}
     end)
 
     Oban.Testing.with_testing_mode(:manual, fn ->
