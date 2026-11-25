@@ -437,7 +437,7 @@ defmodule Brando.Content.Proposals.PreviewTranslationLinkTest do
       alpha = site("Link Alpha", "link-alpha")
       beta = site("Link Beta", "link-beta")
       alpha_live = environment(alpha, "production")
-      beta_live = environment(beta, "production")
+      environment(beta, "production")
       beta_staging = environment(beta, "staging")
 
       on_exit(fn ->

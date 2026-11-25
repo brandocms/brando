@@ -71,7 +71,8 @@ defmodule Brando.Test.ScopedEnv do
 
   @doc """
   The test that owns the calling process's query cache namespace
-  (`own_cache/0`), or `nil` for one outside any test's `$callers`.
+  (`own_cache/0`). A committed test owns the whole VM's repo, including
+  workers outside its `$callers`, and sets the fallback owner for them.
   """
   @spec cache_owner() :: pid() | nil
   def cache_owner do
@@ -80,7 +81,7 @@ defmodule Brando.Test.ScopedEnv do
     else
       case lookup([self() | Process.get(:"$callers", [])], :cache_owner) do
         {:ok, owner} -> owner
-        :error -> nil
+        :error -> Application.get_env(:brando, :test_query_cache_owner)
       end
     end
   end

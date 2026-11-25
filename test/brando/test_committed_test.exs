@@ -26,7 +26,13 @@ defmodule Brando.Test.CommittedTest do
     end)
 
     Sandbox.unboxed_run(Repo, fn -> Repo.insert!(revision) end)
+    shared_key = Brando.Cache.Query.hash_query({:list, "revisions", []})
     :ok = Committed.start(template)
+    private_key = Brando.Cache.Query.hash_query({:list, "revisions", []})
+    refute private_key == shared_key
+    test = self()
+    spawn(fn -> send(test, {:worker_key, Brando.Cache.Query.hash_query({:list, "revisions", []})}) end)
+    assert_receive {:worker_key, ^private_key}
 
     # The shared pool still requires an owner even while the private one is live.
     assert_raise DBConnection.OwnershipError, fn -> Repo.query!("SELECT 1") end

@@ -27,8 +27,9 @@ defmodule Brando.Test.Committed do
     config = create_database!(template: template)
     Support.put_test_env(Repo, config)
     start_supervised!(Repo)
+    Support.put_test_env(:test_query_cache_owner, self())
     Support.put_test_env(:repo_module, Repo)
-    Code.eval_file("priv/repo/seeds.exs")
+    Code.eval_file(Application.app_dir(:brando, "priv/repo/seeds.exs"))
     :ok
   end
 
@@ -46,8 +47,10 @@ defmodule Brando.Test.Committed do
       |> Keyword.drop([:url, :ownership_pool, :pool_overflow, :name])
       |> Keyword.merge(database: name, pool: DBConnection.ConnectionPool)
 
-    :ok = Postgres.storage_up(Keyword.merge(config, opts))
-    on_exit(fn -> :ok = Postgres.storage_down(Keyword.put(config, :force_drop, true)) end)
+    # Creating and dropping databases can wait for a PostgreSQL checkpoint.
+    storage = Keyword.put(config, :timeout, :timer.minutes(2))
+    :ok = Postgres.storage_up(Keyword.merge(storage, opts))
+    on_exit(fn -> :ok = Postgres.storage_down(Keyword.put(storage, :force_drop, true)) end)
     config
   end
 end
