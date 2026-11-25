@@ -1,0 +1,1 @@
+- Typing in an entry with large embedded lists skips row tracking for lists that stayed the same.

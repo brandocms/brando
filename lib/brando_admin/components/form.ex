@@ -1362,6 +1362,11 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :translation_fill_progress, run: run, step: step}, socket),
     do: {:ok, TranslationFill.progress(socket, run, step)}
 
+  def update(%{action: :finish_translation_fill, run: run, reply: reply}, socket) do
+    {socket, writes} = TranslationFill.finish(socket, run, reply)
+    {:ok, write_translation_fill(socket, writes)}
+  end
+
   # A BlockField's block texts as they are when a run starts, and one that
   # did not answer with them.
   def update(%{event: "translation_fill_read", run: run, field: field, texts: texts}, socket),
@@ -1970,8 +1975,11 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     reply = with {:ok, {_run, reply}} <- result, do: {:ok, reply}
-    {socket, writes} = TranslationFill.finish(socket, run, reply)
-    {:noreply, write_translation_fill(socket, writes)}
+
+    # An earlier field shipment has queued its Form update. Finish through
+    # the same queue so the baseline check sees that editor's change.
+    send_update(socket.assigns.myself, action: :finish_translation_fill, run: run, reply: reply)
+    {:noreply, socket}
   end
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do

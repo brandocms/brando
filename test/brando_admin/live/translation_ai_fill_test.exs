@@ -868,9 +868,23 @@ defmodule BrandoAdmin.TranslationAIFillTest do
       other_form = with_target(other_view, cid_of(other_view, "#article_form-el"))
       render_hook(other_form, "focus", %{"field" => "article[title]"})
       edit_title(other_view, "Their title")
-      render_hook(other_form, "blur", %{"field" => "article[title]"})
 
-      send(model, :answer)
+      # Both messages reach the busy LiveView before it handles either one.
+      # The other editor's blur ships the title first.
+      :sys.suspend(view.pid)
+
+      try do
+        render_hook(other_form, "blur", %{"field" => "article[title]"})
+        send(model, :answer)
+
+        await(fn ->
+          {:messages, messages} = Process.info(view.pid, :messages)
+          Enum.any?(messages, &match?({:phoenix, :async_result, {:start, {_, _, :translation_fill, _}}}, &1))
+        end)
+      after
+        :sys.resume(view.pid)
+      end
+
       render_async(view, 5_000)
       await(fn -> has_element?(view, "#{item("title")}[data-ai='kept']") end)
 

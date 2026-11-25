@@ -42,7 +42,12 @@ defmodule BrandoAdmin.Components.Form.RowEdits do
   event added, removed or moved (a drop or sort param).
   """
   def typed(edits, fields, previous, changeset, target, entry_params) do
-    edits = Enum.reduce(fields, edits, &record_rows(&2, &1, previous, changeset))
+    edits =
+      Enum.reduce(fields, edits, fn field, edits ->
+        if held_rows(previous, field) === held_rows(changeset, field),
+          do: edits,
+          else: record_rows(edits, field, previous, changeset)
+      end)
 
     with [_singular, name | path] <- List.wrap(target),
          field when not is_nil(field) <- Enum.find(fields, &(Atom.to_string(&1) == name)),
@@ -53,6 +58,10 @@ defmodule BrandoAdmin.Components.Form.RowEdits do
       _ -> edits
     end
   end
+
+  # Compare the raw embed before get_embed wraps stored rows as changesets.
+  # The cast can change a second relation too, regardless of the event target.
+  defp held_rows(changeset, field), do: Map.get(changeset.changes, field, Map.get(changeset.data, field))
 
   # The row an input is in, and the input: a list's row by its key in the
   # params, an embedded one as the form holds it.
