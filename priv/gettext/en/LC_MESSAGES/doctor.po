@@ -1901,6 +1901,11 @@ msgstr ""
 msgid "preview_host has no host name of two labels after {site_key}."
 msgstr ""
 
+#: lib/brando/doctor/checks/preview_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "preview_host is no string"
+msgstr ""
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "priv/static/robots.txt is not served (not in %{setting}); delete it"

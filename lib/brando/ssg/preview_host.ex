@@ -16,8 +16,9 @@ defmodule Brando.SSG.PreviewHost do
   The pattern names `{site_key}` once, as the whole first label, followed by
   a host name of at least two labels. It applies with `tenancy_mode: :multi`
   only, where `problems/0` lists what is wrong with it and boot refuses it
-  (`validate_config!/0`): a pattern of another form, or one an installation
-  host (`Brando.Tenant.InstallationHosts`) matches.
+  (`validate_config!/0`): a value that is no string, a pattern of another
+  form, or one an installation host (`Brando.Tenant.InstallationHosts`)
+  matches.
 
   A host an environment binds, as its domain or a redirect host, is never a
   preview host while it is bound, also when it matches the pattern: the site
@@ -38,19 +39,30 @@ defmodule Brando.SSG.PreviewHost do
   @host_max_length 253
 
   @typedoc """
-  What is wrong with the configured pattern: it does not name `{site_key}`
-  once, as its whole first label (`:placeholder`), what follows is no host
-  name of two labels or more (`:base`), or an installation host matches it
-  (`{:installation_host, host}`).
+  What is wrong with the configured pattern: it is no string
+  (`:not_a_string`), it does not name `{site_key}` once, as its whole first
+  label (`:placeholder`), what follows is no host name of two labels or more
+  (`:base`), or an installation host matches it (`{:installation_host, host}`).
   """
-  @type problem :: :placeholder | :base | {:installation_host, String.t()}
+  @type problem :: :not_a_string | :placeholder | :base | {:installation_host, String.t()}
 
-  @doc "The configured pattern, as written, or nil."
+  @doc "The configured pattern, as written, or nil, also for a value that is no string (`problems/0`)."
   @spec pattern() :: String.t() | nil
   def pattern do
+    case setting() do
+      pattern when is_binary(pattern) -> pattern
+      _unset_or_not_a_string -> nil
+    end
+  end
+
+  @doc "Whether `preview_host` is set, to a string that is not blank or to any other value."
+  @spec set?() :: boolean()
+  def set?, do: setting() != nil
+
+  defp setting do
     case Application.get_env(:brando, Brando.SSG, [])[:preview_host] do
       pattern when is_binary(pattern) -> if String.trim(pattern) == "", do: nil, else: pattern
-      _unset -> nil
+      value -> value
     end
   end
 
@@ -67,7 +79,7 @@ defmodule Brando.SSG.PreviewHost do
   """
   @spec problems() :: [problem()]
   def problems do
-    case pattern() && Tenant.mode() == :multi && parse(pattern()) do
+    case set?() && Tenant.mode() == :multi && parse(setting()) do
       {:ok, base} -> installation_hosts_under(base)
       {:error, problem} -> [problem]
       _off -> []
@@ -235,6 +247,8 @@ defmodule Brando.SSG.PreviewHost do
     end
   end
 
+  defp parse(pattern) when not is_binary(pattern), do: {:error, :not_a_string}
+
   defp parse(pattern) do
     case normalize(pattern) do
       @placeholder <> "." <> base ->
@@ -275,6 +289,16 @@ defmodule Brando.SSG.PreviewHost do
 
   defp normalize(host) when is_binary(host), do: host |> String.trim() |> String.downcase() |> String.trim_trailing(".")
   defp normalize(_host), do: nil
+
+  defp config_error(:not_a_string) do
+    """
+    Invalid `preview_host` in `config :brando, Brando.SSG`: #{inspect(setting())}.
+
+    The pattern is a string that names {site_key} as its first label:
+
+        config :brando, Brando.SSG, preview_host: "{site_key}.preview.example.com"
+    """
+  end
 
   defp config_error(:placeholder) do
     """

@@ -128,6 +128,21 @@ defmodule Brando.SSG.PreviewHostTest do
       end
     end
 
+    test "is refused at boot, and reported, when it is no string" do
+      for value <- [true, ~c"{site_key}.preview.test", :pattern] do
+        put_test_env(Brando.SSG, preview_host: value)
+        assert PreviewHost.problems() == [:not_a_string], inspect(value)
+        refute PreviewHost.enabled?()
+        error = assert_raise ConfigError, fn -> Brando.Tenant.validate_config!() end
+        assert error.message =~ inspect(value)
+        assert %{status: :error} = Brando.Doctor.Checks.PreviewHosts.run(nil)
+      end
+
+      put_test_env(Brando.SSG, preview_host: "  ")
+      assert PreviewHost.problems() == []
+      assert %{status: :skipped} = Brando.Doctor.Checks.PreviewHosts.run(nil)
+    end
+
     test "is refused at boot when an installation host matches it" do
       put_test_env(:media_url, "https://media.example.test")
       put_test_env(Brando.SSG, preview_host: "{site_key}.example.test")

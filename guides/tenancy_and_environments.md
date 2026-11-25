@@ -2616,11 +2616,12 @@ a preview host of its own:
 config :brando, Brando.SSG, preview_host: "{site_key}.preview.example.com"
 ```
 
-The pattern names `{site_key}` once, as the whole first label, followed by a
-host name of at least two labels. Any other form is refused at boot, and so is
-a pattern one of the installation's own hosts matches (the admin at
+The pattern is a string that names `{site_key}` once, as the whole first
+label, followed by a host name of at least two labels. A value that is no
+string, or a string of any other form, is refused at boot, and so is a pattern
+one of the installation's own hosts matches (the admin at
 `admin.example.com` under `{site_key}.example.com`); the System check reports
-both. It applies with `tenancy_mode: :multi`; with `:single` or `:none` a
+each. It applies with `tenancy_mode: :multi`; with `:single` or `:none` a
 preview link is a path on any host, and the setting has no effect.
 
 Each active static site, whatever its deploy strategy, then has the preview

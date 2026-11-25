@@ -2,8 +2,8 @@ defmodule Brando.Doctor.Checks.PreviewHosts do
   @moduledoc """
   The static sites' preview host pattern (`Brando.SSG.PreviewHost`):
 
-    * a pattern of the wrong form, or one an installation host matches, is an
-      error, as it is at boot;
+    * a value that is no string, a pattern of the wrong form, or one an
+      installation host matches, is an error, as it is at boot;
     * a pattern with `tenancy_mode` other than `:multi` has no effect, which
       the check says;
     * an active static site with no preview host (a key longer than a DNS
@@ -31,7 +31,7 @@ defmodule Brando.Doctor.Checks.PreviewHosts do
   @impl true
   def run(_context) do
     cond do
-      is_nil(PreviewHost.pattern()) ->
+      not PreviewHost.set?() ->
         skipped(dgettext("doctor", "no preview_host set"))
 
       Brando.Tenant.mode() != :multi ->
@@ -56,6 +56,7 @@ defmodule Brando.Doctor.Checks.PreviewHosts do
     )
   end
 
+  defp problem(:not_a_string), do: dgettext("doctor", "preview_host is no string")
   defp problem(:placeholder), do: dgettext("doctor", "preview_host does not name {site_key} once, as its first label")
   defp problem(:base), do: dgettext("doctor", "preview_host has no host name of two labels after {site_key}.")
 
