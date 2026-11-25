@@ -473,6 +473,19 @@ defmodule Brando.SSG.SSHTest do
       assert ssh == expected_ssh(c.site, 22)
     end
 
+    test "of a build for another port than the site's says to build again", c do
+      build = ready_build(c.site, c.environment)
+      {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{port: 22}})
+      # The site's new port is accepted, the build's is not
+      Brando.SSGSSHFixtures.trust_hosts(c.site, ["example.test"])
+
+      assert {:cancel, :build_target_changed} =
+               perform_job(SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+
+      assert Builds.get_build(build.id).build_log =~ SSH.refusal_message(:build_target_changed)
+      refute_received {:ran, _, _}
+    end
+
     test "is refused without a key or an accepted host key, on the deploy job, and not retried", c do
       build = ready_build(c.site, c.environment)
 

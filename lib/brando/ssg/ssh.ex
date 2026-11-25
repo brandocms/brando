@@ -461,6 +461,10 @@ defmodule Brando.SSG.SSH do
     do:
       "no host key is accepted for the target's host and port. On Publishing, use Test connection and accept the host key."
 
+  def refusal_message(:build_target_changed),
+    do:
+      "the build was made for another target or port than the site's deployment settings. Make a new build, then deploy it."
+
   def refusal_message(:host_key_rejected),
     do:
       "the host's key is not the one accepted for it. On Publishing, use Test connection to compare the fingerprints, and accept the new key only if you know why the host changed."
