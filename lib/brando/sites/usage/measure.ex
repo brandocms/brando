@@ -106,7 +106,9 @@ defmodule Brando.Sites.Usage.Measure do
     case File.lstat(path) do
       {:ok, %File.Stat{type: :regular, size: size}} -> size
       {:ok, %File.Stat{type: :directory}} -> directory_bytes(path)
-      _link_other_or_gone -> 0
+      {:ok, _link_or_other} -> 0
+      {:error, :enoent} -> 0
+      {:error, reason} -> raise File.Error, reason: reason, action: "read file stats", path: path
     end
   end
 

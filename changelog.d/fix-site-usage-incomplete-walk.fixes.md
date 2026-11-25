@@ -1,0 +1,1 @@
+- Site usage keeps the last complete storage measurement when a file's metadata cannot be read.

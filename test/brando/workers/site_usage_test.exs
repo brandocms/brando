@@ -101,6 +101,21 @@ defmodule Brando.Worker.SiteUsageTest do
       assert production > staging
     end
 
+    test "a child that cannot be statted leaves the day's complete sample intact", %{acme: acme} do
+      folder = Path.join(Storage.media_root(acme), "images")
+      child = Path.join(folder, "photo.jpg")
+      write(child, 4_096)
+      args = %{"site_id" => acme.id}
+      assert :ok = perform_job(SiteUsage, args)
+      assert [%Day{media_bytes: 4_096} = previous] = Usage.days(acme, today())
+
+      File.chmod!(folder, 0o400)
+      assert {:ok, ["photo.jpg"]} = File.ls(folder)
+      assert {:error, :eacces} = File.lstat(child)
+      assert capture_log(fn -> perform_job(SiteUsage, args) end) =~ "Could not measure"
+      assert [^previous] = Usage.days(acme, today())
+    end
+
     test "follows a media root that is itself a link", %{acme: acme, root: root} do
       write(Path.join([root, "shared-media", "a.jpg"]), 700)
       File.mkdir_p!(Path.dirname(Storage.media_root(acme)))
