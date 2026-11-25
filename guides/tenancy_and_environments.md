@@ -2730,8 +2730,9 @@ The **keep list**, under **Files on the target** on the Publishing screen,
 holds paths relative to the target, a directory's ending in `/`:
 `.well-known/` and `cgi-bin/` unless changed, at most 100, of letters, digits,
 `. _ ~ + @ , -` and spaces inside a name, with no `.` or `..` segment. A kept
-path is never deleted, whatever else says it may be; a file of the same name in
-the build is still uploaded. The list stays when the target changes.
+path is never deleted, whatever else says it may be, and an entry keeps its
+path and everything under it, with or without the `/`; a file of the same name
+in the build is still uploaded. The list stays when the target changes.
 
 **Before the first deploy to a target**, review it. Once **Test connection**
 connects, it lists everything the target holds (a dry run with `--delete`

@@ -45,11 +45,13 @@ defmodule Brando.SSG.TargetPaths do
     }
   end
 
-  @doc "Rules that protect what `keep` covers and nothing else."
+  @doc "Rules that protect what `keep` covers (`kept?/2`) and nothing else."
   @spec keep_rules([path()]) :: iodata()
   def keep_rules(keep) do
     Enum.map(keep, fn entry ->
-      if directory?(entry), do: rule("P", pattern(entry, "***")), else: rule("P", pattern(entry, ""))
+      if directory?(entry),
+        do: rule("P", pattern(entry, "***")),
+        else: [rule("P", pattern(entry, "")), rule("P", pattern(entry <> "/", "***"))]
     end)
   end
 
@@ -89,13 +91,15 @@ defmodule Brando.SSG.TargetPaths do
   end
 
   @doc """
-  Whether `keep` covers `path`: a directory entry covers it and everything
-  in it, another entry the path of that name.
+  Whether `keep` covers `path`: an entry covers its path and everything
+  under it, and one without a trailing `/` also a file of its name.
   """
   @spec kept?(path(), [path()]) :: boolean()
   def kept?(path, keep) do
     Enum.any?(keep, fn entry ->
-      if directory?(entry), do: String.starts_with?(path, entry), else: path in [entry, entry <> "/"]
+      if directory?(entry),
+        do: String.starts_with?(path, entry),
+        else: path == entry or String.starts_with?(path, entry <> "/")
     end)
   end
 

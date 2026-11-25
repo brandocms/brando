@@ -151,6 +151,21 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
     assert on_target(c, "cgi-bin/run")
   end
 
+  test "a keep entry without a trailing slash keeps the directory of its name, with one in the build", c do
+    assert :ok = TargetReview.add_keep_path(c.site, c.user, "uploads")
+    put_files(c.remote, [{"uploads/a.jpg", "a"}, {"uploads/sub/b.jpg", "b"}, {"old.html", "o"}])
+    review_and_confirm(c)
+
+    assert {:ok, _deployed} =
+             c |> ready_build([{"index.html", "1"}, {"uploads/new.jpg", "n"}]) |> Deploy.deploy(runner: runner(c))
+
+    assert on_target(c, "uploads/a.jpg")
+    assert on_target(c, "uploads/sub/b.jpg")
+    assert on_target(c, "uploads/new.jpg")
+    refute on_target(c, "old.html")
+    assert unknown(c) == []
+  end
+
   test "an unknown file with odd characters in its name survives and is listed", c do
     review_and_confirm(c)
     odd = "a*b[1] c\nd.html"

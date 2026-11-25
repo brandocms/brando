@@ -34,6 +34,17 @@ defmodule Brando.SSG.TargetPathsTest do
     refute TargetPaths.kept?(".well-knownx/", keep)
   end
 
+  test "an entry without a trailing slash covers a directory of its name and everything under it" do
+    keep = ["uploads"]
+
+    assert TargetPaths.kept?("uploads", keep)
+    assert TargetPaths.kept?("uploads/", keep)
+    assert TargetPaths.kept?("uploads/sub/b.jpg", keep)
+    refute TargetPaths.kept?("uploads2/a.jpg", keep)
+    assert [%{name: "uploads/", kept: true}] = TargetPaths.top_level(["uploads/", "uploads/a.jpg"], keep)
+    assert IO.iodata_to_binary(TargetPaths.keep_rules(keep)) == "P /uploads\0P /uploads/***\0"
+  end
+
   test "writes rules a name matches only itself by, kept first and every other path protected" do
     rules = [".well-known/"] |> TargetPaths.keep_rules() |> IO.iodata_to_binary()
     assert rules == "P /.well-known/***\0"
