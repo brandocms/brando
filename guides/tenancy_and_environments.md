@@ -2815,7 +2815,8 @@ another reason than there being no file, when the file is larger than 32 KB,
 a link or a directory, when the file with Brando's block would be larger than
 32 KB (a later deploy could not fetch it again), or when a `# BEGIN Brando`
 line has no `# END Brando` after it. A build with a `.htaccess` of its own has the merged file uploaded
-instead, and its log says so. The merged file is never among the files
+instead, or nothing when the target's file is the merge already, and its log
+says so. The merged file is never among the files
 Brando uploaded, so no deploy deletes it, and it is not listed among the
 unknown files. A `_redirects.json` an earlier deploy uploaded is deleted.
 
