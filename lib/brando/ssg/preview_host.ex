@@ -104,19 +104,24 @@ defmodule Brando.SSG.PreviewHost do
   binds that host.
   """
   @spec host(Site.t()) :: String.t() | nil
-  def host(%Site{status: :active, delivery_mode: :static, key: key}) do
+  def host(%Site{} = site) do
+    host = pattern_host(site)
+    if host && not bound?(host), do: host
+  end
+
+  # The host the pattern gives an active `:static` site, bound or not
+  defp pattern_host(%Site{status: :active, delivery_mode: :static, key: key}) do
     with {:ok, base} <- base(),
          true <- label?(key),
          host = key <> "." <> base,
-         true <- byte_size(host) <= @host_max_length,
-         false <- bound?(host) do
+         true <- byte_size(host) <= @host_max_length do
       host
     else
       _none -> nil
     end
   end
 
-  def host(%Site{}), do: nil
+  defp pattern_host(%Site{}), do: nil
 
   @doc """
   Whether `host` is a preview host: it matches the pattern and no environment
@@ -150,9 +155,17 @@ defmodule Brando.SSG.PreviewHost do
   """
   @spec hosts() :: [String.t()]
   def hosts do
-    if enabled?(),
-      do: Cache.list_sites() |> Enum.map(&host/1) |> Enum.reject(&is_nil/1) |> Enum.sort(),
-      else: []
+    if enabled?() do
+      sites = Cache.list_sites()
+      bound = MapSet.new(Enum.flat_map(sites, &environment_hosts/1))
+
+      sites
+      |> Enum.map(&pattern_host/1)
+      |> Enum.reject(&(is_nil(&1) or MapSet.member?(bound, &1)))
+      |> Enum.sort()
+    else
+      []
+    end
   end
 
   @doc """
@@ -279,12 +292,10 @@ defmodule Brando.SSG.PreviewHost do
   # not, as `Brando.Plug.Tenant` resolves it before the pattern
   defp bound?(host), do: binding_site(host) != nil
 
-  defp binding_site(host) do
-    Enum.find(Cache.list_sites(), fn site ->
-      Enum.any?(site.environments, fn environment ->
-        normalize(environment.domain) == host or host in (environment.redirect_hosts || [])
-      end)
-    end)
+  defp binding_site(host), do: Enum.find(Cache.list_sites(), &(host in environment_hosts(&1)))
+
+  defp environment_hosts(%Site{environments: environments}) do
+    Enum.flat_map(environments, &[normalize(&1.domain) | &1.redirect_hosts || []])
   end
 
   defp normalize(host) when is_binary(host), do: host |> String.trim() |> String.downcase() |> String.trim_trailing(".")

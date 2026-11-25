@@ -200,6 +200,17 @@ defmodule Brando.SSG.PreviewHostTest do
       assert PreviewHost.hosts() == ["shop.preview.test"]
     end
 
+    test "the listing leaves out a host bound as a domain or a redirect host, as host/1 does", context do
+      put_test_env(Brando.SSG, [])
+      blog = create_site("blog", :dynamic)
+      create_environment(blog, "production", "Shop.Preview.Test", true, ["beta.preview.test"])
+      gamma = create_site("gamma", :static)
+      put_test_env(Brando.SSG, preview_host: @pattern)
+
+      assert PreviewHost.hosts() == ["gamma.preview.test"]
+      assert Enum.map([context.shop, context.beta, gamma], &PreviewHost.host/1) == [nil, nil, "gamma.preview.test"]
+    end
+
     test "a host of 253 bytes is one, one of 254 is not, nor a key longer than a DNS label" do
       # 192 bytes, of labels no longer than 63
       base = Enum.join([String.duplicate("a", 63), String.duplicate("b", 63), String.duplicate("c", 62), "x"], ".")
