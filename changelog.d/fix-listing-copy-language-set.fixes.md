@@ -1,0 +1,1 @@
+- The listing’s language-copy actions offer the same missing languages as the form, including when alternate links form a chain.

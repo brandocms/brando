@@ -146,6 +146,15 @@ defmodule Brando.Translations.LanguageSetTest do
                "de" => german.id
              }
 
+      alone = article(user, "en") |> independent()
+
+      assert Translations.copy_languages(IndependentArticle, [english, independent(german), alone]) == %{
+               english.id => [],
+               german.id => [],
+               alone.id => Translations.missing_languages(IndependentArticle, alone)
+             }
+
+      assert Enum.sort(Translations.missing_languages(IndependentArticle, alone)) == ["de", "no"]
       assert Translations.missing_languages(IndependentArticle, english) == []
     end
   end
