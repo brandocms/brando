@@ -317,24 +317,26 @@ defmodule Brando.MCP.Uploads do
     |> bucket()
     |> File.ls!()
     |> Enum.filter(&valid_id?/1)
-    |> Enum.count(fn id ->
-      meta = read_meta(id)
+    |> Enum.count(&pending?(&1, grant_id, now))
+  end
 
-      cond do
-        stale?(id, meta, now) ->
-          with {:ok, _} <- File.rm_rf(dir(id)), do: File.rm(marker(grant_id, id))
-          false
+  defp pending?(id, grant_id, now) do
+    meta = read_meta(id)
 
-        meta == :error and File.lstat(dir(id)) == {:error, :enoent} ->
-          File.rm(marker(grant_id, id))
-          false
+    cond do
+      stale?(id, meta, now) ->
+        with {:ok, _} <- File.rm_rf(dir(id)), do: File.rm(marker(grant_id, id))
+        false
 
-        true ->
-          # A stalled or refused upload can still be finished to learn why it
-          # failed. Retain its marker so later prepares remove its files at expiry.
-          held?(id, meta, grant_id, now)
-      end
-    end)
+      meta == :error and File.lstat(dir(id)) == {:error, :enoent} ->
+        File.rm(marker(grant_id, id))
+        false
+
+      true ->
+        # A stalled or refused upload can still be finished to learn why it
+        # failed. Retain its marker so later prepares remove its files at expiry.
+        held?(id, meta, grant_id, now)
+    end
   end
 
   defp held?(id, {:ok, %{"grant_id" => grant_id} = meta}, grant_id, now), do: usable?(id, meta, now)
