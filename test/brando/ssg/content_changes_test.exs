@@ -158,6 +158,34 @@ defmodule Brando.SSG.ContentChangesTest do
       assert title(c.site, c.production, page) == "Saved"
     end
 
+    # The waiter on the test's connection, the transaction on a session of
+    # its own: the waiter cannot wait for the connection, only for the lock
+    test "in a transaction begun on the repo itself is marked only once that has ended", c do
+      session = own_session()
+      test = self()
+
+      saver =
+        in_session(session, fn ->
+          Brando.Repo.repo().transaction(fn ->
+            ContentChanges.touch_environment(c.production)
+            send(test, :touched)
+
+            receive do
+              :commit -> :ok
+            end
+          end)
+        end)
+
+      assert_receive :touched
+      assert waiter_waiting?(session)
+      refute_received {:ssg_content_changed, _}
+
+      send(saver.pid, :commit)
+      assert {:ok, :ok} = Task.await(saver)
+      assert_receive {:ssg_content_changed, production_id}, 2_000
+      assert production_id == c.production.id
+    end
+
     test "in a transaction begun on the repo itself is saved when no waiter can start", c do
       page = page!(c.site, c.production, c.user)
       waiters = Brando.SSG.ContentChanges.TaskSupervisor
@@ -539,6 +567,32 @@ defmodule Brando.SSG.ContentChangesTest do
       BrandoIntegration.Repo.put_dynamic_repo(session)
       fun.()
     end)
+  end
+
+  # A session of this database waits for an advisory lock
+  defp waiter_waiting?(session, tries \\ 40) do
+    %{rows: [[waiting]]} =
+      session
+      |> in_session(fn ->
+        Brando.Repo.repo().query!("""
+        SELECT count(*) FROM pg_locks
+        WHERE locktype = 'advisory' AND NOT granted
+          AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+        """)
+      end)
+      |> Task.await()
+
+    cond do
+      waiting > 0 ->
+        true
+
+      tries == 0 ->
+        false
+
+      true ->
+        Process.sleep(50)
+        waiter_waiting?(session, tries - 1)
+    end
   end
 
   # What `at_mark` returns at each statement that writes a mark while `fun`
