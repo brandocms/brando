@@ -1181,7 +1181,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     {(source && source.entry_id) || entry.id, languages}
   end
 
-  @doc false
+  @doc "Adds the available language-copy actions for a batch of listing entries of the same schema."
   def with_copy_languages([%schema{} | _] = entries) do
     if schema.has_trait(Trait.Translatable) and not Brando.Translations.synchronized?(schema) do
       languages = Brando.Translations.copy_languages(schema, entries)
