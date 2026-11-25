@@ -462,7 +462,14 @@ defmodule Brando.Content.Proposals.ImageReplacement do
       :image
       |> Usage.owners([id], include_deleted: true)
       |> Map.get(id, [])
-      |> Enum.reject(&updatable?(&1, actor))
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Stream.flat_map(fn {schema, ids} ->
+        ids
+        |> Stream.chunk_every(500)
+        |> Stream.flat_map(fn batch -> Repo.all(from(e in schema, where: e.id in ^batch)) end)
+      end)
+      |> Boundary.forbidden_entries(actor, :update)
+      |> Enum.map(&{&1.__struct__, &1.id})
 
     if forbidden == [] do
       []
@@ -480,13 +487,6 @@ defmodule Brando.Content.Proposals.ImageReplacement do
           )
         )
       ]
-    end
-  end
-
-  defp updatable?({schema, id}, actor) do
-    case Repo.get(schema, id) do
-      nil -> true
-      entry -> Boundary.authorize(actor, :update, entry) == :ok
     end
   end
 

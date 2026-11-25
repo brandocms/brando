@@ -1,0 +1,1 @@
+- Checking an image replacement loads the entries that use the image in batches, reducing database work for widely used images.

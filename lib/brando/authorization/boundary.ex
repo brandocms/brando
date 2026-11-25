@@ -170,6 +170,22 @@ defmodule Brando.Authorization.Boundary do
   end
 
   @doc """
+  The entries from one operation that the actor may not perform `action` on.
+  Loads the actor's current permissions once and checks each concrete record.
+  """
+  def forbidden_entries(_entries, :system, _action), do: []
+
+  def forbidden_entries(entries, actor, action) do
+    if Engine.enabled?() do
+      snapshot = Engine.snapshot(actor_scope(actor))
+      Enum.reject(entries, &Engine.can?(snapshot, action, &1))
+    else
+      actor = fresh_role(actor)
+      Enum.reject(entries, &(legacy_authorize(actor, action, &1) == :ok))
+    end
+  end
+
+  @doc """
   Whether `actor` is a legacy `:user` account as stored now: it reads and
   exports, and writes nothing but its own profile. Always false with groups,
   where `Engine` answers per permission. `BrandoAdmin.Authorization.Events`
