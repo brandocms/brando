@@ -985,6 +985,19 @@
     }
   }
 
+  /* The Apache option: a checkbox with what it does under it */
+  .publishing-htaccess-option {
+    display: grid;
+    gap: 6px;
+
+    > p {
+      margin: 0;
+      padding-left: 21px;
+      font-size: var(--brando-text-sm);
+      color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    }
+  }
+
   /* The site's SSH access: its key, the test and what the test found */
   .publishing-ssh > p + * {
     margin-top: 24px;

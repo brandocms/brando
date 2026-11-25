@@ -276,4 +276,63 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
     assert on_target(c, "host.html")
     assert unknown(c) == ["host.html"]
   end
+
+  test "for an Apache host, the merged .htaccess arrives, _redirects.json goes, and the block leaves with the option",
+       c do
+    put_files(c.remote, [{".htaccess", "Options -Indexes\n"}])
+    review_and_confirm(c, [".htaccess"])
+    redirects = ~s({"version": 1, "redirects": [{"pattern": "/old$", "target": "/new", "status": 301, "exact": true}]})
+    files = [{"index.html", "1"}, {"_redirects.json", redirects}]
+
+    # Uploaded without the option, so Brando's to delete
+    assert {:ok, _deployed} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    assert on_target(c, "_redirects.json")
+
+    {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{htaccess: true}})
+    build = ready_build(c, files ++ [{".htaccess", "the build's own\n"}])
+    assert {:ok, _deployed} = Deploy.deploy(build, runner: runner(c))
+
+    refute on_target(c, "_redirects.json")
+    htaccess = File.read!(Path.join(c.remote, ".htaccess"))
+    assert String.starts_with?(htaccess, "Options -Indexes\n# BEGIN Brando\n")
+    assert htaccess =~ "RewriteRule ^ /new? [R=301,NE,L]\n"
+    refute htaccess =~ "the build's own"
+    assert File.read!(Path.join(build.build_path, ".htaccess")) == "the build's own\n"
+
+    # The host adds a line after the block; the option goes
+    File.write!(Path.join(c.remote, ".htaccess"), htaccess <> "Header set X-Host 1\n")
+    {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{htaccess: false}})
+    assert {:ok, _deployed} = c |> ready_build([{"index.html", "2"}]) |> Deploy.deploy(runner: runner(c))
+
+    assert File.read!(Path.join(c.remote, ".htaccess")) == "Options -Indexes\nHeader set X-Host 1\n"
+    assert unknown(c) == []
+  end
+
+  test "with the option, the build's own .htaccess stays off the target when the merge is already there", c do
+    put_files(c.remote, [{".htaccess", "Options -Indexes\n"}])
+    review_and_confirm(c, [".htaccess"])
+    {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{htaccess: true}})
+    files = [{"index.html", "1"}, {".htaccess", "the build's own\n"}]
+
+    assert {:ok, first} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    merged = File.read!(Path.join(c.remote, ".htaccess"))
+    assert String.starts_with?(merged, "Options -Indexes\n# BEGIN Brando\n")
+    assert first.build_log =~ "with Brando's block, was"
+
+    assert {:ok, second} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    assert File.read!(Path.join(c.remote, ".htaccess")) == merged
+    # Nothing was sent this time, and the log does not say something was
+    assert second.build_log =~ "The build's own .htaccess was not uploaded"
+    refute second.build_log =~ "with Brando's block, was"
+  end
+
+  test "a review that finds Brando's block on the target has it removed with the option off", c do
+    block = "# BEGIN Brando\nRewriteRule ^old$ /new [R=301,L]\n# END Brando\n"
+    put_files(c.remote, [{".htaccess", "Options -Indexes\n" <> block}])
+    review_and_confirm(c, [".htaccess"])
+
+    assert {:ok, _deployed} = c |> ready_build([{"index.html", "1"}]) |> Deploy.deploy(runner: runner(c))
+
+    assert File.read!(Path.join(c.remote, ".htaccess")) == "Options -Indexes\n"
+  end
 end

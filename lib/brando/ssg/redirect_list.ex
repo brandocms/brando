@@ -113,7 +113,7 @@ defmodule Brando.SSG.RedirectList do
     case ValidSource.compile(from) do
       {:ok, _regex} ->
         target = if code == 410 or is_nil(to), do: nil, else: Brando.HTML.replace_timestamp(to)
-        source_entry(source(from), from, target, code, language, built)
+        source_entry(path(from), from, target, code, language, built)
 
       :error ->
         []
@@ -188,10 +188,14 @@ defmodule Brando.SSG.RedirectList do
 
   defp trim_slash(path), do: "/" <> Enum.join(String.split(path, "/", trim: true), "/")
 
-  # `{path, exact?}` when `from` is a path: plain characters, characters
-  # escaped as `Regex.escape/1` and `Redirects.exact_source/1` escape them, and
-  # `:name` segments, with an optional `$` at its end. Nil for anything else.
-  defp source(from) do
+  @doc """
+  The path a redirect's `from` matches, as `{path, exact?}`, when `from` is
+  one: plain characters, characters escaped as `Regex.escape/1` and
+  `Redirects.exact_source/1` escape them, and `:name` segments, with an
+  optional `$` at its end (`exact?`). Nil for anything else.
+  """
+  @spec path(String.t()) :: {String.t(), boolean()} | nil
+  def path(from) do
     {body, exact?} =
       if String.ends_with?(from, "$") and not String.ends_with?(from, "\\$"),
         do: {String.slice(from, 0..-2//1), true},

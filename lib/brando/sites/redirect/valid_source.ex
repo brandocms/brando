@@ -6,6 +6,9 @@ defmodule Brando.Sites.Redirect.ValidSource do
   use Brando.Trait
   use Gettext, backend: Brando.Gettext
 
+  # What a `:name` segment matches
+  @segment "[a-z0-9_-]+"
+
   def changeset_mutator(_module, _config, changeset, _user, _opts) do
     Ecto.Changeset.validate_change(changeset, :from, fn :from, from ->
       case compile(from) do
@@ -24,18 +27,25 @@ defmodule Brando.Sites.Redirect.ValidSource do
   """
   @spec compile(String.t()) :: {:ok, Regex.t()} | :error
   def compile(from) when is_binary(from) do
-    "^#{from}"
-    |> String.split("/")
-    |> Enum.map_join("/", fn
-      ":" <> segment -> "(?<#{segment}>[a-z0-9\-\_]+)"
-      segment -> segment
-    end)
-    |> Regex.compile()
-    |> case do
+    case from |> expand() |> Regex.compile() do
       {:ok, regex} -> {:ok, regex}
       {:error, _reason} -> :error
     end
   end
 
   def compile(_from), do: :error
+
+  @doc """
+  The regular expression `compile/1` compiles for `from`, as text: `from`
+  after `^`, with each segment that begins with `:` a named group.
+  """
+  @spec expand(String.t()) :: String.t()
+  def expand(from) when is_binary(from) do
+    "^#{from}"
+    |> String.split("/")
+    |> Enum.map_join("/", fn
+      ":" <> segment -> "(?<#{segment}>#{@segment})"
+      segment -> segment
+    end)
+  end
 end

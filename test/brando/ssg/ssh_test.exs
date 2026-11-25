@@ -450,7 +450,8 @@ defmodule Brando.SSG.SSHTest do
     end
 
     test "snapshots the target and port, and nothing read when it runs", c do
-      {:ok, build} = Builds.request_build(c.site, c.environment, [])
+      {:ok, site} = Registry.update_site(c.site, %{deploy_config: %{htaccess: true}})
+      {:ok, build} = Builds.request_build(site, c.environment, [])
 
       stored =
         Brando.Repo.one!(

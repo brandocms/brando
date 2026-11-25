@@ -24,7 +24,11 @@ defmodule Brando.Sites.DeployConfig do
   An rsync deploy mirrors the build with `--delete`, deleting only what
   Brando uploaded or an admin confirmed and never a path on `:keep_paths`
   (`Brando.SSG.TargetReview`): relative paths, a directory's ending in `/`,
-  `.well-known/` and `cgi-bin/` unless changed, at most 100. Anyone who may
+  `.well-known/` and `cgi-bin/` unless changed, at most 100. With
+  `:htaccess`, for an Apache or LiteSpeed host, a deploy writes the build's
+  redirects, 404 page and caching into Brando's block in the target's
+  `.htaccess` and leaves `_redirects.json` out (`Brando.SSG.TargetHtaccess`).
+  Anyone who may
   deploy can set the target, so it is held
   to that remote form: no local paths, no loopback hosts, no `..` in the
   path, no rsync daemon or URL syntax, and no user or host that rsync or ssh
@@ -114,9 +118,10 @@ defmodule Brando.Sites.DeployConfig do
     field :auto_deploy, :boolean, default: false
     field :retention_count, :integer, default: 10
     field :keep_paths, {:array, :string}, default: [".well-known/", "cgi-bin/"]
+    field :htaccess, :boolean, default: false
   end
 
-  @fields [:strategy, :target, :port, :cdn_url, :webhook_url, :auto_deploy, :retention_count, :keep_paths]
+  @fields [:strategy, :target, :port, :cdn_url, :webhook_url, :auto_deploy, :retention_count, :keep_paths, :htaccess]
 
   @keep_paths_limit 100
 

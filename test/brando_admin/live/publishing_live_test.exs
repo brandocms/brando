@@ -547,6 +547,18 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       refute has_element?(view, ~s(#static-deploy-config input[name="deploy[port]"]))
     end
 
+    test "the Apache option shows for rsync alone, off until it is saved on", context do
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+      refute has_element?(view, ~s(#static-deploy-config input[name="deploy[htaccess]"][checked]))
+
+      view |> form("#static-deploy-config", deploy: %{htaccess: "true"}) |> render_submit()
+      assert Registry.get_site(context.site.id).deploy_config.htaccess
+      assert has_element?(view, ~s(#static-deploy-config input[name="deploy[htaccess]"][checked]))
+
+      render_change(view, "change_deploy_config", %{"deploy" => %{"strategy" => "s3"}})
+      refute has_element?(view, ~s(#static-deploy-config input[name="deploy[htaccess]"]))
+    end
+
     test "rotating asks first, and says the old key stays on the host", context do
       Brando.SSG.SSH.ensure_key(context.site, context.current_user)
       {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
@@ -737,6 +749,20 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
 
       assert Builds.get_build(build.id).status == :deployed
       assert %{uploaded: ["index.html"], confirmed: []} = state(context)
+    end
+
+    test "a review ticks the host's .htaccess to keep", context do
+      Agent.update(context.listed, fn _ -> [".htaccess", "old.html"] end)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      test_connection(view)
+      assert has_element?(view, ~s{#target-files input[value=".htaccess"][checked]:not([disabled])})
+      assert has_element?(view, ~s{#target-files input[value="old.html"]:not([checked])})
+
+      view |> element("#publishing-review button[phx-click=confirm_target_review]") |> render_click()
+
+      assert %{reviewed: true, confirmed: ["old.html"]} = state(context)
+      assert ".htaccess" in Registry.get_site(context.site.id).deploy_config.keep_paths
     end
 
     test "unknown files are kept, or deleted by a deploy of the build deployed when it runs", context do

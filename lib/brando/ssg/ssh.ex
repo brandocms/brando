@@ -438,6 +438,38 @@ defmodule Brando.SSG.SSH do
       if error.original == :enoent, do: {:error, {:program_missing, program}}, else: reraise(error, __STACKTRACE__)
   end
 
+  @doc """
+  Runs `fun` with a directory of its own under the system's temporary
+  directory: made new under a random name, so one another account made
+  ahead is refused, entered by this account alone, and removed after.
+  `{:error, {:temporary_dir, reason}}` when it cannot be made.
+  """
+  @spec with_temporary_dir(String.t(), (String.t() -> result)) :: result | {:error, {:temporary_dir, term()}}
+        when result: term()
+  def with_temporary_dir(prefix, fun) do
+    dir = Path.join(System.tmp_dir!(), "#{prefix}-#{Base.url_encode64(:crypto.strong_rand_bytes(12))}")
+
+    case File.mkdir(dir) do
+      :ok ->
+        try do
+          # Made with the process's umask: what another account put in
+          # before the mode closed it is refused, not read
+          with :ok <- File.chmod(dir, 0o700),
+               {:ok, []} <- File.ls(dir) do
+            fun.(dir)
+          else
+            {:ok, _planted} -> {:error, {:temporary_dir, :not_empty}}
+            {:error, reason} -> {:error, {:temporary_dir, reason}}
+          end
+        after
+          File.rm_rf(dir)
+        end
+
+      {:error, reason} ->
+        {:error, {:temporary_dir, reason}}
+    end
+  end
+
   ## Who acts, and what is said
 
   # The site as stored, for someone who may change where it deploys

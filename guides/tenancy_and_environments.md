@@ -2740,9 +2740,10 @@ in the build is still uploaded. The list stays when the target changes.
 **Before the first deploy to a target**, review it. Once **Test connection**
 connects, it lists everything the target holds (a dry run with `--delete`
 from an empty directory, which deletes nothing) and fetches a `.htaccess` at
-its root to show (up to 32 KB). The screen shows the top-level entries with
-the number of files in each, those the keep list covers ticked: tick what else
-to keep, add deeper paths to the keep list, and press **Confirm**. Ticked
+its root to show (up to 256 KB). The screen shows the top-level entries with
+the number of files in each, those the keep list covers and a `.htaccess`
+ticked: tick what else to keep, add deeper paths to the keep list, and press
+**Confirm**. Ticked
 entries go on the keep list (a ticked name with characters the list does not
 take is not confirmed, so it stays, but it shows again among the unknown
 files); the first deploy deletes the rest.
@@ -2793,6 +2794,83 @@ in the moment between the listing and the run is the one thing a deploy can
 still replace. A target that holds more than 100,000 paths cannot be deployed
 to: each deploy lists the whole target first, and refuses with a build-log line
 that says how many paths it found.
+
+### Apache and LiteSpeed targets
+
+Apache and LiteSpeed serve files and nothing else: without help, the build's
+redirects answer 404, a missing path gets the server's own 404 page instead of
+the build's `404.html`, and `_redirects.json` is served to anyone who asks.
+Tick **The host is Apache or LiteSpeed** beside the rsync target, and save:
+each deploy then writes what the installation would answer for the build into
+Brando's block in the `.htaccess` at the target's root, and leaves
+`_redirects.json` out. The option is read from the site when the deploy runs,
+so the same build deploys with it or without it, and the build itself is not
+changed.
+
+The file is the host's, the block is Brando's. As the last step before the
+real run, the deploy fetches the target's `.htaccess` (none is fine, up to
+256 KB) and replaces what is between `# BEGIN Brando` and `# END Brando`, or
+adds the block after the host's lines when there is none. Every other line
+is written back byte for byte, and the file keeps its mode (0644 when it is
+new). The deploy stops, with nothing copied, when the fetch fails for
+another reason than there being no file, when the file is larger than 256 KB,
+a link or a directory, when the file with Brando's block would be larger than
+256 KB (a later deploy could not fetch it again; the block takes about 90
+bytes a redirect, so that is some 2,800 redirects with no host lines), or when a `# BEGIN Brando`
+line has no `# END Brando` after it. A build with a `.htaccess` of its own has the merged file uploaded
+instead, or nothing when the target's file is the merge already, and its log
+says so. The merged file is never among the files
+Brando uploaded, so no deploy deletes it, and it is not listed among the
+unknown files. A `_redirects.json` an earlier deploy uploaded is deleted.
+
+The block holds:
+
+- `ErrorDocument 404 /404.html`, when the build has a 404 page;
+- the redirect list as rewrite rules, in its order: `:name` segments, rules
+  that are not exact, a page of the build winning over such a rule, 410 for
+  a gone path, each rule only for paths in its language, and the request's
+  query dropped unless the target has its own, as the installation answers
+  them. A redirect that cannot be written safely is left out, with a line in
+  the build's log: a relative target, a target or pattern with characters
+  `.htaccess` cannot hold, a pattern Apache's regular expressions would read
+  otherwise;
+- `Cache-Control: no-cache` for every answer, and a year's immutable caching
+  for the files the build's Vite manifest lists.
+
+The rules are inside `<IfModule mod_rewrite.c>` and the headers inside
+`<IfModule mod_headers.c>`, so a host without one of the modules serves the
+site without that part instead of answering 500.
+
+Turn the option off, and the next deploy removes the block and leaves the
+host's lines (the target's state remembers that a block was written, or that
+the review found one); a file left with nothing else in it is deleted, or
+left empty when the keep list holds `.htaccess`. A build with a `.htaccess` of its own then replaces the
+host's file, as any other file of the build.
+
+Where the host answers differently from the installation:
+
+- a host that forbids these directives in `.htaccess` (`AllowOverride`)
+  answers 500 for every path: open the site after the first deploy with the
+  option on;
+- a rewrite in the host's own lines that answers every request, such as a
+  CMS's front controller, answers before Brando's redirects;
+- an edit the host makes to `.htaccess` in the seconds between the fetch and
+  the upload is lost;
+- the block takes the target directory to be the document root: the 404
+  page is `/404.html`, and the check that a page of the build wins over a
+  rule looks under the document root;
+- the check that a page wins over a rule that is not exact asks whether the
+  file exists on the host, so a file only the host has, such as a kept
+  `legacy/index.html`, wins too where the installation would redirect;
+- an encoded slash (`%2F`) in a path is a 404 before any rule runs, and a
+  directory's path without its trailing slash is first redirected to the
+  path with one;
+- immutable caching matches by file name, so a file of the same name in
+  another directory gets it too, and `?vsn=` in a request does not make a
+  file immutable.
+
+The block was checked against Apache 2.4; LiteSpeed reads the same
+directives, but was not checked.
 
 ### A site's allowed deploy targets
 
@@ -2915,7 +2993,9 @@ For whoever serves the file:
   (`/about` to `/about?lang=en`) is left out, since a host matching on the
   path would answer it in a loop; the build's log names it.
 Brando follows these facts itself when it serves the build
-([Served by this installation](#served-by-this-installation)). Feed the list
+([Served by this installation](#served-by-this-installation)), and writes them
+into `.htaccess` for an Apache or LiteSpeed host
+([Apache and LiteSpeed targets](#apache-and-litespeed-targets)). Feed the list
 to any other host as its redirect rules. For a host that reads
 Netlify's `_redirects` format, write one line per entry with a `source`, as
 `source target status`; an entry that is not exact also gets a line for
