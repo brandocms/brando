@@ -7,6 +7,14 @@ defmodule Brando.Worker.SSGBuild do
   its count of pages, then ready, deployed or failed. Its deploys and
   rollbacks (`Brando.Worker.SSGDeploy`) report under the same key. The work
   is global: builds belong to no one site's admin.
+
+  A build with `auto_deploy` owes its deploy once it is ready: an attempt
+  that finds it ready, its deploy neither done nor given up, deploys it (the
+  one before stopped in between). The deploy is skipped when a build that
+  started later is the deployed one by then, or when the build's Markdown
+  publication was superseded, and the build then owes nothing. A failed
+  build, and a deploy that failed, are recorded and told to the
+  environment's `failed_job` routes (`Brando.SSG.Publishing`).
   """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3, unique: [period: :infinity, fields: [:args]]
@@ -16,6 +24,7 @@ defmodule Brando.Worker.SSGBuild do
   alias Brando.SSG.Builds
   alias Brando.SSG.ContentChanges
   alias Brando.SSG.Deploy
+  alias Brando.SSG.Publishing
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetReview
   alias BrandoAdmin.Work
@@ -72,6 +81,9 @@ defmodule Brando.Worker.SSGBuild do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id} = args}) do
     case Builds.get_build(build_id) do
+      %Build{status: :ready, auto_deploy: true, deploy_failed_at: nil} = build ->
+        deploy_owed(build)
+
       %Build{site: %{status: status}} = build when status != :active ->
         cancel_unbuildable(build, :site_not_active)
 
@@ -128,7 +140,18 @@ defmodule Brando.Worker.SSGBuild do
     end
   end
 
+  # A build that is ready stays ready: a problem in or before its deploy is
+  # a failed deploy. One raised goes to Oban, whose retry deploys what the
+  # build owes, and which records the deploy as given up after the last.
   defp run_build(build) do
+    case build_ready(build) do
+      {:ok, ready} -> deploy_and_finish(ready)
+      {:error, reason, result} -> fail_build(build, reason, result)
+      {:error, reason} -> fail_build(build, reason, %{})
+    end
+  end
+
+  defp build_ready(build) do
     report(build, fn user, key ->
       Work.update(user, key, gettext("Building static version %{version}", version: build.version), global: true)
     end)
@@ -139,20 +162,45 @@ defmodule Brando.Worker.SSGBuild do
              started_at: build.started_at || ContentChanges.now(),
              build_log: build.build_log <> log_line(build_start_message(build))
            }),
-         result <- call_builder(building),
-         {:ok, ready} <- finish_build(building, result),
-         {:ok, final} <- maybe_deploy(ready),
-         :ok <- prune_and_log(final) do
-      report(final, &Work.finish(&1, &2, ready_message(final), global: true))
-      :ok
-    else
-      {:error, {:deploy_failed, reason}, ready} -> record_deploy_failure(ready, reason)
-      {:error, reason, result} -> fail_build(build, reason, result)
-      {:error, reason} -> fail_build(build, reason, %{})
+         result <- call_builder(building) do
+      finish_build(building, result)
     end
   rescue
-    exception ->
-      fail_build(build, {:exception, Exception.message(exception)}, %{})
+    exception -> {:error, {:exception, Exception.message(exception)}}
+  end
+
+  # A retry, or an attempt after one that stopped once the build was ready
+  defp deploy_owed(%Build{site: %{status: status}} = build) when status != :active,
+    do: record_deploy_failure(build, :site_not_active)
+
+  defp deploy_owed(%Build{environment: nil} = build), do: record_deploy_failure(build, :environment_not_found)
+  defp deploy_owed(build), do: deploy_and_finish(build)
+
+  defp deploy_and_finish(ready) do
+    case maybe_deploy(ready) do
+      {:ok, final} ->
+        finish(final)
+
+      {:error, reason} when reason in [:superseded, :markdown_publication_superseded] ->
+        {:ok, ready} =
+          Builds.update(ready, %{auto_deploy: false, build_log: ready.build_log <> log_line(skipped_message(reason))})
+
+        finish(ready)
+
+      {:error, reason} ->
+        record_deploy_failure(ready, reason)
+    end
+  end
+
+  defp skipped_message(:superseded), do: "Not deployed: a build that started later was deployed meanwhile"
+
+  defp skipped_message(:markdown_publication_superseded),
+    do: "Not deployed: its Markdown publication was superseded by a newer build or a change to the source"
+
+  defp finish(build) do
+    :ok = prune_and_log(build)
+    report(build, &Work.finish(&1, &2, ready_message(build), global: true))
+    :ok
   end
 
   defp call_builder(build) do
@@ -194,12 +242,8 @@ defmodule Brando.Worker.SSGBuild do
   defp finish_build(_build, {:error, reason}), do: {:error, reason}
   defp finish_build(_build, result), do: {:error, {:invalid_builder_result, result}}
 
-  defp maybe_deploy(%Build{auto_deploy: true} = build) do
-    case Deploy.deploy(build, creator_id: build.creator_id) do
-      {:ok, deployed} -> {:ok, deployed}
-      {:error, reason} -> {:error, {:deploy_failed, reason}, build}
-    end
-  end
+  defp maybe_deploy(%Build{auto_deploy: true} = build),
+    do: Deploy.deploy(build, creator_id: build.creator_id, unless_superseded: true)
 
   defp maybe_deploy(build), do: {:ok, build}
 
@@ -221,6 +265,7 @@ defmodule Brando.Worker.SSGBuild do
 
   defp record_deploy_failure(build, reason) do
     Builds.append_log(build, automatic_deploy_log(reason))
+    Publishing.deploy_failed(build)
 
     report(build, fn user, key ->
       Work.fail(user, key, gettext("Static build %{version} is ready, but deployment failed", version: build.version),
@@ -228,7 +273,8 @@ defmodule Brando.Worker.SSGBuild do
       )
     end)
 
-    {:error, {:deploy_failed, reason}}
+    # The build is done; another attempt would not deploy it
+    {:cancel, {:deploy_failed, reason}}
   end
 
   # As the deploy job logs it (`Brando.Worker.SSGDeploy`): what a remote host
@@ -261,6 +307,7 @@ defmodule Brando.Worker.SSGBuild do
     case Builds.update(current, attrs) do
       {:ok, failed} ->
         report_failed(failed)
+        Publishing.notify_failed(failed, :build)
         {:error, reason}
 
       {:error, changeset} ->
@@ -304,11 +351,13 @@ defmodule Brando.Worker.SSGBuild do
   end
 
   defp cancel_unbuildable(build, reason) do
-    Builds.update(build, %{
-      status: :failed,
-      built_at: DateTime.utc_now(),
-      build_log: build.build_log <> log_line("Build cancelled: #{cancel_message(reason)}")
-    })
+    with {:ok, failed} <-
+           Builds.update(build, %{
+             status: :failed,
+             built_at: DateTime.utc_now(),
+             build_log: build.build_log <> log_line("Build cancelled: #{cancel_message(reason)}")
+           }),
+         do: Publishing.notify_failed(failed, :build)
 
     report(build, fn user, key ->
       Work.fail(user, key, gettext("Static build %{version} was cancelled", version: build.version), global: true)

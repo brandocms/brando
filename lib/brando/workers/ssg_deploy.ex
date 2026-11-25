@@ -10,38 +10,101 @@ defmodule Brando.Worker.SSGDeploy do
   site's deployed one when the job runs, so a newer deploy queued before it
   stays live (`Brando.SSG.TargetReview.delete_unknown/4`), and nothing when
   another build became the deployed one while it waited for the deploy lock.
+
+  `"unless_superseded" => true` (the Publish button, `Brando.SSG.Publishing`)
+  deploys nothing when a build that started later is the deployed one by the
+  time the job runs. A Markdown publication's build deploys nothing once the
+  publication is superseded; the build then owes no deploy. Neither is a
+  failure.
+
+  A deploy that gives up (refused, or failed on its last attempt) records it
+  on the build (`deploy_failed_at`, cleared when the next deploy of it
+  starts) and tells the environment's `failed_job` routes
+  (`Brando.SSG.Publishing.deploy_failed/1`).
   """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
+  alias Brando.SSG.Publishing
   alias Brando.SSG.SSH
   alias Brando.SSG.TargetReview
+
+  @doc "What a deploy or rollback job of `version` reports (`BrandoAdmin.Work.track/4`)."
+  @spec work_messages(String.t(), String.t()) :: keyword()
+  def work_messages("deploy", version) do
+    [
+      queued: gettext("Deploy of %{version} is queued", version: version),
+      running: gettext("Deploying %{version}", version: version),
+      done: gettext("%{version} is deployed", version: version),
+      failed: gettext("Could not deploy %{version}", version: version)
+    ]
+  end
+
+  def work_messages("rollback", version) do
+    [
+      queued: gettext("Rollback to %{version} is queued", version: version),
+      running: gettext("Rolling back to %{version}", version: version),
+      done: gettext("Rolled back to %{version}", version: version),
+      failed: gettext("Could not roll back to %{version}", version: version)
+    ]
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args} = job)
       when action in ["deploy", "rollback"] do
     case Builds.get_build(build_id) do
-      %Build{} = build -> action |> run(build, args["creator_id"]) |> outcome(build, job)
-      nil -> {:cancel, :build_not_found}
+      %Build{} = build ->
+        build = Publishing.deploy_started(build)
+        action |> run(build, args) |> outcome(build, job) |> given_up(build, job)
+
+      nil ->
+        {:cancel, :build_not_found}
     end
   end
 
   def perform(%Oban.Job{args: %{"site_id" => site_id, "action" => "redeploy"} = args} = job) do
     case Builds.deployed_build(site_id) do
-      %Build{} = build -> "redeploy" |> run(build, args["creator_id"]) |> outcome(build, job)
-      nil -> {:cancel, :no_deployed_build}
+      %Build{} = build ->
+        build = Publishing.deploy_started(build)
+        "redeploy" |> run(build, args) |> outcome(build, job) |> given_up(build, job)
+
+      nil ->
+        {:cancel, :no_deployed_build}
     end
   end
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
 
-  defp run("deploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id)
-  defp run("rollback", build, creator_id), do: Deploy.rollback(build.site, build, creator_id: creator_id)
-  defp run("redeploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id, only_if_deployed: true)
+  defp run("deploy", build, args),
+    do: Deploy.deploy(build, creator_id: args["creator_id"], unless_superseded: args["unless_superseded"] == true)
+
+  defp run("rollback", build, args), do: Deploy.rollback(build.site, build, creator_id: args["creator_id"])
+
+  defp run("redeploy", build, args),
+    do: Deploy.deploy(build, creator_id: args["creator_id"], only_if_deployed: true)
+
+  # None is a failure: the site online, or the publication, is newer than this build
+  defp given_up({:cancel, reason} = result, _build, _job)
+       when reason in [:build_no_longer_deployed, :superseded, :markdown_publication_superseded],
+       do: result
+
+  defp given_up({:cancel, _reason} = result, build, _job), do: deploy_failed(result, build)
+
+  defp given_up({:error, _reason} = result, build, %Oban.Job{attempt: attempt, max_attempts: max})
+       when attempt >= max,
+       do: deploy_failed(result, build)
+
+  defp given_up(result, _build, _job), do: result
+
+  defp deploy_failed(result, build) do
+    Publishing.deploy_failed(build)
+    result
+  end
 
   defp outcome({:ok, _deployed}, _build, _job), do: :ok
 
@@ -50,6 +113,26 @@ defmodule Brando.Worker.SSGDeploy do
     Builds.append_log(build, refused_target_log())
 
     {:cancel, :invalid_deploy_target}
+  end
+
+  # Someone put a build that started later online meanwhile (`Brando.SSG.Publishing`)
+  defp outcome({:error, :superseded}, build, _job) do
+    Builds.append_log(build, "Deployment skipped: a build that started later was deployed meanwhile, and stays live.")
+    {:cancel, :superseded}
+  end
+
+  # The publication queued a newer build, or its source changed: this build
+  # never deploys, and owes no automatic deploy (`Brando.SSG.Publishing`
+  # would read one owed with no job left as failed)
+  defp outcome({:error, :markdown_publication_superseded}, build, _job) do
+    {:ok, build} = Builds.update(build, %{auto_deploy: false})
+
+    Builds.append_log(
+      build,
+      "Deployment skipped: its Markdown publication was superseded by a newer build or a change to the source."
+    )
+
+    {:cancel, :markdown_publication_superseded}
   end
 
   # The newer deploy deleted what was confirmed, or the next one does

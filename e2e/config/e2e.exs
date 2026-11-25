@@ -137,7 +137,8 @@ config :brando, Brando.Content.Definitions, release_path: "/tmp/brando_e2e_#{rel
 # Screenshots of multi-site screens: `BRANDO_E2E_MULTI_SITE=1 scripts/server.sh
 # start` serves two sites (with the `multi-site-hosts` fixture) and keeps a
 # served hosts file whose lookups `E2E.MultiSiteHosts` answers, so no DNS
-# query leaves the machine. Never set for the E2E suite, which is single-site.
+# query leaves the machine. Never set for the E2E suite, which is single-site;
+# the specs under `playwright/tests/multi-site/` run only on such a server.
 if System.get_env("BRANDO_E2E_MULTI_SITE") == "1" do
   instance = String.replace(System.get_env("BRANDO_E2E_INSTANCE", "default"), ~r/[^a-zA-Z0-9_]/, "_")
 
@@ -156,6 +157,9 @@ if System.get_env("BRANDO_E2E_MULTI_SITE") == "1" do
     # The fixture checks when it runs; no timer changes a state mid-shot
     retry_interval: :timer.hours(24),
     recheck_interval: :timer.hours(24)
+
+  # A static site's build writes one page: the project renders none
+  config :brando, :ssg_builder, E2E.StaticBuilder
 end
 
 # Test-only public GitHub provider; requests still traverse the real signed endpoint.

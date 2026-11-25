@@ -3,8 +3,15 @@ defmodule BrandoAdmin.Nav do
   use BrandoAdmin, :child_live_view
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Activity
+  alias Brando.SSG.Build
+  alias Brando.SSG.Builds
+  alias Brando.SSG.ContentChanges
+  alias Brando.SSG.Publishing
   alias Brando.Tenant
   alias Brando.Tenant.Access
+  alias BrandoAdmin.Authorization, as: AdminAuthorization
+  alias BrandoAdmin.Components.Activity, as: Events
   alias BrandoAdmin.Components.Content
 
   on_mount {BrandoAdmin.UserAuth, :mount_current_user}
@@ -21,6 +28,8 @@ defmodule BrandoAdmin.Nav do
       |> assign_tenant_options()
       |> assign_brand()
       |> assign_menu_sections()
+      |> assign(publish_topic: nil, publish_panel: nil)
+      |> assign_publish()
       |> then(&{:ok, &1})
     else
       # The first render already has the user (`:mount_current_user`), so it
@@ -33,6 +42,8 @@ defmodule BrandoAdmin.Nav do
       |> assign_tenant_options()
       |> assign_brand()
       |> assign_menu_sections()
+      |> assign(publish_topic: nil, publish_panel: nil)
+      |> assign_publish()
       |> then(&{:ok, &1})
     end
   end
@@ -84,6 +95,7 @@ defmodule BrandoAdmin.Nav do
     socket
     |> assign_tenant_options()
     |> assign_menu_sections()
+    |> assign_publish(reload_panel: true)
   end
 
   def subscribe(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
@@ -94,6 +106,333 @@ defmodule BrandoAdmin.Nav do
 
   def subscribe(socket) do
     socket
+  end
+
+  ## Publish
+
+  # The Publish button (`Brando.SSG.Publishing`), under the switcher: for
+  # those who may build and deploy the current site when it is static, has a
+  # deploy target and publishes from the current environment. Its state is
+  # read when the navigation mounts, and again when a build of the site, the
+  # environment's content, the user's grants or the site's row change: at
+  # most five reads, none for a dynamic site or a user without the grants.
+  # The navigation listens to the site's builds also while the button is
+  # hidden: a deploy elsewhere can make this the environment it publishes from.
+  defp assign_publish(socket, opts \\ []) do
+    site = socket.assigns[:current_site]
+    environment = socket.assigns[:current_environment]
+
+    if publish_watch?(site, environment) and may_publish?(socket, site) do
+      publish = publish_status(site, environment)
+      reload? = opts[:reload_panel] || moved?(socket.assigns[:publish], publish)
+      socket = socket |> watch_publishing(site) |> assign(:publish, publish)
+      if reload?, do: reload_panel(socket), else: socket
+    else
+      socket |> unwatch_publishing() |> assign(publish: nil, publish_panel: nil)
+    end
+  end
+
+  # Shown when the site has somewhere to deploy to and publishes from here
+  defp publish_status(site, environment) do
+    with true <- Builds.deploy_target?(site),
+         %{} = status <- Publishing.status(site, environment) do
+      status
+    else
+      _hidden -> nil
+    end
+  end
+
+  defp publish_watch?(%{status: :active, delivery_mode: :static}, %{}), do: true
+  defp publish_watch?(_site, _environment), do: false
+
+  # With groups, from the grants this view already holds
+  defp may_publish?(socket, site) do
+    if Brando.Authorization.enabled?(),
+      do: AdminAuthorization.allowed?(:build, :publishing) and AdminAuthorization.allowed?(:deploy, :publishing),
+      else: Builds.can_manage?(socket.assigns.current_user, site)
+  end
+
+  defp watch_publishing(socket, site) do
+    topic = Builds.topic(site)
+
+    if not connected?(socket) or socket.assigns.publish_topic == topic do
+      socket
+    else
+      socket = unwatch_publishing(socket)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), topic)
+      assign(socket, :publish_topic, topic)
+    end
+  end
+
+  defp unwatch_publishing(%{assigns: %{publish_topic: nil}} = socket), do: socket
+
+  defp unwatch_publishing(socket) do
+    Phoenix.PubSub.unsubscribe(Brando.pubsub(), socket.assigns.publish_topic)
+    assign(socket, :publish_topic, nil)
+  end
+
+  defp moved?(%{state: state} = previous, %{state: state} = current),
+    do: publish_build_id(previous) != publish_build_id(current)
+
+  defp moved?(_previous, _current), do: true
+
+  defp publish_build_id(%{build: %Build{id: id}}), do: id
+  defp publish_build_id(_publish), do: nil
+
+  # A panel once opened is read again when the state moves on; opening it
+  # reads it afresh
+  defp reload_panel(%{assigns: %{publish_panel: nil}} = socket), do: socket
+  defp reload_panel(socket), do: load_panel(socket)
+
+  @panel_events 20
+
+  # Not changes a build puts online (`Brando.SSG.ContentChanges`)
+  @not_changes [:tool_called, :note_added, :note_resolved, :note_reopened]
+
+  defp load_panel(%{assigns: %{publish: nil}} = socket), do: assign(socket, :publish_panel, nil)
+
+  defp load_panel(%{assigns: %{publish: publish}} = socket) do
+    panel =
+      Brando.Authorization.with_snapshots(fn ->
+        Map.merge(
+          %{configure?: may_configure?(socket), read?: may_read_publishing?()},
+          panel(publish, socket)
+        )
+      end)
+
+    assign(socket, :publish_panel, panel)
+  end
+
+  # What will go out: the events of the kinds the user may read since the
+  # deployed build started, newest first, counted with the same filters
+  defp panel(%{state: :changes, deployed: deployed}, socket) do
+    filters =
+      Map.merge(Events.readable_filters(), %{
+        since: deployed && (deployed.started_at || deployed.inserted_at),
+        action_not_in: @not_changes
+      })
+
+    events = Activity.list(filters, limit: @panel_events)
+    count = if length(events) < @panel_events, do: length(events), else: Activity.count(filters)
+
+    %{
+      events: events,
+      rest: count - length(events),
+      states: Events.states(events),
+      preview?: not is_nil(preview_url(%Build{preview_token: ""}, socket))
+    }
+  end
+
+  defp panel(%{state: :ready, build: build}, socket) do
+    %{
+      changed?: ContentChanges.changed_since?(%{build | site: socket.assigns.current_site}),
+      preview_url: if(DateTime.after?(build.preview_expires_at, DateTime.utc_now()), do: preview_url(build, socket))
+    }
+  end
+
+  defp panel(_publish, _socket), do: %{}
+
+  # The build's preview, or the one a build of this environment would get.
+  # A sticky view is not mounted at the router and has no `host_uri`: the
+  # scheme and port are the endpoint's.
+  defp preview_url(build, socket) do
+    build = %{build | environment: socket.assigns.current_environment}
+    Builds.preview_url(build, socket.assigns.current_site, Brando.endpoint().struct_url())
+  end
+
+  defp may_configure?(socket) do
+    if Brando.Authorization.enabled?(),
+      do: AdminAuthorization.allowed?(:configure, :publishing),
+      else: Builds.can_configure?(socket.assigns.current_user, socket.assigns.current_site)
+  end
+
+  # Without groups, whoever may publish opens the Publishing screen
+  defp may_read_publishing? do
+    not Brando.Authorization.enabled?() or AdminAuthorization.allowed?(:read, :publishing)
+  end
+
+  defp publish_action(socket, fun) do
+    %{current_site: site, current_environment: environment, current_user: user} = socket.assigns
+    result = if site && environment, do: fun.(site, environment, user), else: {:error, :not_found}
+    socket = assign_publish(socket, reload_panel: true)
+
+    case result do
+      {:ok, _started} ->
+        {:noreply, socket}
+
+      {:error, reason} ->
+        BrandoAdmin.Toast.send_to(user, publish_error(reason), %{level: :error, type: :notification})
+        {:noreply, socket}
+    end
+  end
+
+  defp publish_error(:publishing), do: gettext("Publishing has already started.")
+  defp publish_error(:forbidden), do: gettext("You may not publish this site.")
+
+  defp publish_error(reason) when reason in [:stale, :not_publishing_environment],
+    do: gettext("Nothing was started: publishing changed since the panel opened. It shows what it is now.")
+
+  defp publish_error(_reason), do: gettext("Could not publish the site.")
+
+  defp publish_icon(%{state: :publishing}), do: "loader-circle"
+  defp publish_icon(%{state: :failed}), do: "circle-alert"
+  defp publish_icon(%{state: :ready}), do: "eye"
+  defp publish_icon(%{state: :changes}), do: "cloud-upload"
+  defp publish_icon(%{state: :published}), do: "circle-check"
+
+  defp publish_label(%{state: :publishing}), do: gettext("Publishing")
+  defp publish_label(%{state: :failed}), do: gettext("Publishing failed")
+  defp publish_label(%{state: :ready}), do: gettext("Ready: publish this build")
+  defp publish_label(%{state: :changes}), do: gettext("Publish changes")
+  defp publish_label(%{state: :published}), do: gettext("Published")
+
+  defp publish_detail(%{state: :publishing, step: :waiting}), do: gettext("Waiting for another build")
+  defp publish_detail(%{state: :publishing, step: :deploying}), do: gettext("Deploying")
+
+  defp publish_detail(%{state: :publishing, build: %Build{url_count: total, processed_urls: built}}) when total > 0,
+    do: gettext("%{built} of %{total} pages built", built: built, total: total)
+
+  defp publish_detail(%{state: :publishing}), do: gettext("Building")
+  defp publish_detail(%{state: :failed, failed: :build}), do: gettext("The build failed")
+  defp publish_detail(%{state: :failed, failed: :deploy}), do: gettext("The deploy failed")
+  defp publish_detail(%{state: :ready, build: build}), do: gettext("Build %{version}", version: build.version)
+  defp publish_detail(%{state: :changes, deployed: nil}), do: gettext("Not published yet")
+  defp publish_detail(%{state: :changes}), do: gettext("Unpublished changes")
+  defp publish_detail(%{state: :published, deployed: deployed}), do: Events.when_label(deployed.deployed_at)
+
+  defp publishing_path(%Build{id: id}), do: "/admin/config/publishing#ssg-build-#{id}"
+
+  attr :publish, :map, required: true
+  attr :panel, :map, default: nil
+
+  defp publish(assigns) do
+    ~H"""
+    <div
+      id="publish"
+      class={["publish", "publish--#{@publish.state}"]}
+      phx-hook="Brando.FloatingDropdown"
+      data-open-event="publish_panel"
+    >
+      <button
+        type="button"
+        class="publish__button"
+        popovertarget="publish-panel"
+        aria-expanded="false"
+        data-testid="publish-button"
+      >
+        <.icon name={publish_icon(@publish)} />
+        <span class="publish__copy">
+          <span class="publish__label">{publish_label(@publish)}</span>
+          <span class="publish__detail">{publish_detail(@publish)}</span>
+        </span>
+      </button>
+      <div
+        id="publish-panel"
+        class="publish-panel"
+        popover="auto"
+        role="dialog"
+        aria-label={publish_label(@publish)}
+      >
+        <.publish_panel publish={@publish} panel={@panel} />
+      </div>
+    </div>
+    """
+  end
+
+  attr :publish, :map, required: true
+  attr :panel, :map, default: nil
+
+  defp publish_panel(%{publish: %{state: :changes}} = assigns) do
+    ~H"""
+    <h3 class="publish-panel__title">{gettext("What will go out")}</h3>
+    <p :if={!@panel} class="publish-panel__note">{gettext("Loading the changes…")}</p>
+    <%= if @panel do %>
+      <ul :if={@panel.events != []} class="publish-panel__changes">
+        <li :for={event <- @panel.events} class="publish-change">
+          <span class="publish-change__entry"><Events.entry event={event} states={@panel.states} /></span>
+          <small class="publish-change__meta">
+            {Enum.join([Events.action_label(event), Events.by_phrase(event)], " ")} · {Events.when_label(event.inserted_at)}
+          </small>
+        </li>
+      </ul>
+      <p :if={@panel.events == []} class="publish-panel__note">{gettext("No listed changes.")}</p>
+      <p :if={@panel.rest > 0} class="publish-panel__note" data-rest={@panel.rest}>
+        {ngettext("And 1 more change", "And %{count} more changes", @panel.rest)}
+      </p>
+    <% end %>
+    <p class="publish-panel__note">{gettext("Changes to media and some settings are not listed.")}</p>
+    <div class="publish-panel__actions">
+      <button type="button" class="btn btn--primary" phx-click="publish">{gettext("Publish")}</button>
+      <button :if={@panel && @panel.preview?} type="button" class="btn" phx-click="publish_preview">
+        {gettext("Preview first")}
+      </button>
+    </div>
+    """
+  end
+
+  defp publish_panel(%{publish: %{state: :ready}} = assigns) do
+    ~H"""
+    <h3 class="publish-panel__title">{gettext("Build %{version} is ready", version: @publish.build.version)}</h3>
+    <p class="publish-panel__note">{gettext("It was built without publishing it. Look at the preview, then publish it.")}</p>
+    <div class="publish-panel__actions">
+      <a
+        :if={@panel && @panel.preview_url}
+        class="btn"
+        href={@panel.preview_url}
+        target="_blank"
+        rel="noreferrer"
+      ><.icon name="external-link" />{gettext("Open preview")}</a>
+      <button type="button" class="btn btn--primary" phx-click="publish_build" phx-value-id={@publish.build.id}>
+        {gettext("Publish this build")}
+      </button>
+    </div>
+    <%= if @panel && @panel.changed? do %>
+      <p class="publish-panel__note">{gettext("Changes saved after it was built are not in it.")}</p>
+      <div class="publish-panel__actions">
+        <button type="button" class="btn" phx-click="publish">{gettext("Publish latest changes instead")}</button>
+      </div>
+    <% end %>
+    """
+  end
+
+  defp publish_panel(%{publish: %{state: :publishing}} = assigns) do
+    ~H"""
+    <h3 class="publish-panel__title">{gettext("Publishing")}</h3>
+    <p class="publish-panel__note">{publish_detail(@publish)}</p>
+    <p class="publish-panel__note">
+      {gettext("The site is built, then deployed. Changes saved meanwhile go out with the next publish.")}
+    </p>
+    """
+  end
+
+  defp publish_panel(%{publish: %{state: :failed}} = assigns) do
+    ~H"""
+    <h3 class="publish-panel__title">{gettext("Publishing failed")}</h3>
+    <p :if={@publish.failed == :build} class="publish-panel__note">
+      {gettext("The site could not be built, so nothing was published. The site online is unchanged.")}
+    </p>
+    <p :if={@publish.failed == :deploy} class="publish-panel__note">
+      {gettext("The site was built, but could not be deployed. The site online is unchanged.")}
+    </p>
+    <div class="publish-panel__actions">
+      <button type="button" class="btn btn--primary" phx-click="publish_retry">{gettext("Try again")}</button>
+      <.link :if={@panel && @panel.configure?} class="btn" navigate={publishing_path(@publish.build)}>
+        {gettext("See the build's log")}
+      </.link>
+    </div>
+    """
+  end
+
+  defp publish_panel(%{publish: %{state: :published}} = assigns) do
+    ~H"""
+    <h3 class="publish-panel__title">{gettext("Published")}</h3>
+    <p class="publish-panel__note">
+      {gettext("Build %{version}", version: @publish.deployed.version)} · {Events.when_label(@publish.deployed.deployed_at)}
+    </p>
+    <div :if={@panel && @panel.read?} class="publish-panel__actions">
+      <.link class="btn" navigate="/admin/config/publishing">{gettext("Open Publishing")}</.link>
+    </div>
+    """
   end
 
   attr :environment, :map, required: true
@@ -152,7 +491,9 @@ defmodule BrandoAdmin.Nav do
           |> assign_menu_sections()
       end
 
-    assign(socket, :tenant_sites, tenant_sites(socket.assigns[:current_user], socket.assigns.current_site))
+    socket
+    |> assign(:tenant_sites, tenant_sites(socket.assigns[:current_user], socket.assigns.current_site))
+    |> assign_publish()
   end
 
   defp refresh_from_registry(socket), do: socket
@@ -333,6 +674,7 @@ defmodule BrandoAdmin.Nav do
                 </form>
               </div>
             </details>
+            <.publish :if={@publish} publish={@publish} panel={@publish_panel} />
             <div :if={@current_user} id="current-user" class="current-user" tabindex="0" data-testid="current-user">
               <section class="button">
                 <div class="avatar">
@@ -505,6 +847,21 @@ defmodule BrandoAdmin.Nav do
     {:noreply, socket |> assign(:registry_refresh_pending, false) |> refresh_from_registry()}
   end
 
+  # Progress of the build the button shows reads nothing; anything else
+  # about the site's builds reads the state again
+  def handle_info(
+        {:ssg_build_updated, %Build{id: id, status: :building} = build},
+        %{assigns: %{publish: %{state: :publishing, build: %Build{id: id}} = publish}} = socket
+      ) do
+    {:noreply, assign(socket, :publish, %{publish | build: build, step: :building})}
+  end
+
+  def handle_info({:ssg_build_updated, %Build{}}, socket), do: {:noreply, assign_publish(socket)}
+
+  # A panel once opened lists what changed, and whether a ready build lacks it
+  def handle_info({:ssg_content_changed, id}, %{assigns: %{current_environment: %{id: id}}} = socket),
+    do: {:noreply, assign_publish(socket, reload_panel: true)}
+
   def handle_info(_, socket) do
     {:noreply, socket}
   end
@@ -515,5 +872,22 @@ defmodule BrandoAdmin.Nav do
 
   def handle_event("toggle_nav", %{"minimized" => status}, socket) do
     {:noreply, assign(socket, :minimized, status)}
+  end
+
+  # The panel reads its list when it opens (the hook's `data-open-event`)
+  def handle_event("publish_panel", _params, socket), do: {:noreply, load_panel(socket)}
+
+  def handle_event("publish", _params, socket), do: publish_action(socket, &Publishing.publish/3)
+
+  def handle_event("publish_preview", _params, socket),
+    do: publish_action(socket, &Publishing.publish(&1, &2, &3, deploy: false))
+
+  def handle_event("publish_retry", _params, socket), do: publish_action(socket, &Publishing.retry/3)
+
+  def handle_event("publish_build", %{"id" => id}, socket) do
+    case Integer.parse(to_string(id)) do
+      {build_id, ""} -> publish_action(socket, &Publishing.publish_build(&1, &2, build_id, &3))
+      _invalid -> publish_action(socket, fn _site, _environment, _user -> {:error, :stale} end)
+    end
   end
 end

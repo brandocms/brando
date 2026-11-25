@@ -492,6 +492,10 @@ defmodule Brando.SSG.PreviewHostTest do
       assert Builds.preview_url(stale, context.shop, context.admin) == nil
     end
 
+    test "is nil with a base that is no URI", context do
+      assert Builds.preview_url(context.build, context.shop, "https://admin.test:4443") == nil
+    end
+
     test "is the path with one site or none", context do
       for mode <- [:single, :none] do
         put_test_env(:tenancy_mode, mode)

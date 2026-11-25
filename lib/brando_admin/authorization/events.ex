@@ -351,7 +351,8 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(approve)
     ],
     "BrandoAdmin.Nav" => [
-      read: ~w(toggle toggle_nav)
+      read: ~w(publish_panel toggle toggle_nav),
+      write: ~w(publish publish_build publish_preview publish_retry)
     ],
     "BrandoAdmin.Pages.PageListLive" => [
       read: ~w(create_fragment create_subpage edit_fragment edit_subpage),

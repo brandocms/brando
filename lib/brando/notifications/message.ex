@@ -13,8 +13,10 @@ defmodule Brando.Notifications.Message do
     * for a mention, `"author"` and `"mentioned"` (names); never the note's
       text, nor the text it is anchored to;
     * for a failed job, `"job"` (`"worker"`, `"queue"`, `"attempt"`,
-      `"max_attempts"`, `"error"`), or `"webhook"` (`"name"`, `"host"`,
-      `"admin_url"`) for a webhook delivery that failed for good.
+      `"max_attempts"`, `"error"`), `"webhook"` (`"name"`, `"host"`,
+      `"admin_url"`) for a webhook delivery that failed for good, or
+      `"build"` (`"version"`, `"kind"`, `"admin_url"`) for a static build
+      that failed or whose deploy was given up.
 
   `content/2` words it in a language: a title, a line of text, a link into
   the admin and a context line naming the site and environment. `slack/1`
@@ -117,6 +119,15 @@ defmodule Brando.Notifications.Message do
     {gettext("A webhook stopped: %{name}", name: webhook["name"]),
      gettext("Deliveries to %{host} kept failing for a day, so the webhook was paused.", host: webhook["host"]),
      webhook["admin_url"]}
+  end
+
+  defp words(%{"event" => "failed_job", "build" => %{} = build}) do
+    title =
+      if build["kind"] == "deploy",
+        do: gettext("Publishing failed: %{version} was not deployed", version: build["version"]),
+        else: gettext("Publishing failed: build %{version} failed", version: build["version"])
+
+    {title, gettext("The site online is unchanged. The build's log says why."), build["admin_url"]}
   end
 
   defp words(%{"event" => "failed_job"} = n) do

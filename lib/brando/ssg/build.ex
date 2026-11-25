@@ -48,6 +48,9 @@ defmodule Brando.SSG.Build do
     field :started_at, :utc_datetime_usec
     field :built_at, :utc_datetime_usec
     field :deployed_at, :utc_datetime_usec
+    # When a deploy of it was given up; cleared when one starts again. The
+    # build stays ready.
+    field :deploy_failed_at, :utc_datetime_usec
     field :pruned_at, :utc_datetime_usec
 
     timestamps()
@@ -83,6 +86,7 @@ defmodule Brando.SSG.Build do
     :started_at,
     :built_at,
     :deployed_at,
+    :deploy_failed_at,
     :pruned_at
   ]
 

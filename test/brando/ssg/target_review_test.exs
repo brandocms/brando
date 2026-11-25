@@ -227,7 +227,7 @@ defmodule Brando.SSG.TargetReviewTest do
 
       {:ok, auto} = c.site |> ready_build(c.environment) |> Builds.update(%{status: :queued, auto_deploy: true})
       put_test_env(:ssg_builder, Builder)
-      assert {:error, {:deploy_failed, :target_not_reviewed}} = perform_job(SSGBuild, %{"build_id" => auto.id})
+      assert {:cancel, {:deploy_failed, :target_not_reviewed}} = perform_job(SSGBuild, %{"build_id" => auto.id})
 
       auto = Builds.get_build(auto.id)
       assert auto.status == :ready

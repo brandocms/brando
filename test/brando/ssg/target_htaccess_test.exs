@@ -306,7 +306,7 @@ defmodule Brando.SSG.TargetHtaccessTest do
       {:ok, auto} = c |> ready_build() |> Builds.update(%{status: :queued, auto_deploy: true})
       put_test_env(:ssg_builder, Builder)
 
-      assert {:error, {:deploy_failed, :htaccess_unterminated_block}} =
+      assert {:cancel, {:deploy_failed, :htaccess_unterminated_block}} =
                perform_job(SSGBuild, %{"build_id" => auto.id})
 
       auto = Builds.get_build(auto.id)

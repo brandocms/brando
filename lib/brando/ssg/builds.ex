@@ -134,6 +134,8 @@ defmodule Brando.SSG.Builds do
       with %URI{} = uri <- base_uri,
            host when is_binary(host) <- preview_domain(build, site) do
         URI.to_string(%{uri | host: host, path: path, query: nil, fragment: nil})
+      else
+        _none -> nil
       end
     else
       path

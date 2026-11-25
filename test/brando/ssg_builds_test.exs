@@ -329,12 +329,15 @@ defmodule Brando.SSGBuildsTest do
     put_test_env(:ssg_builder, SuccessfulBuilder)
     put_test_env(:ssg_deploy_runner, fn "rsync", _args, _opts -> {"connection refused", 255} end)
 
-    assert {:error, {:deploy_failed, {:rsync_failed, 255, "connection refused"}}} =
+    assert {:cancel, {:deploy_failed, {:rsync_failed, 255, "connection refused"}}} =
              perform_job(SSGBuild, %{"build_id" => build.id})
 
     ready = Builds.get_build(build.id)
     assert ready.status == :ready
     assert ready.build_log =~ "Automatic deployment failed"
+    # Given up: another attempt of the build's job does not deploy it again
+    assert %DateTime{} = ready.deploy_failed_at
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
   end
 
   test "deploys automatically by the site's setting when the request does not say", context do

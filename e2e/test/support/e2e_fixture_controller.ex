@@ -358,6 +358,9 @@ defmodule E2EFixtureController do
         "multi-site-static-published" ->
           MultiSiteHosts.setup(get_admin_user(), published: true)
 
+        "multi-site-publish-" <> state when state in ~w(changes ready failed publishing) ->
+          MultiSiteHosts.setup(get_admin_user(), published: true, publish: String.to_existing_atom(state))
+
         "multi-site-static-no-preview-host" ->
           MultiSiteHosts.setup(get_admin_user(), published: true, no_preview_host: true)
 

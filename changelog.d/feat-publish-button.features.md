@@ -1,0 +1,3 @@
+- A static site's navigation has a Publish button under the site switcher, for those who may build and deploy: it shows whether the environment the site publishes from has unpublished changes, lists what will go out, and builds and deploys in one step, with a preview first, the build's progress, and Try again after a failure. A failed build or deploy goes to the environment's failed-job notification routes.
+  Run `mix brando.gen.migrations` for `brando_251`, then `mix brando.migrate` before the new release starts.
+  In a release, run `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` from the new release.

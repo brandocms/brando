@@ -159,6 +159,12 @@ Without Configure the screen shows the builds, the strategy and whether
 builds deploy automatically, and none of the target, its URLs, the SSH and
 target panels or a build's log, which names the server and its paths.
 
+Build and Deploy together show the **Publish** button in the navigation,
+under the site switcher, on a static site with a deploy target: it builds
+and deploys the environment the site publishes from in one step, and asks
+for no password ([The Publish button](tenancy_and_environments.md#the-publish-button)).
+Each of its actions checks the permissions it needs when it runs.
+
 A site made since 0.55 gives its Editor group View, Build and Deploy, so its
 editors publish their changes, and leaves Configure to Admin. Presets are
 seeded once, so an existing site's Editor group keeps the grants it has: tick

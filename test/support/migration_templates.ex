@@ -315,7 +315,7 @@ defmodule Brando.MigrationTemplates do
       "content_proposals" => ~w(origin client),
       "sites_previews" => ~w(site_id environment_id proposal_id),
       "environments" => ~w(asset_set_id redirect_hosts),
-      "ssg_builds" => ~w(started_at)
+      "ssg_builds" => ~w(started_at deploy_failed_at)
     }
   end
 

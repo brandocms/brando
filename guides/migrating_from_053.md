@@ -742,6 +742,10 @@ sender first, before the first compile.
   empty: a build made before compares by when it was queued, and edits made
   before count through the environment's activity log. Run
   `mix brando.gen.migrations` for it, then `mix brando.migrate`.
+- **The Publish button.** `brando_251` adds `ssg_builds.deploy_failed_at`
+  in `public`, when a build's deploy was given up, so the navigation's
+  Publish button can say that a deploy failed. Builds made before have none.
+  Run `mix brando.gen.migrations` for it, then `mix brando.migrate`.
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
