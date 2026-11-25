@@ -1583,35 +1583,44 @@ defmodule Brando.Translations do
   translation of either entry — an `:awaiting_translation` item on a pending
   version — are synchronized again so the link can be filled in.
   """
-  def alternate_added(module, entry_id, linked_entry_id) do
+  def alternate_added(module, entry_id, linked_entry_id), do: alternates_added(module, [entry_id, linked_entry_id])
+
+  @doc "Resynchronizes each group waiting on any of the newly linked entries once."
+  def alternates_added(_module, []), do: :ok
+
+  def alternates_added(module, entry_ids) do
+    embedding = if module == Brando.Pages.Fragment, do: embedding_groups(entry_ids), else: []
+
+    (embedding ++ waiting_tree_groups(module, entry_ids) ++ waiting_identifier_groups(module, entry_ids))
+    |> Enum.uniq()
+    |> Enum.each(&enqueue_sync(&1, false))
+
+    :ok
+  end
+
+  defp waiting_identifier_groups(module, entry_ids) do
     identifier_ids =
       Repo.all(
         from i in Identifier,
-          where: i.schema == ^module and i.entry_id in ^[entry_id, linked_entry_id],
+          where: i.schema == ^module and i.entry_id in ^entry_ids,
           select: i.id
       )
 
     patterns = Enum.flat_map(identifier_ids, &["%/identifiers/#{&1}", "%/identifier/#{&1}"])
 
-    resync_waiting_tree(module, [entry_id, linked_entry_id])
-    if module == Brando.Pages.Fragment, do: resync_embedding([entry_id, linked_entry_id])
-
-    if patterns != [] do
-      matches = Enum.reduce(patterns, dynamic(false), &dynamic([w], ^&2 or like(w.path, ^&1)))
-
-      from(w in WorkItem,
-        join: v in assoc(w, :pending_version),
-        join: m in assoc(v, :member),
-        where: w.kind == :awaiting_translation and v.status == :pending and is_nil(w.resolved_at),
-        where: ^matches,
-        distinct: true,
-        select: m.group_id
+    if patterns == [] do
+      []
+    else
+      Repo.all(
+        from w in WorkItem,
+          join: v in assoc(w, :pending_version),
+          join: m in assoc(v, :member),
+          where: w.kind == :awaiting_translation and v.status == :pending and is_nil(w.resolved_at),
+          where: fragment("? LIKE ANY(?)", w.path, type(^patterns, {:array, :string})),
+          distinct: true,
+          select: m.group_id
       )
-      |> Repo.all()
-      |> Enum.each(&enqueue_sync(&1, false))
     end
-
-    :ok
   end
 
   @doc """
@@ -1619,8 +1628,10 @@ defmodule Brando.Translations do
   embed a fragment that was one of them re-sync, so a fragment block that
   took the unlinked version goes back to the source's fragment.
   """
-  def alternate_removed(Brando.Pages.Fragment, entry_id, linked_entry_id),
-    do: resync_embedding([entry_id, linked_entry_id])
+  def alternate_removed(Brando.Pages.Fragment, entry_id, linked_entry_id) do
+    Enum.each(embedding_groups([entry_id, linked_entry_id]), &enqueue_sync(&1, false))
+    :ok
+  end
 
   def alternate_removed(_module, _entry_id, _linked_entry_id), do: :ok
 
@@ -1628,7 +1639,7 @@ defmodule Brando.Translations do
   # fragment's page) waited for. The awaiting item names that entry
   # (`parent/12`), so only its waiters re-sync: of every synchronized schema
   # with a tree relation to `module`.
-  defp resync_waiting_tree(module, entry_ids) do
+  defp waiting_tree_groups(module, entry_ids) do
     waiting =
       for type <- Repo.all(from(m in Member, distinct: true, select: m.entry_type)),
           schema = known_schema(type),
@@ -1637,7 +1648,7 @@ defmodule Brando.Translations do
           id <- entry_ids,
           do: {type, "#{name}/#{id}"}
 
-    for {type, paths} <- Enum.group_by(waiting, &elem(&1, 0), &elem(&1, 1)) do
+    Enum.flat_map(Enum.group_by(waiting, &elem(&1, 0), &elem(&1, 1)), fn {type, paths} ->
       from(w in WorkItem,
         join: v in assoc(w, :pending_version),
         join: m in assoc(v, :member),
@@ -1647,15 +1658,12 @@ defmodule Brando.Translations do
         select: m.group_id
       )
       |> Repo.all()
-      |> Enum.each(&enqueue_sync(&1, false))
-    end
-
-    :ok
+    end)
   end
 
   # A fragment's new version is the one the translations of the entries
   # embedding it take in their blocks: their groups re-sync.
-  defp resync_embedding(fragment_ids) do
+  defp embedding_groups(fragment_ids) do
     blocks = Repo.all(from b in Brando.Content.Block, where: b.fragment_id in ^fragment_ids, select: b.id)
 
     for {schema, ids} <-
@@ -1668,11 +1676,8 @@ defmodule Brando.Translations do
             from m in Member,
               where: m.entry_type == ^entry_type(schema) and m.entry_id in ^ids and m.role == :source,
               select: m.group_id
-          ) do
-      enqueue_sync(group_id, false)
-    end
-
-    :ok
+          ),
+        do: group_id
   end
 
   defp known_schema(type) do

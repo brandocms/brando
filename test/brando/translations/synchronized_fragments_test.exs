@@ -307,6 +307,27 @@ defmodule Brando.Translations.SynchronizedFragmentsTest do
       refute html =~ "Kontakt oss"
     end
 
+    test "pairing two fragment keys schedules their shared consumer once on each apply", c do
+      second = fragment!(c, :no, nil, key: "hours")
+      add_block(c.page, Page.Blocks, c, %{"type" => "fragment", "fragment_id" => second.id}, nil, 1)
+      {:ok, _en} = Translations.create_target(Page, c.page.id, :en, c.user)
+      group = Translations.get_member(Page, c.page.id).group_id
+      fragment!(c, :en, nil)
+      fragment!(c, :en, nil, key: "hours")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        jobs = fn ->
+          Repo.aggregate(from(j in Oban.Job, where: j.args["group_id"] == ^group), :count)
+        end
+
+        before = jobs.()
+        assert length(Pairing.apply(Fragment, Pairing.plan(Fragment))) == 2
+        assert jobs.() == before + 1
+        assert Pairing.apply(Fragment, Pairing.plan(Fragment)) == []
+        assert jobs.() == before + 2
+      end)
+    end
+
     test "moves over when a pairing run finds the key linked by a run that stopped before the re-sync", c do
       {:ok, en} = Translations.create_target(Page, c.page.id, :en, c.user)
       english = fragment!(c, :en, "Get in touch", status: :published)
