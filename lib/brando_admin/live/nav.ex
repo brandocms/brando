@@ -224,17 +224,22 @@ defmodule BrandoAdmin.Nav do
   defp panel(%{state: :ready, build: build}, socket) do
     %{
       changed?: ContentChanges.changed_since?(%{build | site: socket.assigns.current_site}),
-      preview_url: build.preview_expires_at && DateTime.after?(build.preview_expires_at, DateTime.utc_now()) &&
-        preview_url(build, socket)
+      preview_url: if(DateTime.after?(build.preview_expires_at, DateTime.utc_now()), do: preview_url(build, socket))
     }
   end
 
   defp panel(_publish, _socket), do: %{}
 
-  # The build's preview, or the one a build of this environment would get
+  # The build's preview, or the one a build of this environment would get.
+  # A sticky view is not mounted at the router and has no `host_uri`: the
+  # scheme and port are the endpoint's.
   defp preview_url(build, socket) do
     build = %{build | environment: socket.assigns.current_environment}
-    Builds.preview_url(build, socket.assigns.current_site, socket.host_uri)
+
+    case Builds.preview_url(build, socket.assigns.current_site, Brando.endpoint().struct_url()) do
+      url when is_binary(url) -> url
+      _none -> nil
+    end
   end
 
   defp may_configure?(socket) do
@@ -353,7 +358,7 @@ defmodule BrandoAdmin.Nav do
         </li>
       </ul>
       <p :if={@panel.events == []} class="publish-panel__note">{gettext("No listed changes.")}</p>
-      <p :if={@panel.rest > 0} class="publish-panel__note">
+      <p :if={@panel.rest > 0} class="publish-panel__note" data-rest={@panel.rest}>
         {ngettext("And 1 more change", "And %{count} more changes", @panel.rest)}
       </p>
     <% end %>
