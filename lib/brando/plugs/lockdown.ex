@@ -8,7 +8,8 @@ defmodule Brando.Plug.Lockdown do
   While locked, visitors are redirected to `lockdown_path(conn, :index)`,
   which `mix brando.gen.site` routes to `YourWeb.CMS.LockdownController` at
   `/coming-soon`. Users with access to the admin, the admin's live preview,
-  shared preview links (`/__p__/…`) and visitors who have entered the
+  shared preview links (`/__p__/…`), build previews on a static site's
+  preview host (`Brando.SSG.PreviewHost`) and visitors who have entered the
   password are let through.
 
   ## Example
@@ -113,6 +114,10 @@ defmodule Brando.Plug.Lockdown do
   # Shared preview links are for people without an admin account; the key in
   # the link is what grants access.
   defp allowed?(%{path_info: ["__p__", _preview_key]} = conn), do: conn
+
+  # As is the token in a build preview's link on a static site's preview host,
+  # where `Brando.Plug.Tenant` lets nothing else through
+  defp allowed?(%{private: %{brando_preview_host: true}} = conn), do: conn
 
   defp allowed?(conn) do
     session = conn.private[:plug_session] || %{}

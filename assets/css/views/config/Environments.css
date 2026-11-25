@@ -351,6 +351,14 @@
     width: 25%;
   }
 
+  /* The guide link under the message that the site has no preview host */
+  .publishing-no-preview-host a {
+    display: inline-block;
+    margin-top: 8px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
   .publishing-builds td.environment-actions {
     white-space: normal;
 

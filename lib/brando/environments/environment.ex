@@ -8,17 +8,19 @@ defmodule Brando.Environments.Environment do
 
   `domain` decides which site answers on a host, and everything that resolves
   a host trusts it. A new value must be a bare host and not one the
-  installation itself uses (`Brando.Tenant.InstallationHosts`); who may set it
+  installation itself uses (`Brando.Tenant.InstallationHosts`), nor one that
+  matches the static sites' preview host pattern (`Brando.SSG.PreviewHost`); who may set it
   is `Brando.Tenant.Registry`'s check. A stored value is not checked again
   until it changes.
 
   `redirect_hosts` are hosts that redirect permanently to `domain`, such as
   `www.example.com` to `example.com`. Each follows the rules for `domain`,
-  and an environment with any must have a domain. A host is bound once in the
-  whole installation, as one environment's domain or one redirect host: the
-  database refuses a second binding, also from concurrent writes (a trigger
-  on `environments` under an advisory lock, besides the unique index on
-  `domain`).
+  and an environment with any must have a domain; a host already in the list
+  is not checked against the preview host pattern again when the list
+  changes. A host is bound once in the whole installation, as one
+  environment's domain or one redirect host: the database refuses a second
+  binding, also from concurrent writes (a trigger on `environments` under an
+  advisory lock, besides the unique index on `domain`).
   """
 
   use Ecto.Schema
@@ -27,6 +29,7 @@ defmodule Brando.Environments.Environment do
   import Ecto.Changeset
 
   alias Brando.Sites.Site
+  alias Brando.SSG.PreviewHost
   alias Brando.Tenant.InstallationHosts
 
   @schema_prefix "public"
@@ -121,6 +124,14 @@ defmodule Brando.Environments.Environment do
         InstallationHosts.member?(domain) ->
           [domain: gettext("The installation itself uses this host, for its admin, media or CDN.")]
 
+        PreviewHost.matches?(domain) ->
+          [
+            domain:
+              gettext("This host matches %{pattern}, which the installation keeps for static sites' build previews.",
+                pattern: PreviewHost.pattern()
+              )
+          ]
+
         true ->
           []
       end
@@ -146,7 +157,9 @@ defmodule Brando.Environments.Environment do
 
     changeset =
       changeset
-      |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts -> Enum.flat_map(hosts, &redirect_host_error/1) end)
+      |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts ->
+        Enum.flat_map(hosts, &redirect_host_error(&1, bound_hosts(changeset.data)))
+      end)
       |> validate_domain_not_redirected(domain, hosts)
 
     cond do
@@ -169,7 +182,13 @@ defmodule Brando.Environments.Environment do
     end
   end
 
-  defp redirect_host_error(host) do
+  # A host stored before the preview host pattern was set may stay
+  # The hosts the stored environment answers on already: one of them that
+  # moves from the domain to the redirect list was bound before, too
+  defp bound_hosts(%{domain: domain, redirect_hosts: redirect_hosts}),
+    do: Enum.reject([domain | redirect_hosts || []], &is_nil/1)
+
+  defp redirect_host_error(host, stored_hosts) do
     cond do
       not valid_host?(host) ->
         [
@@ -183,6 +202,16 @@ defmodule Brando.Environments.Environment do
         [
           redirect_hosts:
             gettext("%{host}: the installation itself uses this host, for its admin, media or CDN.", host: host)
+        ]
+
+      host not in stored_hosts and PreviewHost.matches?(host) ->
+        [
+          redirect_hosts:
+            gettext(
+              "%{host} matches %{pattern}, which the installation keeps for static sites' build previews.",
+              host: host,
+              pattern: PreviewHost.pattern()
+            )
         ]
 
       true ->

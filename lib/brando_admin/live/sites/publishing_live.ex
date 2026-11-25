@@ -286,6 +286,25 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             {gettext("No static builds have been requested yet.")}
           </div>
 
+          <div
+            :if={no_preview_host?(@builds, @site, @admin_uri)}
+            id="publishing-no-preview-host"
+            class="environment-notice warning publishing-no-preview-host"
+          >
+            <div>
+              {gettext(
+                "This site has no host for previews. An environment domain routed to this installation, or the installation's preview_host setting, gives it one."
+              )}
+            </div>
+            <a
+              href="https://hexdocs.pm/brando/tenancy_and_environments.html#preview-hosts"
+              target="_blank"
+              rel="noopener"
+            >
+              {gettext("Preview hosts in the guide")} ↗
+            </a>
+          </div>
+
           <div :if={@builds != []} class="environment-table-wrap environment-stacking">
             <table>
               <thead>
@@ -332,9 +351,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   <td>{format_datetime(build.scheduled_at || build.inserted_at)}</td>
                   <td class="environment-actions">
                     <a
-                      :if={previewable?(build) && preview_url(build, @site, @admin_uri)}
+                      :if={previewable?(build) && Builds.preview_url(build, @site, @admin_uri)}
                       class="btn btn--sm"
-                      href={preview_url(build, @site, @admin_uri)}
+                      href={Builds.preview_url(build, @site, @admin_uri)}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -1252,37 +1271,18 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp previewable?(build),
     do: build.status in [:ready, :deployed, :archived] and is_nil(build.pruned_at)
 
-  # A preview opens only on a host of the build's own site
-  # (`Brando.SSG.PreviewController`), which with several sites need not be
-  # the admin's: link to the build environment's domain, or the live one's.
-  # With no such domain there is no host to link to, and no link.
-  defp preview_url(build, site, admin_uri) do
-    path = "/__ssg_preview__/#{build.preview_token}/"
+  # A previewable build with no host to open its preview on
+  # (`Brando.SSG.Builds.preview_url/3`), said once for the screen. With the
+  # preview host pattern set, a build whose environment was deleted has no
+  # link whatever the site's hosts are, so it says nothing about them
+  defp no_preview_host?(builds, site, admin_uri) do
+    pattern? = Brando.SSG.PreviewHost.enabled?()
 
-    if Brando.Tenant.mode() == :multi do
-      with %URI{} = uri <- admin_uri,
-           domain when is_binary(domain) <- preview_domain(build, site) do
-        URI.to_string(%{uri | host: domain, path: path, query: nil, fragment: nil})
-      else
-        _ -> nil
-      end
-    else
-      path
-    end
+    Enum.any?(builds, fn build ->
+      previewable?(build) and not (pattern? and is_nil(build.environment)) and
+        is_nil(Builds.preview_url(build, site, admin_uri))
+    end)
   end
-
-  defp preview_domain(build, site),
-    do: environment_domain(build.environment) || environment_domain(Brando.Tenant.Cache.get_live_env(site.key))
-
-  # A host that would answer 404 is no link: one that does not route, or one
-  # of the installation's own, where a preview does not open.
-  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "" do
-    if (not String.contains?(domain, ":") and Brando.Tenant.Cache.get_env_by_domain(domain)) &&
-         not Brando.Tenant.InstallationHosts.member?(domain),
-       do: domain
-  end
-
-  defp environment_domain(_environment), do: nil
 
   # The CDN in front, or the live domain the installation serves the build on
   defp public_url(build, site, admin_uri) do

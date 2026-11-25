@@ -27,6 +27,12 @@ defmodule Brando.Plug.Tenant do
   answers 503 when that set is gone, so the build fails rather than link
   files its artifact does not hold.
 
+  A request on a static site's preview host (`Brando.SSG.PreviewHost`), one
+  no environment binds, is decided before anything else above: only a build
+  preview of that site (`/__ssg_preview__/:token/*path`) goes on, under the
+  build's own environment, and every response there carries
+  `X-Robots-Tag: noindex, nofollow`. Every other request on it answers 404.
+
   A request a host serving its build let through for a plug before the
   router, which none answered, gets the build's 404 page here and goes no
   further (`Brando.SSG.LocalDelivery.answer_unanswered/1`).
@@ -35,8 +41,11 @@ defmodule Brando.Plug.Tenant do
   import Plug.Conn, only: [assign: 3, halt: 1, put_private: 3, put_resp_header: 3, register_before_send: 2, send_resp: 3]
 
   alias Brando.Assets.SiteAssets
+  alias Brando.Environments.Environment
+  alias Brando.SSG.Builds
   alias Brando.SSG.Context
   alias Brando.SSG.LocalDelivery
+  alias Brando.SSG.PreviewHost
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Frontend
@@ -56,7 +65,10 @@ defmodule Brando.Plug.Tenant do
 
     case redirect_target(conn) do
       nil ->
-        resolve_tenant(conn)
+        case PreviewHost.site(conn.host) do
+          nil -> resolve_tenant(conn)
+          found -> preview_host(conn, found)
+        end
 
       {_site, environment} ->
         # A static build of a site whose base URL is now a redirect host
@@ -83,6 +95,28 @@ defmodule Brando.Plug.Tenant do
           {site, environment} -> put_tenant(conn, site, environment)
           nil -> conn |> mark_standalone_build() |> reject_missing_multi_site()
         end
+    end
+  end
+
+  # A preview host (`Brando.SSG.PreviewHost`) answers its site's build
+  # previews only, each under its build's environment, and 404 for every
+  # other path, an unknown token, a site that is no active static one, and a
+  # build whose environment is gone. The token in the link is the access, so
+  # `Brando.Plug.Lockdown` lets it through.
+  defp preview_host(conn, found) do
+    Tenant.put_prefix(nil)
+
+    conn =
+      conn
+      |> put_private(:brando_preview_host, true)
+      |> put_resp_header("x-robots-tag", "noindex, nofollow")
+
+    with {:ok, site} <- found,
+         ["__ssg_preview__", token | _path] <- conn.path_info,
+         %{environment: %Environment{} = environment} <- Builds.get_preview(token, site) do
+      put_tenant(conn, site, environment)
+    else
+      _not_a_preview -> conn |> send_resp(404, "Not found") |> halt()
     end
   end
 
@@ -182,14 +216,17 @@ defmodule Brando.Plug.Tenant do
   @doc """
   The site and environment `conn` is for, or nil: an internal preview
   render's, then a static build's signed header (`Brando.SSG.Context`), then
-  the host's. A shared preview's link is not resolved here. Also used by
+  the host's. A shared preview's link is not resolved here, nor a preview
+  host (`Brando.SSG.PreviewHost`). Also used by
   `Brando.Plug.I18n.put_locale/2` when it runs before this plug.
   """
   @spec resolve(Plug.Conn.t()) :: {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
   def resolve(conn) do
-    case resolve_with_source(conn) do
-      {_source, site, environment} -> {site, environment}
-      nil -> nil
+    with false <- PreviewHost.preview_host?(conn.host),
+         {_source, site, environment} <- resolve_with_source(conn) do
+      {site, environment}
+    else
+      _none -> nil
     end
   end
 
