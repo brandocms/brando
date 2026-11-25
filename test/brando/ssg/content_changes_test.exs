@@ -157,6 +157,34 @@ defmodule Brando.SSG.ContentChangesTest do
       assert title(c.site, c.production, page) == "Saved"
     end
 
+    # A build that reads the content once it is marked must not find it as
+    # the cache held it before the save
+    test "is marked after the evictions that go with it", c do
+      page = page!(c.site, c.production, c.user)
+
+      Tenant.with_prefix(Tenant.prefix(c.site, c.production), fn ->
+        key = Brando.Cache.Query.hash_query({:list, "pages", :marked})
+
+        {cached, _} =
+          at_marks(
+            fn -> Brando.Cache.Query.get(key) end,
+            fn ->
+              Brando.Cache.Query.put(key, :as_it_was)
+              Brando.Cache.Query.evict({:ok, page})
+
+              Brando.Repo.transaction(fn ->
+                Brando.Cache.Query.evict({:ok, page})
+                # As another process reading before the commit caches it
+                Brando.Cache.Query.put(key, :as_it_was)
+              end)
+            end
+          )
+
+        assert [_ | _] = cached
+        assert Enum.all?(cached, &is_nil/1)
+      end)
+    end
+
     test "rolled back in a transaction begun on the repo itself stays undone, and raises nothing", c do
       page = page!(c.site, c.production, c.user)
 
@@ -450,8 +478,9 @@ defmodule Brando.SSG.ContentChangesTest do
     not is_nil(name)
   end
 
-  # How many statements wrote a mark while `fun` ran
-  defp counting_marks(fun) do
+  # What `at_mark` returns at each statement that writes a mark while `fun`
+  # runs, in the process that writes it
+  defp at_marks(at_mark, fun) do
     test = self()
     handler = "content-changes-#{System.unique_integer([:positive])}"
 
@@ -459,24 +488,30 @@ defmodule Brando.SSG.ContentChangesTest do
       handler,
       [:brando_integration, :repo, :query],
       fn _event, _measurements, %{query: query}, _config ->
-        if query =~ "INSERT INTO public.ssg_content_changes", do: send(test, :marked)
+        if query =~ "INSERT INTO public.ssg_content_changes", do: send(test, {:at_mark, at_mark.()})
       end,
       nil
     )
 
     try do
       result = fun.()
-      {count_received(:marked), result}
+      {received_at_marks([]), result}
     after
       :telemetry.detach(handler)
     end
   end
 
-  defp count_received(message, count \\ 0) do
+  defp received_at_marks(values) do
     receive do
-      ^message -> count_received(message, count + 1)
+      {:at_mark, value} -> received_at_marks([value | values])
     after
-      0 -> count
+      0 -> Enum.reverse(values)
     end
+  end
+
+  # How many statements wrote a mark while `fun` ran
+  defp counting_marks(fun) do
+    {marks, result} = at_marks(fn -> :marked end, fun)
+    {length(marks), result}
   end
 end

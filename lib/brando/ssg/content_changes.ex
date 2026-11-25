@@ -154,9 +154,11 @@ defmodule Brando.SSG.ContentChanges do
     |> Brando.Repo.repo().exists?(prefix: prefix)
   end
 
-  # Once per transaction for each environment or site
+  # Once per transaction for each environment or site, after the rest of its
+  # after-commit work: a build that starts once it is marked reads no cache
+  # entry the transaction's evictions and rebuilds have yet to refresh
   defp hold(key, site_id, environment_ids) do
-    Brando.Repo.after_commit({__MODULE__, key}, fn -> mark(site_id, environment_ids) end)
+    Brando.Repo.after_commit({__MODULE__, key}, fn -> mark(site_id, environment_ids) end, late: true)
   end
 
   # Inside a transaction begun on the repo itself, `Brando.Repo.after_commit/2`
