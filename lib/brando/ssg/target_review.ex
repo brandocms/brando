@@ -78,8 +78,9 @@ defmodule Brando.SSG.TargetReview do
   ## The screen
 
   @doc """
-  The state of the site's stored rsync target, for `actor`: reviewed or not,
-  and what it was last found to hold. Nil without rsync settings.
+  What the Publishing screen shows `actor` of the site's stored rsync
+  target: whether it is reviewed, what it was last found to hold, and the
+  keep list. Nil without rsync settings.
   """
   @spec status(Site.t(), term()) :: {:ok, status() | nil} | {:error, term()}
   def status(%Site{} = site, actor) do
@@ -110,16 +111,16 @@ defmodule Brando.SSG.TargetReview do
   target. Takes the deploy's `:runner`.
   """
   @spec review(Site.t(), term(), keyword()) :: {:ok, :reviewed | found()} | {:error, term()}
-  def review(%Site{} = site, actor, opts \\ []) do
-    acting(site, actor, fn site ->
-      with {:ok, target, port} <- stored_target(site),
-           keys = host_keys(site, target, port),
-           {:ok, state} <- read_state(site) do
-        if match?(%{reviewed: true}, for_target(state, target, port, keys)),
-          do: {:ok, :reviewed},
-          else: list_for_review(site, target, port, keys, opts)
-      end
-    end)
+  def review(%Site{} = site, actor, opts \\ []), do: acting(site, actor, &review_stored(&1, opts))
+
+  defp review_stored(site, opts) do
+    with {:ok, target, port} <- stored_target(site),
+         keys = host_keys(site, target, port),
+         {:ok, state} <- read_state(site) do
+      if match?(%{reviewed: true}, for_target(state, target, port, keys)),
+        do: {:ok, :reviewed},
+        else: list_for_review(site, target, port, keys, opts)
+    end
   end
 
   defp list_for_review(site, target, port, keys, opts) do
@@ -130,31 +131,22 @@ defmodule Brando.SSG.TargetReview do
         htaccess: if(".htaccess" in paths, do: fetch_htaccess(site, target, port, opts))
       }
 
-      locked(site, fn ->
-        site = Registry.get_site(site.id)
+      locked(site, &store_review(&1, target, port, keys, found))
+    end
+  end
 
-        cond do
-          stored_target(site) != {:ok, target, port} or host_keys(site, target, port) != keys ->
-            {:error, :target_changed}
+  defp store_review(site, target, port, keys, found) do
+    cond do
+      stored_target(site) != {:ok, target, port} or host_keys(site, target, port) != keys ->
+        {:error, :target_changed}
 
-          # Another admin confirmed while this listed
-          match?({:ok, %{reviewed: true}}, current_state(site, target, port)) ->
-            {:ok, :reviewed}
+      # Another admin confirmed while this listed
+      match?({:ok, %{reviewed: true}}, current_state(site, target, port)) ->
+        {:ok, :reviewed}
 
-          true ->
-            state = %{
-              target: target,
-              port: port,
-              host_keys: keys,
-              reviewed: false,
-              uploaded: [],
-              confirmed: [],
-              found: found
-            }
-
-            with :ok <- write_state(site, state), do: {:ok, found}
-        end
-      end)
+      true ->
+        state = %{target: target, port: port, host_keys: keys, reviewed: false, uploaded: [], confirmed: [], found: found}
+        with :ok <- write_state(site, state), do: {:ok, found}
     end
   end
 
@@ -168,27 +160,25 @@ defmodule Brando.SSG.TargetReview do
   """
   @spec confirm(Site.t(), term(), :review | :unknown, String.t(), [String.t()]) :: :ok | {:error, term()}
   def confirm(%Site{} = site, actor, kind, digest, ticked) when kind in [:review, :unknown] and is_binary(digest) do
-    acting(site, actor, fn site ->
-      locked(site, fn ->
-        site = Registry.get_site(site.id)
+    acting(site, actor, fn site -> locked(site, &confirm_stored(&1, kind, digest, ticked)) end)
+  end
 
-        with {:ok, target, port} <- stored_target(site),
-             {:ok, state} <- current_state(site, target, port),
-             :ok <- confirmable(state, kind, digest),
-             {:ok, keep} <- keep_ticked(site, state.found, ticked) do
-          ticked = MapSet.new(ticked)
+  defp confirm_stored(site, kind, digest, ticked) do
+    with {:ok, target, port} <- stored_target(site),
+         {:ok, state} <- current_state(site, target, port),
+         :ok <- confirmable(state, kind, digest),
+         {:ok, keep} <- keep_ticked(site, state.found, ticked) do
+      ticked = MapSet.new(ticked)
 
-          confirmed =
-            for path <- state.found.paths,
-                not TargetPaths.kept?(path, keep),
-                TargetPaths.top(path) not in ticked,
-                TargetPaths.rule_path?(path),
-                do: path
+      confirmed =
+        for path <- state.found.paths,
+            not TargetPaths.kept?(path, keep),
+            TargetPaths.top(path) not in ticked,
+            TargetPaths.rule_path?(path),
+            do: path
 
-          write_state(site, %{state | reviewed: true, confirmed: union(state.confirmed, confirmed), found: nil})
-        end
-      end)
-    end)
+      write_state(site, %{state | reviewed: true, confirmed: union(state.confirmed, confirmed), found: nil})
+    end
   end
 
   defp confirmable(%{found: %{digest: digest}, reviewed: reviewed}, kind, digest)
@@ -200,16 +190,14 @@ defmodule Brando.SSG.TargetReview do
   @doc "Adds the ticked top-level entries of the unknown files to the keep list, for `actor`."
   @spec keep(Site.t(), term(), [String.t()]) :: :ok | {:error, term()}
   def keep(%Site{} = site, actor, ticked) do
-    acting(site, actor, fn site ->
-      locked(site, fn ->
-        site = Registry.get_site(site.id)
+    acting(site, actor, fn site -> locked(site, &keep_stored(&1, ticked)) end)
+  end
 
-        with {:ok, target, port} <- stored_target(site),
-             {:ok, %{found: %{}} = state} <- current_state(site, target, port),
-             {:ok, _keep} <- keep_ticked(site, state.found, ticked),
-             do: :ok
-      end)
-    end)
+  defp keep_stored(site, ticked) do
+    with {:ok, target, port} <- stored_target(site),
+         {:ok, %{found: %{}} = state} <- current_state(site, target, port),
+         {:ok, _keep} <- keep_ticked(site, state.found, ticked),
+         do: :ok
   end
 
   @doc """
@@ -239,12 +227,7 @@ defmodule Brando.SSG.TargetReview do
   def remove_keep_path(%Site{} = site, actor, path), do: change_keep(site, actor, &List.delete(&1, path))
 
   defp change_keep(site, actor, fun) do
-    acting(site, actor, fn site ->
-      locked(site, fn ->
-        site = Registry.get_site(site.id)
-        save_keep(site, fun.(keep_paths(site)))
-      end)
-    end)
+    acting(site, actor, fn site -> locked(site, &save_keep(&1, fun.(keep_paths(&1)))) end)
   end
 
   # The ticked names of the listing that may be on the keep list, added to it
@@ -277,35 +260,38 @@ defmodule Brando.SSG.TargetReview do
   @spec deploy(Build.t(), String.t(), pos_integer(), keyword()) :: {:ok, [String.t()]} | {:error, term()}
   def deploy(%Build{site: %Site{} = site} = build, target, port, opts) do
     keys = host_keys(site, target, port)
-    keep = keep_paths(site)
 
     with {:ok, _ssh_args} <- SSH.rsync_ssh_args(site, target, port),
          {:ok, state} <- read_state(site),
-         {:ok, state} <- reviewed(state, site, target, port, keys) do
-      plan = TargetPaths.plan(build.build_path, state.uploaded ++ state.confirmed, keep)
-      source = String.trim_trailing(build.build_path, "/") <> "/"
-
-      with {:ok, listing} <- listing(site, target, port, opts),
-           :ok <- check_collisions(plan, listing),
-           :ok <- write_state(site, %{state | uploaded: union(state.uploaded, plan.upload)}, :uploaded_list),
-           :ok <- DeployFiles.write(site, :filter, plan.rules),
-           {:ok, _output} <-
-             SSH.rsync(site, target, port, ["-az", "--delete"] ++ filter_args(site) ++ ["--", source, target], opts) do
-        deployed = %{state | uploaded: plan.upload, confirmed: [], found: nil}
-
-        # Failing here leaves the union: more than this build, nothing unknown
-        case write_state(site, deployed) do
-          :ok ->
-            {:ok, list_unknown(site, deployed, source, keep, opts)}
-
-          {:error, reason} ->
-            Logger.warning("SSG target state of site #{site.key} not written: #{inspect(reason)}")
-            {:ok, []}
-        end
-      end
-    end
+         {:ok, state} <- reviewed(state, site, target, port, keys),
+         do: deploy_reviewed(build, state, keep_paths(site), opts)
   after
     File.rm(DeployFiles.path(build.site, :filter))
+  end
+
+  defp deploy_reviewed(%Build{site: site} = build, state, keep, opts) do
+    %{target: target, port: port} = state
+    plan = TargetPaths.plan(build.build_path, state.uploaded ++ state.confirmed, keep)
+    source = String.trim_trailing(build.build_path, "/") <> "/"
+
+    with {:ok, listing} <- listing(site, target, port, opts),
+         :ok <- check_collisions(plan, listing),
+         :ok <- write_state(site, %{state | uploaded: union(state.uploaded, plan.upload)}, :uploaded_list),
+         :ok <- DeployFiles.write(site, :filter, plan.rules),
+         {:ok, _output} <-
+           SSH.rsync(site, target, port, ["-az", "--delete"] ++ filter_args(site) ++ ["--", source, target], opts) do
+      deployed = %{state | uploaded: plan.upload, confirmed: [], found: nil}
+
+      # Failing here leaves the union: more than this build, nothing unknown
+      case write_state(site, deployed) do
+        :ok ->
+          {:ok, list_unknown(site, deployed, source, keep, opts)}
+
+        {:error, reason} ->
+          Logger.warning("SSG target state of site #{site.key} not written: #{inspect(reason)}")
+          {:ok, []}
+      end
+    end
   end
 
   defp filter_args(site), do: ["--from0", "--filter=merge " <> DeployFiles.path(site, :filter)]
@@ -331,18 +317,19 @@ defmodule Brando.SSG.TargetReview do
     on_target = MapSet.new(listing)
     deletable = MapSet.new(plan.deletable)
 
-    Enum.find_value(plan.upload, :ok, fn path ->
-      if TargetPaths.directory?(path) do
-        name = String.trim_trailing(path, "/")
-        if name in on_target and name not in deletable, do: {:error, {:target_collision, name}}
-      else
-        directory = path <> "/"
+    Enum.find_value(plan.upload, :ok, &collision(&1, on_target, deletable, listing))
+  end
 
-        if directory in on_target and
-             Enum.any?(listing, &(String.starts_with?(&1, directory) and &1 not in deletable)),
-           do: {:error, {:target_collision, path}}
-      end
-    end)
+  defp collision(path, on_target, deletable, listing) do
+    file = String.trim_trailing(path, "/")
+    directory = file <> "/"
+
+    collides? =
+      if TargetPaths.directory?(path),
+        do: file in on_target and file not in deletable,
+        else: directory in on_target and Enum.any?(listing, &(String.starts_with?(&1, directory) and &1 not in deletable))
+
+    if collides?, do: {:error, {:target_collision, file}}
   end
 
   # What the target holds beyond the build and the keep list, for the screen.
@@ -383,8 +370,9 @@ defmodule Brando.SSG.TargetReview do
     end
   end
 
-  defp limited(paths) when length(paths) > @listing_limit, do: {:error, :listing_cut_short}
-  defp limited(paths), do: {:ok, Enum.sort(paths)}
+  defp limited(paths) do
+    if length(paths) > @listing_limit, do: {:error, :listing_cut_short}, else: {:ok, Enum.sort(paths)}
+  end
 
   defp fetch_htaccess(site, target, port, opts) do
     dir = temporary_dir("brando-ssg-htaccess")
@@ -414,8 +402,9 @@ defmodule Brando.SSG.TargetReview do
 
   ## The state file
 
+  # `fun` gets the site as stored once the lock is held
   defp locked(site, fun) do
-    case Lock.with_timeout(Lock.deploy_key(site.id), @lock_timeout, fun) do
+    case Lock.with_timeout(Lock.deploy_key(site.id), @lock_timeout, fn -> fun.(Registry.get_site(site.id)) end) do
       {:ok, result} -> result
       :busy -> {:error, :deploy_running}
     end

@@ -75,21 +75,25 @@ defmodule Brando.SSG.TargetReviewTest do
 
     fn "rsync", args, _opts ->
       send(test_pid, {:rsync, args})
-
-      cond do
-        Enum.any?(args, &String.starts_with?(&1, "--max-size=")) ->
-          if text = opts[:htaccess], do: File.write!(Path.join(List.last(args), ".htaccess"), text)
-          {"", 0}
-
-        format = Enum.find(args, &String.starts_with?(&1, "--out-format=")) ->
-          nonce = format |> String.replace_prefix("--out-format=", "") |> String.split(" ") |> hd()
-          lines = Enum.map(paths, &"#{nonce} *deleting  |#{&1}\n")
-          {Keyword.get(opts, :said, "") <> Enum.join(lines), Keyword.get(opts, :status, 0)}
-
-        true ->
-          {"", 0}
-      end
+      answer(args, paths, opts)
     end
+  end
+
+  defp answer(["-e", _ssh, "--max-size=" <> _, _timeout, "--", _remote, dir], _paths, opts) do
+    if text = opts[:htaccess], do: File.write!(Path.join(dir, ".htaccess"), text)
+    {"", 0}
+  end
+
+  defp answer(args, paths, opts) do
+    case Enum.find(args, &String.starts_with?(&1, "--out-format=")) do
+      nil -> {"", 0}
+      "--out-format=" <> format -> {Keyword.get(opts, :said, "") <> listed(format, paths), Keyword.get(opts, :status, 0)}
+    end
+  end
+
+  defp listed(format, paths) do
+    nonce = format |> String.split(" ") |> hd()
+    Enum.map_join(paths, &"#{nonce} *deleting  |#{&1}\n")
   end
 
   defp ready_build(site, environment) do
