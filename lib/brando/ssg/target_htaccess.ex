@@ -23,7 +23,7 @@ defmodule Brando.SSG.TargetHtaccess do
 
   The deploy stops, with nothing copied, when the fetch fails for another
   reason than there being no file, when the file, or the file with Brando's
-  block, is larger than 32 KB, when it is not a file, and when a
+  block, is larger than 256 KB, when it is not a file, and when a
   `# BEGIN Brando` has no `# END Brando` after it: Brando never uploads a
   file it could not merge, or could not fetch again.
   """
@@ -37,7 +37,8 @@ defmodule Brando.SSG.TargetHtaccess do
 
   @name ".htaccess"
   @redirect_list "_redirects.json"
-  @limit 32_768
+  # A block is about 90 bytes a redirect
+  @limit 262_144
   # What Apache needs to read a file the host has none of
   @default_mode 0o644
 
@@ -93,7 +94,7 @@ defmodule Brando.SSG.TargetHtaccess do
 
     with {:ok, current, file_mode} <- fetch(site, target, port, opts),
          {:ok, step} <- merged(current, Htaccess.merge(current, block), file_mode, keep, dir) do
-      {:ok, %{step | notes: own_file_note(mode, build) ++ notes}}
+      {:ok, %{step | notes: own_file_note(mode, build, step.sources) ++ notes}}
     end
   end
 
@@ -133,13 +134,16 @@ defmodule Brando.SSG.TargetHtaccess do
     end
   end
 
-  defp own_file_note(:write, build) do
-    if File.regular?(Path.join(build.build_path, @name)),
-      do: ["The build's own .htaccess was not uploaded: the target's, with Brando's block, was"],
-      else: []
+  # No source: the target's file is the merge already, and nothing is sent
+  defp own_file_note(:write, build, sources) do
+    cond do
+      not File.regular?(Path.join(build.build_path, @name)) -> []
+      sources == [] -> ["The build's own .htaccess was not uploaded: the target's has Brando's block already"]
+      true -> ["The build's own .htaccess was not uploaded: the target's, with Brando's block, was"]
+    end
   end
 
-  defp own_file_note(_mode, _build), do: []
+  defp own_file_note(_mode, _build, _sources), do: []
 
   @doc """
   Brando's block for the build, from its `_redirects.json`, `404.html` and
@@ -232,7 +236,7 @@ defmodule Brando.SSG.TargetHtaccess do
 
   def refusal_message({:htaccess_merged_too_large, size}),
     do:
-      "the target's .htaccess with Brando's block would be #{size} bytes, more than the #{@limit} bytes Brando can merge its block into, so nothing was copied."
+      "the target's .htaccess with Brando's block would be #{size} bytes, more than the #{@limit} bytes Brando can merge its block into, so nothing was copied. The block grows with the site's redirects: shorten the redirects or the host's own lines, or turn the Apache option off."
 
   def refusal_message(:htaccess_not_a_file),
     do:

@@ -177,7 +177,7 @@ defmodule Brando.SSG.TargetHtaccessTest do
                          "-e",
                          _ssh,
                          "-rlp",
-                         "--max-size=32768",
+                         "--max-size=262144",
                          "--info=skip1",
                          "--timeout=30",
                          "--filter=+ /.htaccess",
@@ -269,17 +269,28 @@ defmodule Brando.SSG.TargetHtaccessTest do
       end
     end
 
+    # A block is about 90 bytes a redirect: a site with some hundred of them needs the room
+    test "merges into a host file of 40 KB", c do
+      build = ready_build(c)
+      host = String.duplicate("# host\n", div(40_000, 7))
+
+      assert {:ok, _deployed} = Deploy.deploy(build, runner: runner(htaccess: host))
+      assert_received {:real_run, _rules, [{".htaccess", merged, _mode}], _sources}
+      assert String.starts_with?(merged, host)
+    end
+
     test "stops before the real run when the merged file would be over the limit a fetch reads", c do
       build = ready_build(c)
-      host = String.duplicate("# host\n", div(32_768, 7))
+      host = String.duplicate("# host\n", div(262_144, 7))
 
       assert {:error, {:htaccess_merged_too_large, size} = reason} =
                Deploy.deploy(build, runner: runner(htaccess: host))
 
-      assert size > 32_768
+      assert size > 262_144
       refute_received {:real_run, _rules, _merged, _sources}
       assert %{uploaded: []} = state(c.site)
       assert TargetReview.refusal_message(reason) =~ "#{size}"
+      assert TargetReview.refusal_message(reason) =~ "redirects"
     end
 
     test "a file that cannot be merged is refused on both paths, and not retried", c do

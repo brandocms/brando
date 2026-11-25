@@ -2738,7 +2738,7 @@ in the build is still uploaded. The list stays when the target changes.
 **Before the first deploy to a target**, review it. Once **Test connection**
 connects, it lists everything the target holds (a dry run with `--delete`
 from an empty directory, which deletes nothing) and fetches a `.htaccess` at
-its root to show (up to 32 KB). The screen shows the top-level entries with
+its root to show (up to 256 KB). The screen shows the top-level entries with
 the number of files in each, those the keep list covers and a `.htaccess`
 ticked: tick what else to keep, add deeper paths to the keep list, and press
 **Confirm**. Ticked
@@ -2807,13 +2807,14 @@ changed.
 
 The file is the host's, the block is Brando's. As the last step before the
 real run, the deploy fetches the target's `.htaccess` (none is fine, up to
-32 KB) and replaces what is between `# BEGIN Brando` and `# END Brando`, or
+256 KB) and replaces what is between `# BEGIN Brando` and `# END Brando`, or
 adds the block after the host's lines when there is none. Every other line
 is written back byte for byte, and the file keeps its mode (0644 when it is
 new). The deploy stops, with nothing copied, when the fetch fails for
-another reason than there being no file, when the file is larger than 32 KB,
+another reason than there being no file, when the file is larger than 256 KB,
 a link or a directory, when the file with Brando's block would be larger than
-32 KB (a later deploy could not fetch it again), or when a `# BEGIN Brando`
+256 KB (a later deploy could not fetch it again; the block takes about 90
+bytes a redirect, so that is some 2,800 redirects with no host lines), or when a `# BEGIN Brando`
 line has no `# END Brando` after it. A build with a `.htaccess` of its own has the merged file uploaded
 instead, or nothing when the target's file is the merge already, and its log
 says so. The merged file is never among the files

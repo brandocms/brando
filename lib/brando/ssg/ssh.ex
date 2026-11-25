@@ -452,8 +452,13 @@ defmodule Brando.SSG.SSH do
     case File.mkdir(dir) do
       :ok ->
         try do
-          case File.chmod(dir, 0o700) do
-            :ok -> fun.(dir)
+          # Made with the process's umask: what another account put in
+          # before the mode closed it is refused, not read
+          with :ok <- File.chmod(dir, 0o700),
+               {:ok, []} <- File.ls(dir) do
+            fun.(dir)
+          else
+            {:ok, _planted} -> {:error, {:temporary_dir, :not_empty}}
             {:error, reason} -> {:error, {:temporary_dir, reason}}
           end
         after

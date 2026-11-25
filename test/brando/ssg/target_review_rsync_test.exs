@@ -314,12 +314,16 @@ defmodule Brando.SSG.TargetReviewRsyncTest do
     {:ok, _site} = Registry.update_site(c.site, %{deploy_config: %{htaccess: true}})
     files = [{"index.html", "1"}, {".htaccess", "the build's own\n"}]
 
-    assert {:ok, _deployed} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    assert {:ok, first} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
     merged = File.read!(Path.join(c.remote, ".htaccess"))
     assert String.starts_with?(merged, "Options -Indexes\n# BEGIN Brando\n")
+    assert first.build_log =~ "with Brando's block, was"
 
-    assert {:ok, _deployed} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
+    assert {:ok, second} = c |> ready_build(files) |> Deploy.deploy(runner: runner(c))
     assert File.read!(Path.join(c.remote, ".htaccess")) == merged
+    # Nothing was sent this time, and the log does not say something was
+    assert second.build_log =~ "The build's own .htaccess was not uploaded"
+    refute second.build_log =~ "with Brando's block, was"
   end
 
   test "a review that finds Brando's block on the target has it removed with the option off", c do

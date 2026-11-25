@@ -647,7 +647,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   defp htaccess(%{value: :too_large} = assigns) do
     ~H"""
-    <p>{gettext("It is larger than 32 KB and is not shown.")}</p>
+    <p>{gettext("It is larger than 256 KB and is not shown.")}</p>
     """
   end
 

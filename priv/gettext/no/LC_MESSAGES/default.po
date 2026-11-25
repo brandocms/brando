@@ -10789,8 +10789,8 @@ msgstr "Den beholdes, men vises ikke på siden."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
-msgid "It is larger than 32 KB and is not shown."
-msgstr "Den er større enn 32 KB og vises ikke."
+msgid "It is larger than 256 KB and is not shown."
+msgstr "Den er større enn 256 KB og vises ikke."
 
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format

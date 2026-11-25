@@ -136,7 +136,7 @@ defmodule Brando.SSG.TargetReviewTest do
                          "-e",
                          _ssh,
                          "-rlp",
-                         "--max-size=32768",
+                         "--max-size=262144",
                          "--info=skip1",
                          "--timeout=30",
                          "--filter=+ /.htaccess",
