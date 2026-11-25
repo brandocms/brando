@@ -81,6 +81,9 @@ defmodule Brando.Worker.SSGBuild do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id} = args}) do
     case Builds.get_build(build_id) do
+      %Build{status: :ready, auto_deploy: true, deploy_failed_at: nil} = build ->
+        deploy_owed(build)
+
       %Build{site: %{status: status}} = build when status != :active ->
         cancel_unbuildable(build, :site_not_active)
 
@@ -95,9 +98,6 @@ defmodule Brando.Worker.SSGBuild do
 
       %Build{status: status} = build when status in [:queued, :building] ->
         run_with_recorded_set(build, args)
-
-      %Build{status: :ready, auto_deploy: true, deploy_failed_at: nil} = build ->
-        deploy_and_finish(build)
 
       %Build{status: status} when status in [:ready, :deployed, :archived] ->
         :ok
@@ -140,7 +140,18 @@ defmodule Brando.Worker.SSGBuild do
     end
   end
 
+  # A build that is ready stays ready: a problem in or before its deploy is
+  # a failed deploy. One raised goes to Oban, whose retry deploys what the
+  # build owes, and which records the deploy as given up after the last.
   defp run_build(build) do
+    case build_ready(build) do
+      {:ok, ready} -> deploy_and_finish(ready)
+      {:error, reason, result} -> fail_build(build, reason, result)
+      {:error, reason} -> fail_build(build, reason, %{})
+    end
+  end
+
+  defp build_ready(build) do
     report(build, fn user, key ->
       Work.update(user, key, gettext("Building static version %{version}", version: build.version), global: true)
     end)
@@ -151,17 +162,19 @@ defmodule Brando.Worker.SSGBuild do
              started_at: build.started_at || ContentChanges.now(),
              build_log: build.build_log <> log_line(build_start_message(build))
            }),
-         result <- call_builder(building),
-         {:ok, ready} <- finish_build(building, result) do
-      deploy_and_finish(ready)
-    else
-      {:error, reason, result} -> fail_build(build, reason, result)
-      {:error, reason} -> fail_build(build, reason, %{})
+         result <- call_builder(building) do
+      finish_build(building, result)
     end
   rescue
-    exception ->
-      fail_build(build, {:exception, Exception.message(exception)}, %{})
+    exception -> {:error, {:exception, Exception.message(exception)}}
   end
+
+  # A retry, or an attempt after one that stopped once the build was ready
+  defp deploy_owed(%Build{site: %{status: status}} = build) when status != :active,
+    do: record_deploy_failure(build, :site_not_active)
+
+  defp deploy_owed(%Build{environment: nil} = build), do: record_deploy_failure(build, :environment_not_found)
+  defp deploy_owed(build), do: deploy_and_finish(build)
 
   defp deploy_and_finish(ready) do
     case maybe_deploy(ready) do

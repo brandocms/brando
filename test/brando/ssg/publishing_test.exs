@@ -467,6 +467,53 @@ defmodule Brando.SSG.PublishingTest do
       assert Builds.get_build(build.id).status == :deployed
     end
 
+    test "an exception in its automatic deploy is no failed build: retried, then a deploy given up", c do
+      # A Markdown publication's context without its tenant raises in the deploy step
+      build =
+        manual(fn ->
+          {:ok, build} =
+            Builds.request_build(c.site, c.production,
+              creator_id: c.user.id,
+              auto_deploy: true,
+              markdown_context: %{"source_id" => 0}
+            )
+
+          build
+        end)
+
+      [job] = jobs("Brando.Worker.SSGBuild")
+      assert catch_error(SSGBuild.perform(%{job | attempt: 1}))
+      set_job_state(job, "retryable")
+      assert %Build{status: :ready, deploy_failed_at: nil} = Builds.get_build(build.id)
+      assert %{state: :publishing} = Publishing.status(site(c), c.production)
+
+      # The retry deploys what the build owes; on the last attempt Oban gives it up
+      assert catch_error(SSGBuild.perform(%{job | attempt: 3}))
+      set_job_state(job, "discarded")
+      :ok = Publishing.given_up(job)
+      assert %Build{status: :ready, deploy_failed_at: %DateTime{}} = Builds.get_build(build.id)
+      assert %{state: :failed, failed: :deploy} = Publishing.status(site(c), c.production)
+    end
+
+    test "a retry for a ready build whose site was suspended, or environment deleted, is a deploy failure", c do
+      manual(fn -> {:ok, _build} = Publishing.publish(c.site, c.production, c.user) end)
+      [job] = jobs("Brando.Worker.SSGBuild")
+      [build] = Builds.list_builds(c.site)
+      File.mkdir_p!(build.build_path)
+      {:ok, _ready} = Builds.update(build, %{status: :ready, started_at: DateTime.utc_now()})
+
+      {:ok, _site} = Registry.update_site(site(c), %{status: :suspended})
+      assert {:cancel, {:deploy_failed, :site_not_active}} = SSGBuild.perform(job)
+      assert %Build{status: :ready, deploy_failed_at: %DateTime{}} = Builds.get_build(build.id)
+
+      {:ok, _site} = Registry.update_site(site(c), %{status: :active})
+      from(b in Build, where: b.id == ^build.id)
+      |> Brando.Repo.update_all([set: [deploy_failed_at: nil, environment_id: nil]], prefix: "public")
+
+      assert {:cancel, {:deploy_failed, :environment_not_found}} = SSGBuild.perform(job)
+      assert %Build{status: :ready, deploy_failed_at: %DateTime{}} = Builds.get_build(build.id)
+    end
+
     test "a build job given up while building is recorded as failed once", c do
       manual(fn -> {:ok, _build} = Publishing.publish(c.site, c.production, c.user) end)
       [job] = jobs("Brando.Worker.SSGBuild")
