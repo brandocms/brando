@@ -93,7 +93,7 @@ defmodule Brando.Test.Database do
 
     unless marked? do
       raise "Database #{inspect(database)} is not provisioned as a disposable Brando #{kind} test database. " <>
-              "Select a fresh database name and run scripts/worktree-setup."
+              "Run `scripts/worktree-setup my_new_slug` with an unused slug, then export the environment it prints."
     end
 
     :ok
