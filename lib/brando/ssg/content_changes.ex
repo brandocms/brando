@@ -134,6 +134,10 @@ defmodule Brando.SSG.ContentChanges do
   were kept. Media is the part only the mark sees. True when the build's
   environment is gone. Reads the site and environment when `build` does not
   have them loaded.
+
+  Call it outside a transaction: while an environment is copied over, its
+  schema is missing for a moment, and the failed read that this answers true
+  for would leave a caller's transaction aborted.
   """
   @spec changed_since?(Build.t()) :: boolean()
   def changed_since?(%Build{} = build) do
@@ -202,8 +206,14 @@ defmodule Brando.SSG.ContentChanges do
     repo.query!("SET LOCAL lock_timeout = #{@lock_wait}")
 
     case upsert(site_id, environment_ids) do
-      {:ok, rows} -> rows
-      {:error, error} -> repo.rollback(error)
+      {:ok, rows} ->
+        # Inside an enclosing transaction (a sandboxed test's) this one is a
+        # savepoint, and a SET LOCAL outlives a released savepoint
+        repo.query!("SET LOCAL lock_timeout = DEFAULT")
+        rows
+
+      {:error, error} ->
+        repo.rollback(error)
     end
   end
 
