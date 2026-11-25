@@ -75,8 +75,7 @@ config :brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser
 # same name when it creates, migrates and seeds the database.
 #
 # `mix test --partitions` runs set MIX_TEST_PARTITION (scripts/test-partitions):
-# each partition gets its own database and media directory, the number
-# appended to the name.
+# each partition gets its own database, the number appended to its name.
 partition = System.get_env("MIX_TEST_PARTITION", "")
 
 test_database =
@@ -193,7 +192,11 @@ config :brando, :languages, [
 config :brando, :log_dir, Path.expand("./tmp/logs#{partition}")
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
-config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media#{partition}"])
+# A Mix subprocess spawned by a test inherits the running suite's media.
+config :brando,
+       :media_path,
+       System.get_env("BRANDO_TEST_MEDIA_PATH") || Path.join([Mix.Project.app_path(), "tmp", "media#{partition}"])
+
 config :brando, :media_url, "/media"
 config :brando, :otp_app, :brando
 config :brando, :repo_module, BrandoIntegration.Repo
