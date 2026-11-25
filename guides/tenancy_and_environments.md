@@ -2847,9 +2847,9 @@ Where the host answers differently from the installation:
   CMS's front controller, answers before Brando's redirects;
 - an edit the host makes to `.htaccess` in the seconds between the fetch and
   the upload is lost;
-- the check that a page of the build wins over a rule looks under the
-  document root, so it holds only when the target directory is the document
-  root;
+- the block takes the target directory to be the document root: the 404
+  page is `/404.html`, and the check that a page of the build wins over a
+  rule looks under the document root;
 - an encoded slash (`%2F`) in a path is a 404 before any rule runs, and a
   directory's path without its trailing slash is first redirected to the
   path with one;
