@@ -1,0 +1,1 @@
+- Simultaneous MCP upload preparations share one pending limit per connection and check only that connection’s inventory after upgrade.

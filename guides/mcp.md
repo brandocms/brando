@@ -496,7 +496,8 @@ environment: another connection, even the same person's, cannot finish the
 upload, and the URL answers only at the endpoint it was made for. It expires
 10 minutes after it is prepared; the bytes must have all arrived 10 minutes
 after the PUT starts, and the upload must be finished within the hour.
-A connection has at most 10 uploads waiting at once; one whose bytes were
+Simultaneous preparations share the same 10 pending slots per connection,
+including across server nodes. An upload whose bytes were
 refused, whose URL expired with nothing sent, or whose PUT stopped without
 an answer and is past its 10 minutes, does not count, and finishing it says
 it failed. A request whose
@@ -512,8 +513,8 @@ only, until they are finished. The directory around it is left as it is, and
 a directory of that name Brando cannot make its own (a link, or another
 user's) is refused: nothing in it is listed, read, written or removed, by
 the nightly purge either, and the log says once why every upload is refused.
-One not finished in time is removed when the connection's next
-upload is prepared and by the nightly purge. With more than one server
+The nightly purge removes expired uploads across connections. Preparing another
+upload also checks and releases this connection’s expired reservations. With more than one server
 node, set `upload_dir` to a directory every node shares.
 
 An import from an address goes through the webhooks' address guard, as the
