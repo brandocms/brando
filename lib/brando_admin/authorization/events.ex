@@ -405,7 +405,7 @@ defmodule BrandoAdmin.Authorization.Events do
     "BrandoAdmin.Sites.PublishingLive" => [
       read: ~w(change_deploy_config refresh),
       write:
-        ~w(accept_host_keys deploy request_build rollback rotate_deploy_key save_deploy_config schedule_build test_connection)
+        ~w(accept_host_keys deploy make_deploy_key request_build rollback rotate_deploy_key save_deploy_config schedule_build test_connection)
     ],
     "BrandoAdmin.Sites.SEOLive" => [
       read: ~w(audit_scope cancel_batch confirm_batch redirect_404 sort tab toggle_picker toggle_row),
