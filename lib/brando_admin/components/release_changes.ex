@@ -1546,6 +1546,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
           <span>
             <strong>{gettext("%{name} can’t be reverted without a migration", name: item.name || item.uid)}</strong>
             ({item.reason}). {gettext("Revert leaves it as the apply left it.")}
+            {dependent_revert_note(item)}
           </span>
         </div>
         <div :for={item <- @changed_since} class="release-banner-conflict">
@@ -1555,6 +1556,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             ({person(item.edited)}, {date(item.edited && item.edited.at)}). {gettext(
               "Revert leaves it as it is and lists it as a conflict."
             )}
+            {dependent_revert_note(item)}
           </span>
         </div>
       </div>
@@ -1595,4 +1597,13 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     </section>
     """
   end
+
+  defp dependent_revert_note(%{prevents_revert: [_ | _] = uids, uid: dependency}) do
+    gettext("%{dependency} also prevents reverting %{definitions}.",
+      definitions: Enum.join(uids, ", "),
+      dependency: dependency
+    )
+  end
+
+  defp dependent_revert_note(_item), do: nil
 end

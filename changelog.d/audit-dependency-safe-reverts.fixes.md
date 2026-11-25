@@ -1,0 +1,1 @@
+- Release reverts show which definitions depend on a blocked palette, table template or module, and can still restore independent definitions.

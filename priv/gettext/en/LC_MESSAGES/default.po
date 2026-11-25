@@ -788,6 +788,11 @@ msgstr ""
 msgid "%{day}: %{requests} requests"
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{dependency} also prevents reverting %{definitions}."
+msgstr ""
+
 #: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "%{email} gets an email with a link to choose a new password. The current password works until then."
