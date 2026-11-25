@@ -22,9 +22,10 @@ defmodule Brando.SSG.TargetHtaccess do
   the host's file as any other file, as it would without the option.
 
   The deploy stops, with nothing copied, when the fetch fails for another
-  reason than there being no file, when the file is larger than
-  32 KB or is not a file, and when a `# BEGIN Brando` has no
-  `# END Brando` after it: Brando never uploads a file it could not merge.
+  reason than there being no file, when the file, or the file with Brando's
+  block, is larger than 32 KB, when it is not a file, and when a
+  `# BEGIN Brando` has no `# END Brando` after it: Brando never uploads a
+  file it could not merge, or could not fetch again.
   """
 
   alias Brando.Sites.DeployConfig
@@ -116,6 +117,10 @@ defmodule Brando.SSG.TargetHtaccess do
          rules: [TargetPaths.path_rule(:hide, @name), TargetPaths.path_rule(:protect, @name)],
          notes: []
        }}
+
+  # Every later fetch would refuse it, the one that removes the block too
+  defp merged(_current, {:ok, text}, _mode, _keep, _dir) when byte_size(text) > @limit,
+    do: {:error, {:htaccess_merged_too_large, byte_size(text)}}
 
   defp merged(_current, {:ok, text}, mode, _keep, dir), do: send_file(text, mode, dir)
 
@@ -224,6 +229,10 @@ defmodule Brando.SSG.TargetHtaccess do
   def refusal_message(:htaccess_too_large),
     do:
       "the target's .htaccess is larger than #{div(@limit, 1024)} KB, too large to merge Brando's block into, so nothing was copied."
+
+  def refusal_message({:htaccess_merged_too_large, size}),
+    do:
+      "the target's .htaccess with Brando's block would be #{size} bytes, more than the #{@limit} bytes Brando can merge its block into, so nothing was copied."
 
   def refusal_message(:htaccess_not_a_file),
     do:

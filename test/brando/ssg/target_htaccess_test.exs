@@ -269,6 +269,19 @@ defmodule Brando.SSG.TargetHtaccessTest do
       end
     end
 
+    test "stops before the real run when the merged file would be over the limit a fetch reads", c do
+      build = ready_build(c)
+      host = String.duplicate("# host\n", div(32_768, 7))
+
+      assert {:error, {:htaccess_merged_too_large, size} = reason} =
+               Deploy.deploy(build, runner: runner(htaccess: host))
+
+      assert size > 32_768
+      refute_received {:real_run, _rules, _merged, _sources}
+      assert %{uploaded: []} = state(c.site)
+      assert TargetReview.refusal_message(reason) =~ "#{size}"
+    end
+
     test "a file that cannot be merged is refused on both paths, and not retried", c do
       build = ready_build(c)
       put_test_env(:ssg_deploy_runner, runner(htaccess: "# BEGIN Brando\n"))

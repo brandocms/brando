@@ -2812,8 +2812,9 @@ adds the block after the host's lines when there is none. Every other line
 is written back byte for byte, and the file keeps its mode (0644 when it is
 new). The deploy stops, with nothing copied, when the fetch fails for
 another reason than there being no file, when the file is larger than 32 KB,
-a link or a directory, or when a `# BEGIN Brando` line has no `# END Brando`
-after it. A build with a `.htaccess` of its own has the merged file uploaded
+a link or a directory, when the file with Brando's block would be larger than
+32 KB (a later deploy could not fetch it again), or when a `# BEGIN Brando`
+line has no `# END Brando` after it. A build with a `.htaccess` of its own has the merged file uploaded
 instead, and its log says so. The merged file is never among the files
 Brando uploaded, so no deploy deletes it, and it is not listed among the
 unknown files. A `_redirects.json` an earlier deploy uploaded is deleted.
