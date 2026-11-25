@@ -11,9 +11,9 @@ defmodule Brando.Sites.Usage.Measure do
   Folders are walked without following a link inside them; the media root
   itself may be one, as a release's media folder is. The builds are reached
   from the site's folder (`Brando.Tenant.Storage.site_root/1`) only through
-  folders that are no links. A folder it cannot read fails the measurement,
-  and so does a sizing query that fails; a schema that disappears between
-  listing and sizing is left out.
+  folders that are no links. A failed directory listing, file stat or
+  sizing query fails the measurement, except that a missing file or folder
+  is skipped. A schema that disappears between listing and sizing is left out.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -80,7 +80,7 @@ defmodule Brando.Sites.Usage.Measure do
   @doc """
   The bytes of the regular files under `path`, without following links
   inside it. 0 for a path that does not exist; raises `File.Error` for a
-  folder it cannot read, so a measurement is never short of it.
+  failed listing or stat, so a measurement is never short of unreadable entries.
   """
   @spec directory_bytes(String.t()) :: non_neg_integer()
   def directory_bytes(path) do
@@ -112,7 +112,9 @@ defmodule Brando.Sites.Usage.Measure do
     case File.lstat(path) do
       {:ok, %File.Stat{type: :regular, size: size}} -> size
       {:ok, %File.Stat{type: :directory}} -> directory_bytes(path)
-      _link_other_or_gone -> 0
+      {:ok, _link_or_other} -> 0
+      {:error, :enoent} -> 0
+      {:error, reason} -> raise File.Error, reason: reason, action: "read file stats", path: path
     end
   end
 
