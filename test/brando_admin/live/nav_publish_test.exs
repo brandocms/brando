@@ -288,6 +288,19 @@ defmodule BrandoAdmin.NavPublishTest do
       assert has_element?(nav, "#publish-panel [data-rest='1']")
     end
 
+    test "takes in a change saved while it is open", c do
+      nav = nav(c) |> open_panel()
+      nav |> element("#publish-panel button[phx-click=publish_preview]") |> render_click()
+      nav |> open_panel()
+      assert has_element?(nav, "#publish.publish--ready")
+      refute has_element?(nav, "#publish-panel button[phx-click=publish]")
+
+      event!(c, Brando.Pages.Page, "Saved meanwhile", DateTime.utc_now())
+      send(nav.pid, {:ssg_content_changed, c.production.id})
+
+      assert has_element?(nav, "#publish-panel button[phx-click=publish]")
+    end
+
     test "goes with the button when the user's grants are removed while it is open", c do
       publisher = member(c, ["brando.publishing.build", "brando.publishing.deploy"])
       nav = nav(c, as: publisher) |> open_panel()

@@ -858,8 +858,9 @@ defmodule BrandoAdmin.Nav do
 
   def handle_info({:ssg_build_updated, %Build{}}, socket), do: {:noreply, assign_publish(socket)}
 
+  # A panel once opened lists what changed, and whether a ready build lacks it
   def handle_info({:ssg_content_changed, id}, %{assigns: %{current_environment: %{id: id}}} = socket),
-    do: {:noreply, assign_publish(socket)}
+    do: {:noreply, assign_publish(socket, reload_panel: true)}
 
   def handle_info(_, socket) do
     {:noreply, socket}
