@@ -149,7 +149,12 @@ defmodule Brando.SSG.TargetReviewTest do
                TargetReview.review(c.site, c.superuser, runner: runner(["a.html"], status: 23))
 
       many = for n <- 1..100_001, do: "f#{n}"
-      assert {:error, :listing_cut_short} = TargetReview.review(c.site, c.superuser, runner: runner(many))
+
+      assert {:error, {:listing_cut_short, 100_001, 100_000} = reason} =
+               TargetReview.review(c.site, c.superuser, runner: runner(many))
+
+      assert TargetReview.refusal_message(reason) =~ "100001 paths"
+      assert TargetReview.refusal_message(reason) =~ "100000"
       assert {:ok, %{found: nil}} = TargetReview.status(c.site, c.superuser)
     end
 

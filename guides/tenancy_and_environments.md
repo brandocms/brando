@@ -2746,8 +2746,8 @@ take is not confirmed, so it stays, but it shows again among the unknown
 files); the first deploy deletes the rest.
 Confirm names the listing the screen showed, with the keep list that marked
 it: when another admin's test has listed the target again since, or the keep
-list changed, it is refused and the screen shows the current listing. A listing that failed, or found more than 100,000 paths, cannot be
-confirmed.
+list changed, it is refused and the screen shows the current listing. A
+listing that failed, or found more than 100,000 paths, cannot be confirmed.
 
 A deploy to a target that is not the reviewed one is refused, the automatic
 deploy after a build too, with a build-log line that names the review and the
@@ -2788,7 +2788,9 @@ deleting and the keep list are for those who may save the deploy settings,
 and confirming, deleting and taking a path off the keep list ask for a recent
 confirmation. A file the host puts at a path where the build has a directory
 in the moment between the listing and the run is the one thing a deploy can
-still replace.
+still replace. A target that holds more than 100,000 paths cannot be deployed
+to: each deploy lists the whole target first, and refuses with a build-log line
+that says how many paths it found.
 
 ### A site's allowed deploy targets
 

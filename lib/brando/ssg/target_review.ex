@@ -373,7 +373,8 @@ defmodule Brando.SSG.TargetReview do
   end
 
   defp limited(paths) do
-    if length(paths) > @listing_limit, do: {:error, :listing_cut_short}, else: {:ok, Enum.sort(paths)}
+    count = length(paths)
+    if count > @listing_limit, do: {:error, {:listing_cut_short, count, @listing_limit}}, else: {:ok, Enum.sort(paths)}
   end
 
   defp fetch_htaccess(site, target, port, opts) do
@@ -505,8 +506,9 @@ defmodule Brando.SSG.TargetReview do
   def refusal_message({:target_state_not_written, :uploaded_list, reason}),
     do: "the list of files Brando uploads could not be written (#{inspect(reason)}), so nothing was copied."
 
-  def refusal_message(:listing_cut_short),
-    do: "the target holds more than #{@listing_limit} paths, too many to list before the deploy."
+  def refusal_message({:listing_cut_short, count, limit}),
+    do:
+      "the target holds #{count} paths, more than the #{limit} a deploy lists before it runs, so nothing was copied. Remove files from the target to deploy to it."
 
   def refusal_message(_reason), do: nil
 

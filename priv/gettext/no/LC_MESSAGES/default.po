@@ -21826,6 +21826,11 @@ msgstr "Fanen du redigerte dette elementet i, ble lukket."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "The target holds %{count} paths, more than the %{limit} Brando lists, so it cannot be reviewed here."
+msgstr "Målet inneholder %{count} stier, flere enn de %{limit} Brando lister, så det kan ikke gås gjennom her."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
 msgid "The target holds files Brando did not put there"
 msgstr "Målet inneholder filer som Brando ikke har lagt der"
 
@@ -21833,11 +21838,6 @@ msgstr "Målet inneholder filer som Brando ikke har lagt der"
 #, elixir-autogen, elixir-format
 msgid "The target holds these entries. Tick what to keep: the first deploy deletes the rest. Deeper paths can be added to the keep list below."
 msgstr "Målet inneholder disse oppføringene. Kryss av det som skal beholdes: den første publiseringen sletter resten. Dypere stier kan legges til i beholdlisten nedenfor."
-
-#: lib/brando_admin/live/sites/publishing_live.ex
-#, elixir-autogen, elixir-format
-msgid "The target holds too many files to list, so it cannot be reviewed here."
-msgstr "Målet inneholder for mange filer til å listes, så det kan ikke gås gjennom her."
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
