@@ -129,17 +129,16 @@ defmodule Brando.Content.RenderQueue do
     # This node's tokens, the same for every entry
     tokens = Freshness.attach(%{})
 
-    requests =
-      entries
-      |> Enum.map(&(&1 |> Map.merge(tokens) |> Brando.Tenant.Job.attach()))
-      |> Enum.uniq_by(&entry_key/1)
+    # These entries contain only identity fields. Use the same JSON values as
+    # the persisted job, including the spelling of a schema passed as a module.
+    keys = entries |> Enum.map(&(&1 |> JSON.encode!() |> JSON.decode!() |> Brando.Tenant.Job.attach())) |> Enum.uniq()
 
-    if requests == [] do
+    if keys == [] do
       []
     else
-      start_work(work, length(requests))
-      {merged, rest} = merge_waiting(requests, hold, work)
-      merged ++ insert(rest, hold, work)
+      start_work(work, length(keys))
+      {merged, rest} = merge_waiting(keys, tokens, hold, work)
+      merged ++ insert(Enum.map(rest, &Map.merge(&1, tokens)), hold, work)
     end
   end
 
@@ -149,18 +148,14 @@ defmodule Brando.Content.RenderQueue do
   # or that another insert merged into since, gets a render of its own.
   # Only a request that holds leaves a held render waiting: one that does
   # not makes it run now.
-  defp merge_waiting(requests, hold, work) do
+  defp merge_waiting(keys, tokens, hold, work) do
     now = DateTime.utc_now()
-    by_key = Map.new(requests, &{entry_key(&1), &1})
+    waiting = waiting(keys)
 
     updates =
-      by_key
-      |> Map.keys()
-      |> waiting()
-      |> Enum.map(fn job ->
-        more = Map.fetch!(by_key, entry_key(job.args))
-        {job, Freshness.merge(job.args, more), merged_meta(job, hold, work), is_nil(hold) and held?(job)}
-      end)
+      for {_key, job} <- waiting do
+        {job, Freshness.merge(job.args, tokens), merged_meta(job, hold, work), is_nil(hold) and held?(job)}
+      end
 
     updated = update_waiting(updates, now)
 
@@ -179,8 +174,8 @@ defmodule Brando.Content.RenderQueue do
 
     merged = Enum.map(merged, &elem(&1, 1))
 
-    merged_keys = MapSet.new(merged, &entry_key(&1.args))
-    {Enum.map(merged, &{:ok, &1}), Enum.reject(requests, &MapSet.member?(merged_keys, entry_key(&1)))}
+    merged_keys = for {key, job} <- waiting, MapSet.member?(updated, job.id), into: MapSet.new(), do: key
+    {Enum.map(merged, &{:ok, &1}), Enum.reject(keys, &MapSet.member?(merged_keys, &1))}
   end
 
   # The first waiting render of each entry. A join on the key's fields as
@@ -213,10 +208,13 @@ defmodule Brando.Content.RenderQueue do
 
     keys = MapSet.new(keys)
 
-    query
-    |> Brando.Repo.all(prepare: :unnamed)
-    |> Enum.filter(&MapSet.member?(keys, entry_key(&1.args)))
-    |> Enum.uniq_by(&entry_key(&1.args))
+    matches =
+      for job <- Brando.Repo.all(query, prepare: :unnamed),
+          key = Map.take(job.args, @entry_keys),
+          MapSet.member?(keys, key),
+          do: {key, job}
+
+    Enum.uniq_by(matches, &elem(&1, 0))
   end
 
   defp update_waiting([], _now), do: MapSet.new()
@@ -337,15 +335,6 @@ defmodule Brando.Content.RenderQueue do
   defp key_text(nil), do: nil
   defp key_text(value) when is_binary(value), do: value
   defp key_text(value), do: JSON.encode!(value)
-
-  # As the jobs table holds it
-  defp entry_key(args) do
-    args
-    |> Map.new(fn {key, value} -> {to_string(key), value} end)
-    |> Map.take(@entry_keys)
-    |> JSON.encode!()
-    |> JSON.decode!()
-  end
 
   @doc """
   Enqueues one entry-rendering job. It carries what this node's render
