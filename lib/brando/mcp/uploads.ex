@@ -322,8 +322,7 @@ defmodule Brando.MCP.Uploads do
 
       cond do
         stale?(id, meta, now) ->
-          File.rm_rf(dir(id))
-          File.rm(marker(grant_id, id))
+          with {:ok, _} <- File.rm_rf(dir(id)), do: File.rm(marker(grant_id, id))
           false
 
         meta == :error and File.lstat(dir(id)) == {:error, :enoent} ->
@@ -399,7 +398,7 @@ defmodule Brando.MCP.Uploads do
     meta = read_meta(id)
 
     if stale?(id, meta, now) do
-      match?({:ok, _}, File.rm_rf(dir(id)))
+      match?({:ok, [_ | _]}, File.rm_rf(dir(id)))
     else
       if indexed?, do: track_missing(id, meta)
       false
@@ -410,14 +409,16 @@ defmodule Brando.MCP.Uploads do
   # a marker. A sweep picks up anything staged since the initial adoption.
   defp track_missing(id, {:ok, %{"grant_id" => grant_id}}) when is_integer(grant_id) do
     unless File.regular?(marker(grant_id, id)) do
-      Repo.transaction(fn ->
-        lock!("grant-#{grant_id}")
-        if File.dir?(dir(id)), do: track!(grant_id, id)
-      end)
+      Repo.transaction(fn -> track_existing(grant_id, id) end)
     end
   end
 
   defp track_missing(_id, _meta), do: :ok
+
+  defp track_existing(grant_id, id) do
+    lock!("grant-#{grant_id}")
+    if File.dir?(dir(id)), do: track!(grant_id, id)
+  end
 
   # A process may have stopped between removing a directory and its marker.
   # Clean each grant under the prepare lock, including its now-empty bucket.
