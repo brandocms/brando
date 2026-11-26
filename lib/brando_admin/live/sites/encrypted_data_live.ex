@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Sites.EncryptedDataLive do
           <h2>{status_heading(@result.status)}</h2>
         </header>
         <div class="encrypted-data-body">
-          <p>{@result.summary}</p>
+          <p class="encrypted-data-summary">{@result.summary}</p>
           <ul :if={@result.items != []} class="encrypted-data-items" data-testid="encrypted-data-items">
             <li :for={item <- @result.items}>{item}</li>
           </ul>
@@ -111,7 +111,8 @@ defmodule BrandoAdmin.Sites.EncryptedDataLive do
 
   # The counts and the two causes, as the dialog's text
   defp confirm_text(result) do
-    Enum.join(result.items, "\n") <> "\n\n" <> result.fix
+    {first, rest} = result.items |> Enum.join(", ") |> String.split_at(1)
+    String.upcase(first) <> rest <> ". " <> result.fix
   end
 
   @impl Phoenix.LiveView

@@ -412,8 +412,8 @@ msgstr[1] "%{count} oppgraderingsmigreringer avviker fra Brandos maler"
 #, elixir-autogen, elixir-format
 msgid "%{count} user's two-factor secret"
 msgid_plural "%{count} users' two-factor secrets"
-msgstr[0] "Tofaktorhemmeligheten til %{count} bruker"
-msgstr[1] "Tofaktorhemmelighetene til %{count} brukere"
+msgstr[0] "tofaktorhemmeligheten til %{count} bruker"
+msgstr[1] "tofaktorhemmelighetene til %{count} brukere"
 
 #: lib/brando/doctor/checks/video_providers.ex
 #, elixir-autogen, elixir-format
@@ -433,8 +433,8 @@ msgstr[1] "%{count} advarsler"
 #, elixir-autogen, elixir-format
 msgid "%{count} webhook's secret"
 msgid_plural "%{count} webhooks' secrets"
-msgstr[0] "Hemmeligheten til %{count} webhook"
-msgstr[1] "Hemmelighetene til %{count} webhooks"
+msgstr[0] "hemmeligheten til %{count} webhook"
+msgstr[1] "hemmelighetene til %{count} webhooks"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format

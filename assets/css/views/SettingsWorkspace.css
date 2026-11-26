@@ -121,8 +121,12 @@
   .dashboard-move-paused {
     display: grid; gap: 4px; margin: 8px 0 0; padding: 0; list-style: none; font-size: var(--brando-text-md);
     a { color: var(--brando-ink); }
-    .dashboard-move-names a:not(:last-child)::after { content: ", "; }
+    /* A flex row drops the whitespace between the links */
+    .dashboard-move-names { display: inline-flex; flex-wrap: wrap; column-gap: 4px; }
+    .dashboard-move-names a:not(:last-child)::after { content: ","; }
   }
+  /* The System check's counts, a sentence here */
+  .dashboard-encrypted-items::first-letter { text-transform: uppercase; }
   .dashboard-heading { margin: 0 0 14px; font-size: var(--brando-text-2xl); line-height: 24px; font-weight: 500; }
   .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 

@@ -66,6 +66,13 @@ defmodule BrandoAdmin.Components.Dashboard do
   def move_notice(assigns) do
     here = Brando.Tenant.current_prefix()
     {local, elsewhere} = Enum.split_with(assigns.move.paused, &(&1["prefix"] == here))
+
+    local =
+      Enum.map(local, fn group ->
+        named = for item <- group["named"], do: {item["name"], paused_item_path(group["kind"], item["id"])}
+        %{kind: group["kind"], count: group["count"], named: named}
+      end)
+
     count = assigns.move.paused |> Enum.map(& &1["count"]) |> Enum.sum()
 
     assigns =
@@ -89,14 +96,12 @@ defmodule BrandoAdmin.Components.Dashboard do
         </p>
         <ul :if={@local != []} class="dashboard-move-paused">
           <li :for={group <- @local}>
-            <span>{paused_kind(group["kind"])}:</span>
+            <span>{paused_kind(group.kind)}:</span>
             <span class="dashboard-move-names">
-              <.link :for={item <- group["named"]} navigate={paused_item_path(group["kind"], item["id"])}>
-                {item["name"]}
-              </.link>
+              <.link :for={{name, path} <- group.named} navigate={path}>{name}</.link>
             </span>
-            <.link :if={group["count"] > length(group["named"])} navigate={paused_list_path(group["kind"])}>
-              {gettext("and %{count} more", count: group["count"] - length(group["named"]))}
+            <.link :if={group.count > length(group.named)} navigate={paused_list_path(group.kind)}>
+              {gettext("and %{count} more", count: group.count - length(group.named))}
             </.link>
           </li>
         </ul>
@@ -137,7 +142,7 @@ defmodule BrandoAdmin.Components.Dashboard do
       <.icon name="triangle-alert" />
       <div>
         <h2>{gettext("This database was encrypted with another secret")}</h2>
-        <p>{Enum.join(@result.items, ", ")}</p>
+        <p class="dashboard-encrypted-items">{Enum.join(@result.items, ", ")}</p>
         <p>{@result.fix}</p>
       </div>
       <.link navigate="/admin/config/encrypted-data" class="btn" data-testid="dashboard-encrypted-data-review">
