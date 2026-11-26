@@ -80,11 +80,22 @@ test('reviews, verifies, applies and reverts a release’s module definitions', 
   await page.keyboard.press('Escape')
   await expect(page.locator('#release-preview.release-preview-full')).toHaveCount(0)
 
-  // Apply the one ready change
-  await page.getByTestId('release-apply').click()
+  // Apply the one ready change. `toBeVisible()` passes for a dialog left at
+  // opacity 0, which takes every click on the screen, so the check is its
+  // computed opacity. Escape and the backdrop close it, and it opens again.
   const confirm = page.locator('#release-confirm')
-  await expect(confirm).toBeVisible()
+  await page.getByTestId('release-apply').click()
+  await expect(confirm).toHaveCSS('opacity', '1')
+  await page.keyboard.press('Escape')
+  await expect(confirm).toBeHidden()
+  await page.getByTestId('release-apply').click()
+  await expect(confirm).toHaveCSS('opacity', '1')
+  await page.mouse.click(4, 4)
+  await expect(confirm).toBeHidden()
+  await page.getByTestId('release-apply').click()
+  await expect(confirm).toHaveCSS('opacity', '1')
   await confirm.getByTestId('release-confirm-apply').click()
+  await expect(confirm).toBeHidden()
   const banner = page.getByTestId('release-banner')
   await expect(banner).toBeVisible()
   await expect(page.getByTestId('release-applied-row')).toHaveCount(1)
@@ -126,6 +137,8 @@ test('a module changed here and in the release is applied once its version is ch
 
 // brandocms/brando#3540: a release that removes a var a block holds a value
 // for is ready to apply; the applied module then links to Resolve blocks.
+// brandocms/brando#3996: so do the applied banner and, after Keep, the
+// notice above the review.
 test('a release that removes a var is applied, and the module links to Resolve blocks', async ({ page }) => {
   expect((await page.request.post('/e2e/setup_fixtures/release-removal')).ok()).toBe(true)
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
@@ -143,11 +156,24 @@ test('a release that removes a var is applied, and the module links to Resolve b
   await page.getByTestId('release-confirm-apply').click()
   await syncLV(page)
 
+  const resolvePath = /\/admin\/config\/content\/modules\/update\/\d+\/stale-blocks$/
+  const banner = page.getByTestId('release-banner')
+  await expect(banner.getByTestId('release-banner-leftovers')).toBeVisible()
+  await expect(banner.getByRole('link', { name: 'Løs blokker' })).toHaveAttribute('href', resolvePath)
+
   const applied = page.getByTestId('release-applied-row').filter({ hasText: 'Enkelt bilde med bildetekst' })
   await applied.click()
   await syncLV(page)
-  await page.getByTestId('release-resolve-blocks').click()
-  await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/update\/\d+\/stale-blocks$/)
+  await expect(page.getByTestId('release-resolve-blocks')).toHaveAttribute('href', resolvePath)
+
+  // After Keep, the notice above the review still names the blocks
+  await banner.getByRole('button', { name: 'Behold' }).click()
+  await page.locator('dialog.admin-dialog').getByRole('button', { name: 'Behold', exact: true }).click()
+  await expect(banner).toHaveCount(0)
+  // The seeds' blocks may hold leftovers too: then it links to the list
+  const notice = page.getByTestId('release-leftovers')
+  await notice.getByRole('link', { name: 'Løs blokker' }).click()
+  await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/(update\/\d+\/)?stale-blocks$/)
 })
 
 // brandocms/brando#3844: a release that renames a var a block holds a value

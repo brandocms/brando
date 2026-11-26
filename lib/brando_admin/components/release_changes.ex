@@ -1408,6 +1408,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
       class="admin-dialog release-confirm"
       aria-labelledby="release-confirm-title"
       phx-hook="Brando.ReleaseDialog"
+      phx-mounted={JS.ignore_attributes(["open"])}
       data-open={to_string(@open?)}
       data-close="close_confirm"
     >
