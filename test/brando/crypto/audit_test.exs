@@ -171,6 +171,33 @@ defmodule Brando.Crypto.AuditTest do
       assert actor_id == admin.id
     end
 
+    test "a user's reset that stops before the sessions end changes nothing, and a second run does it" do
+      lost = user()
+      ciphertext = ForeignSecret.two_factor!(lost, false)
+      session = Users.generate_user_session_token(lost)
+
+      Repo.query!(
+        "CREATE FUNCTION public.refuse_token_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'refused'; END $$"
+      )
+
+      Repo.query!(
+        "CREATE TRIGGER refuse BEFORE DELETE ON public.users_tokens FOR EACH ROW EXECUTE FUNCTION public.refuse_token_delete()"
+      )
+
+      {result, _log} = ExUnit.CaptureLog.with_log(fn -> Audit.forget(:system) end)
+
+      assert {:ok, %{failed: [:users], marker: :kept}} = result
+      assert security(lost).totp_secret == ciphertext
+      assert recovery_codes(lost) == 2
+      assert Users.get_user_by_session_token(session)
+
+      Repo.query!("DROP TRIGGER refuse ON public.users_tokens")
+
+      assert {:ok, %{users: 1, failed: []}} = Audit.forget(:system)
+      assert is_nil(security(lost).totp_secret)
+      refute Users.get_user_by_session_token(session)
+    end
+
     test "the admin who runs it keeps the session they run it from" do
       admin = user(role: :superuser)
       ForeignSecret.two_factor!(admin, false)

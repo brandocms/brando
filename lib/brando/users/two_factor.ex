@@ -428,30 +428,39 @@ defmodule Brando.Users.TwoFactor do
   what `reset/3` does, on behalf of `actor` (a user or `:system`), except
   that passkeys stay, as they do not depend on the secret. A secret set up
   again meanwhile is left as it is. `opts[:keep_id]` is the token row of the
-  session to keep, when the actor forgets their own. Returns whether it did.
+  session to keep, when the actor forgets their own. What it writes commits
+  together, so a run that stops part-way leaves the secret for the next run
+  to find. Returns whether it did.
   """
   @spec forget_unreadable(integer(), String.t(), map() | :system, keyword()) :: boolean()
   def forget_unreadable(user_id, ciphertext, actor, opts \\ []) do
-    {:ok, forgot?} =
+    {:ok, result} =
       Repo.transaction(fn ->
         {count, _} =
           from(s in Security, where: s.user_id == ^user_id and s.totp_secret == ^ciphertext)
           |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
 
-        if count == 1, do: delete_recovery_codes(%{id: user_id})
-        count == 1
+        if count == 1 do
+          delete_recovery_codes(%{id: user_id})
+
+          case fetch_user(user_id) do
+            {:ok, user} -> end_access(user, actor, opts[:keep_id])
+            {:error, :not_found} -> :forgotten
+          end
+        end
       end)
 
-    with true <- forgot?, {:ok, user} <- fetch_user(user_id) do
-      own? = match?(%{id: ^user_id}, actor)
-      Throttle.clear(user)
-      Users.revoke_sessions(user, except_id: if(own?, do: opts[:keep_id]))
-      Brando.MCP.revoke_user_grants(user, "two_factor_off")
-      SecurityLog.record(:two_factor_reset, user, actor: if(not own?, do: actor), details: %{"reason" => "unreadable"})
-      Users.notify_security(user, :two_factor_reset)
-    end
+    if match?(%{id: _}, result), do: Users.notify_security(result, :two_factor_reset)
+    not is_nil(result)
+  end
 
-    forgot?
+  defp end_access(%{id: user_id} = user, actor, keep_id) do
+    own? = match?(%{id: ^user_id}, actor)
+    Throttle.clear(user)
+    Users.revoke_sessions(user, except_id: if(own?, do: keep_id))
+    Brando.MCP.revoke_user_grants(user, "two_factor_off")
+    SecurityLog.record(:two_factor_reset, user, actor: if(not own?, do: actor), details: %{"reason" => "unreadable"})
+    user
   end
 
   @doc """
