@@ -223,6 +223,15 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       assert secrets_task(igniter) == [@secret_files]
     end
 
+    test "a config/dev.secret.exs that holds the secret, not yet imported, is imported and keeps its one value" do
+      secret = "import Config\nconfig :brando, Brando.Crypto, secret: \"#{String.duplicate("d", 32)}\"\n"
+      igniter = install(project(%{"config/dev.secret.exs" => secret}))
+
+      assert IgniterCase.source(igniter, "config/dev.exs") =~ ~s|import_config("dev.secret.exs")|
+      assert IgniterCase.source(igniter, "config/dev.secret.exs") == secret
+      assert IgniterCase.source(igniter, ".envrc.prod") =~ @marker
+    end
+
     # A site installed before the secret existed, cloned: Git left out its
     # environment files, so they are planned again, but production holds its
     # secret_key_base, which no run can know.
@@ -394,7 +403,11 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       for {path, contents} <- [
             {".envrc.prod", ~s(export BRANDO_ENCRYPTION_SECRET="too short"\n)},
             {"config/dev.secret.exs", ~s(import Config\nconfig :brando, Brando.Crypto, secret: "too short"\n)},
-            {"config/dev.secret.exs", ~s[import Config\nconfig :brando, Brando.Crypto, secret: System.get_env("X")\n]}
+            {"config/dev.secret.exs", ~s[import Config\nconfig :brando, Brando.Crypto, secret: System.get_env("X")\n]},
+            # Read differently by the shell than by Elixir: `$` expands in an environment file
+            {"config/dev.secret.exs",
+             ~s(import Config\nconfig :brando, Brando.Crypto, secret: "#{String.duplicate("d", 32)}$HOME"\n)},
+            {".envrc.prod", "export BRANDO_ENCRYPTION_SECRET=#{String.duplicate("d", 32)}\\n#\n"}
           ] do
         marked_files(dir)
 
@@ -518,6 +531,16 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
 
       assert IgniterCase.source(result, "config/runtime.exs") =~ ~s|System.get_env("BRANDO_ENCRYPTION_SECRET", "")|
       assert IgniterCase.source(result, "config/dev.exs") =~ ~s|import_config("dev.secret.exs")|
+    end
+
+    # Written by hand from the guide before the upgrade ran: nothing reads it
+    # until config/dev.exs imports it
+    test "a config/dev.secret.exs that config/dev.exs does not import still gets its import" do
+      secret = "import Config\nconfig :brando, Brando.Crypto, secret: \"#{String.duplicate("d", 32)}\"\n"
+      result = upgrade(project(%{"config/dev.secret.exs" => secret}))
+
+      assert IgniterCase.source(result, "config/dev.exs") =~ ~s|import_config("dev.secret.exs")|
+      assert IgniterCase.source(result, "config/dev.secret.exs") == secret
     end
 
     test "mix brando.migrate55 writes the same" do

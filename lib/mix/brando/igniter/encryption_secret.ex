@@ -24,9 +24,11 @@ if Code.ensure_loaded?(Igniter) do
     @runtime "config/runtime.exs"
     # What each environment reads, with the files these import by a literal
     # path. phx.new's import_config "#{config_env()}.exs" is not followed: a
-    # secret config/test.exs sets reaches neither.
+    # secret config/test.exs sets reaches neither. config/dev.secret.exs
+    # counts once config/dev.exs imports it: written by hand before that,
+    # nothing reads it.
     @prod_configs ~w(config/config.exs config/prod.exs config/runtime.exs)
-    @dev_configs ~w(config/config.exs config/dev.exs config/dev.secret.exs)
+    @dev_configs ~w(config/config.exs config/dev.exs)
 
     @doc "The development file that holds the secret."
     def dev_secret, do: @dev_secret
@@ -37,9 +39,10 @@ if Code.ensure_loaded?(Igniter) do
     @doc """
     Reads how the project configures `Brando.Crypto`, in any form: `:prod?`
     when `config/config.exs`, `config/prod.exs` or `config/runtime.exs` do,
-    `:dev?` when `config/config.exs`, `config/dev.exs` or
-    `config/dev.secret.exs` do (each with the files it imports by a literal
-    path), and `:reads_variable?` when prod's names `BRANDO_ENCRYPTION_SECRET`.
+    `:dev?` when `config/config.exs` or `config/dev.exs` do (each with the
+    files it imports by a literal path, `config/dev.secret.exs` among them
+    once it is imported), and `:reads_variable?` when prod's names
+    `BRANDO_ENCRYPTION_SECRET`.
     """
     def existing(igniter) do
       {igniter, prod} = contents(igniter, @prod_configs, MapSet.new())
@@ -182,7 +185,10 @@ if Code.ensure_loaded?(Igniter) do
         import Config
 
         """ <> line,
-        &Source.update(&1, :content, fn content -> String.trim_trailing(content) <> "\n\n" <> line end)
+        &Source.update(&1, :content, fn content ->
+          # One that holds the secret already, not yet imported, keeps its value
+          if configures_crypto?(content), do: content, else: String.trim_trailing(content) <> "\n\n" <> line
+        end)
       )
     end
 
