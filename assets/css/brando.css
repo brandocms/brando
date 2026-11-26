@@ -128,6 +128,7 @@
 @import "./views/config/Sites.css";
 @import "./views/config/FrontendAssets.css";
 @import "./views/config/Globals.css";
+@import "./views/config/EncryptedData.css";
 @import "./views/config/ScheduledPublishing.css";
 @import "./views/config/SEO.css";
 @import "./views/config/Utils.css";

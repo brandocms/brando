@@ -94,14 +94,16 @@ defmodule BrandoAdmin.UserSessionController do
     end
   end
 
-  # The site cannot decrypt the secret (its encryption secret changed): not
-  # the user's fault, so not counted towards the lockout. Logged by TwoFactor.
+  # The site cannot decrypt the secret (its encryption secret changed, or the
+  # database came from another installation): not the user's fault, so not
+  # counted towards the lockout. Logged by TwoFactor, with the command that
+  # resets it on the server (`Brando.Release.reset_two_factor/1`).
   defp unreadable_code(conn) do
     conn
     |> put_flash(
       :error,
       gettext(
-        "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
+        "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication. Whoever runs the server can reset it too."
       )
     )
     |> redirect(to: "/admin/login/two-factor")

@@ -245,8 +245,11 @@ defmodule Brando.Users.TwoFactor do
       :error ->
         Logger.error(
           "[Brando.Users.TwoFactor] The two-factor secret of user ##{user.id} cannot be decrypted. " <>
-            "Has the encryption secret (Brando.Crypto, or the endpoint's secret_key_base) changed? " <>
-            "The user can log in with a recovery code, or an administrator can reset two-factor authentication."
+            "Has the encryption secret (Brando.Crypto, or the endpoint's secret_key_base) changed, or does the " <>
+            "database come from another installation? An administrator can reset two-factor authentication, and " <>
+            "whoever runs the server can with " <>
+            "bin/#{Brando.otp_app()} eval 'Brando.Release.reset_two_factor(\"<email>\")' (mix run -e in " <>
+            "development). See \"Copying a database between environments\" in the deployment guide."
         )
 
         :unreadable
@@ -397,13 +400,15 @@ defmodule Brando.Users.TwoFactor do
   password, and set two-factor authentication up again if they must.
 
   Allowed to whoever may reset the user's password
-  (`Brando.Trait.ProtectPassword.allowed?/2`), but not for their own account.
-  Returns `{:ok, user}` or `{:error, :forbidden | :not_found}`.
+  (`Brando.Trait.ProtectPassword.allowed?/2`), but not for their own account,
+  and to `:system`, for whoever runs the server
+  (`Brando.Release.reset_two_factor/1`). Returns `{:ok, user}` or
+  `{:error, :forbidden | :not_found}`.
   """
-  @spec reset(integer() | String.t(), map(), keyword()) :: {:ok, map()} | {:error, atom()}
+  @spec reset(integer() | String.t(), map() | :system, keyword()) :: {:ok, map()} | {:error, atom()}
   def reset(user_id, actor, opts \\ []) do
     with {:ok, user} <- fetch_user(user_id),
-         :ok <- check(user.id != actor.id, :forbidden),
+         :ok <- check(actor == :system or user.id != actor.id, :forbidden),
          :ok <- check(Brando.Trait.ProtectPassword.allowed?(actor, user), :forbidden) do
       clear(user)
       Passkeys.delete_all(user)
@@ -416,6 +421,43 @@ defmodule Brando.Users.TwoFactor do
       {:ok, user}
     end
   end
+
+  @doc """
+  Forgets `user_id`'s two-factor secret while it is still `ciphertext`, one
+  this installation's secret cannot decrypt (`Brando.Crypto.Audit.forget/2`):
+  what `reset/3` does, on behalf of `actor` (a user or `:system`), except
+  that passkeys stay, as they do not depend on the secret. A secret set up
+  again meanwhile is left as it is. `opts[:keep_id]` is the token row of the
+  session to keep, when the actor forgets their own. Returns whether it did.
+  """
+  @spec forget_unreadable(integer(), String.t(), map() | :system, keyword()) :: boolean()
+  def forget_unreadable(user_id, ciphertext, actor, opts \\ []) do
+    {:ok, forgot?} =
+      Repo.transaction(fn ->
+        {count, _} =
+          from(s in Security, where: s.user_id == ^user_id and s.totp_secret == ^ciphertext)
+          |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
+
+        if count == 1, do: delete_recovery_codes(%{id: user_id})
+        count == 1
+      end)
+
+    with true <- forgot?, {:ok, user} <- fetch_user(user_id) do
+      own? = match?(%{id: ^user_id}, actor)
+      Throttle.clear(user)
+      Users.revoke_sessions(user, except_id: if(own?, do: opts[:keep_id]))
+      Brando.MCP.revoke_user_grants(user, "two_factor_off")
+      SecurityLog.record(:two_factor_reset, user, actor: if(not own?, do: actor), details: %{"reason" => "unreadable"})
+      Users.notify_security(user, :two_factor_reset)
+    end
+
+    forgot?
+  end
+
+  @doc false
+  # Whether `ciphertext` is a two-factor secret of `user_id` that decrypts here
+  def readable_secret?(user_id, ciphertext),
+    do: Brando.Crypto.decrypt(ciphertext, encryption_context(%{id: user_id})) != :error
 
   defp fetch_user(user_id) do
     case Users.get_user(user_id) do

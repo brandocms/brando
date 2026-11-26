@@ -1,0 +1,11 @@
+/* Configuration → Encrypted data (`EncryptedDataLive`): what this
+   installation's encryption secret cannot read, and the clean-up. */
+.encrypted-data-workspace {
+  max-width: 1120px;
+  .encrypted-data-panel + .encrypted-data-panel { margin-top: 24px; }
+  .encrypted-data-body { display: grid; gap: 12px; padding: 20px 24px; max-width: 76ch; }
+  .encrypted-data-items { display: grid; gap: 4px; margin: 0; padding-left: 18px; }
+  .encrypted-data-fix { color: var(--workspace-muted); }
+  .encrypted-data-actions { display: grid; justify-items: start; gap: 8px; padding-top: 8px; }
+  .encrypted-data-note { color: var(--workspace-muted); font-size: var(--brando-text-sm); }
+}

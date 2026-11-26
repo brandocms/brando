@@ -33,6 +33,7 @@ defmodule Brando.Doctor do
     Checks.Oban,
     Checks.Configuration,
     Checks.EncryptionSecret,
+    Checks.EncryptedData,
     Checks.VideoProviders,
     Checks.SoftDeleteRepo,
     Checks.SiteFrontends,

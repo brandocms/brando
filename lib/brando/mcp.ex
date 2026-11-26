@@ -62,6 +62,13 @@ defmodule Brando.MCP do
   require Logger
 
   @path "/mcp"
+  @figma_token_removed [
+    figma_token: nil,
+    figma_token_hint: nil,
+    figma_token_set_at: nil,
+    figma_token_set_by_id: nil,
+    figma_token_expires_on: nil
+  ]
   @scope "content"
 
   @type tenant :: %{
@@ -409,6 +416,48 @@ defmodule Brando.MCP do
     end
   end
 
+  @doc false
+  # Whether `setting` (its site and environment preloaded) holds a pasted
+  # token that does not decrypt here (`Brando.Crypto.Audit`)
+  @spec figma_token_unreadable?(Setting.t()) :: boolean()
+  def figma_token_unreadable?(%Setting{figma_token: ciphertext} = setting) when is_binary(ciphertext),
+    do: Brando.Crypto.decrypt(ciphertext, figma_context(setting_tenant(setting))) == :error
+
+  def figma_token_unreadable?(_setting), do: false
+
+  @doc """
+  Removes the pasted Figma token of `setting` (its site and environment
+  preloaded) as `delete_figma_token/2` does, as `actor` (a user or
+  `:system`), while it is still one that does not decrypt here
+  (`Brando.Crypto.Audit.forget/2`): a token saved meanwhile stays. Returns
+  whether it did.
+  """
+  @spec forget_unreadable_figma_token(Setting.t(), User.t() | :system) :: boolean()
+  def forget_unreadable_figma_token(%Setting{figma_token: ciphertext} = setting, actor) when is_binary(ciphertext) do
+    if figma_token_unreadable?(setting) do
+      {count, rows} =
+        from(s in Setting, where: s.id == ^setting.id and s.figma_token == ^ciphertext, select: s)
+        |> Repo.update_all(set: Keyword.put(@figma_token_removed, :updated_at, DateTime.utc_now()))
+
+      tenant = setting_tenant(setting)
+
+      Enum.each(rows, fn row ->
+        in_tenant(tenant, fn ->
+          Brando.Activity.setting_changed(:updated, row, "MCP", actor, details: %{"figma_token" => "removed"})
+        end)
+      end)
+
+      count == 1
+    else
+      false
+    end
+  end
+
+  def forget_unreadable_figma_token(_setting, _actor), do: false
+
+  defp setting_tenant(%Setting{site_id: nil}), do: standalone_tenant()
+  defp setting_tenant(%Setting{site: site, environment: environment}), do: tenant(site, environment)
+
   # Figma's personal access tokens are printable ASCII without spaces
   defp valid_figma_token?(token),
     do: byte_size(token) in 16..512 and String.match?(token, ~r/\A[\x21-\x7E]+\z/)
@@ -429,13 +478,7 @@ defmodule Brando.MCP do
           figma_token_set_by_id: actor.id,
           figma_token_expires_on: expires_on
         ],
-        else: [
-          figma_token: nil,
-          figma_token_hint: nil,
-          figma_token_set_at: nil,
-          figma_token_set_by_id: nil,
-          figma_token_expires_on: nil
-        ]
+        else: @figma_token_removed
 
     setting =
       struct(

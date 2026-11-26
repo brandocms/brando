@@ -338,8 +338,9 @@ authentication, session, and migration-history tables stay in `public`
 permanently, as do authorization, which shared library items each site
 enables, entry drafts, the content assistant's guidance, conversations and
 proposals, content transfer receipts, form submissions, Markdown webhook
-deliveries, connected AI tools (MCP), each site's usage and when each static
-environment's content last changed, along with every
+deliveries, connected AI tools (MCP), each site's usage, when each static
+environment's content last changed and the installation's encryption marker
+(`Brando.Crypto.Marker`), along with every
 `oban_*` table, since Oban is configured against `public`:
 
 ```text
@@ -354,7 +355,7 @@ ai_conversations  ai_messages  ai_runs  ai_guidance_versions
 content_proposals  content_proposal_receipts  content_transfer_receipts
 forms_submissions  markdown_webhook_deliveries
 mcp_settings  mcp_grants  mcp_tokens  mcp_authorization_codes
-oban_*
+crypto_marker  oban_*
 ```
 
 Environments provisioned before a table joined this list may hold an empty

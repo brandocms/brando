@@ -81,6 +81,12 @@ defmodule Brando.Supervisor do
       Brando.Tenant.ServedHosts
     ]
 
+    # First, and so before Oban works a queue: on a node that serves, a
+    # database copied from another installation has its webhooks and
+    # notification routes paused before anything can send
+    # (`Brando.Crypto.Marker`)
+    children = Brando.Crypto.Marker.children() ++ children
+
     # Starts after the cache it reads from, so it stops (flushing once more)
     # before the cache does.
     children = children ++ Brando.Sites.FourOhFour.Flusher.children()
