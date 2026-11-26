@@ -107,6 +107,19 @@ defmodule Brando.Content.StaleBlocks do
     Repo.one(from(h in subquery(vars), select: count(h.block_id, :distinct)))
   end
 
+  @doc """
+  Of the modules in `modules/0`, those with blocks that hold a ref or var
+  the module no longer defines, and how many (`count_with_leftovers/1`):
+  `[%{module: module, count: count}]`, most first.
+  """
+  @spec modules_with_leftovers() :: [%{module: Module.t(), count: pos_integer()}]
+  def modules_with_leftovers do
+    modules()
+    |> Enum.map(&%{module: &1.module, count: count_with_leftovers(&1.module)})
+    |> Enum.filter(&(&1.count > 0))
+    |> Enum.sort_by(&(-&1.count))
+  end
+
   ## Planning
 
   @doc """

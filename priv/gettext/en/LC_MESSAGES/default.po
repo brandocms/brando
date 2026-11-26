@@ -1319,6 +1319,13 @@ msgid_plural "%{count} blocks differ"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block holds values its module no longer defines"
+msgid_plural "%{count} blocks in one module hold values it no longer defines"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 block holds values the module no longer defines"
@@ -1326,10 +1333,24 @@ msgid_plural "%{count} blocks hold values the module no longer defines"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block in %{modules} modules holds values its module no longer defines"
+msgid_plural "%{count} blocks in %{modules} modules hold values their modules no longer define"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
 msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block still holds values the applied modules no longer define."
+msgid_plural "%{count} blocks still hold values the applied modules no longer define."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -17546,6 +17567,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/components/stale_blocks.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -17556,6 +17578,11 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve conflicts or required migrations before importing. Export the current definitions into a new bundle and reconcile your edits."
+msgstr ""
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve them to drop the values or move them onto refs and vars the modules define now."
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -22328,6 +22355,7 @@ msgstr ""
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
 msgstr ""
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
