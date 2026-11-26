@@ -416,9 +416,11 @@ defmodule Brando.MCP do
     end
   end
 
-  @doc false
-  # Whether `setting` (its site and environment preloaded) holds a pasted
-  # token that does not decrypt here (`Brando.Crypto.Audit`)
+  @doc """
+  Whether `setting` (its site and environment preloaded) holds a pasted
+  token that does not decrypt with this installation's secret, for
+  `Brando.Crypto.Audit`.
+  """
   @spec figma_token_unreadable?(Setting.t()) :: boolean()
   def figma_token_unreadable?(%Setting{figma_token: ciphertext} = setting) when is_binary(ciphertext),
     do: Brando.Crypto.decrypt(ciphertext, figma_context(setting_tenant(setting))) == :error
@@ -439,13 +441,7 @@ defmodule Brando.MCP do
         from(s in Setting, where: s.id == ^setting.id and s.figma_token == ^ciphertext, select: s)
         |> Repo.update_all(set: Keyword.put(@figma_token_removed, :updated_at, DateTime.utc_now()))
 
-      tenant = setting_tenant(setting)
-
-      Enum.each(rows, fn row ->
-        in_tenant(tenant, fn ->
-          Brando.Activity.setting_changed(:updated, row, "MCP", actor, details: %{"figma_token" => "removed"})
-        end)
-      end)
+      Enum.each(rows, &record_token_removed(setting_tenant(setting), &1, actor))
 
       count == 1
     else
@@ -454,6 +450,12 @@ defmodule Brando.MCP do
   end
 
   def forget_unreadable_figma_token(_setting, _actor), do: false
+
+  defp record_token_removed(tenant, setting, actor) do
+    in_tenant(tenant, fn ->
+      Brando.Activity.setting_changed(:updated, setting, "MCP", actor, details: %{"figma_token" => "removed"})
+    end)
+  end
 
   defp setting_tenant(%Setting{site_id: nil}), do: standalone_tenant()
   defp setting_tenant(%Setting{site: site, environment: environment}), do: tenant(site, environment)

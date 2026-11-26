@@ -728,17 +728,20 @@ defmodule Brando.Webhooks do
   @spec pause_unreadable(String.t() | nil, term()) :: non_neg_integer()
   def pause_unreadable(prefix, actor) do
     if tables?(schema(prefix)) do
-      reduce_unreadable(prefix, 0, 0, fn webhook, count ->
-        if pause_unreadable_one(prefix, webhook, actor), do: count + 1, else: count
-      end)
+      reduce_unreadable(prefix, 0, 0, &count_paused(prefix, &1, &2, actor))
     else
       0
     end
   end
 
-  @doc false
-  # Pauses `webhook` while its stored secret is still `secret_ciphertext`, one that
-  # did not decrypt, and it still sends or resumes by itself
+  defp count_paused(prefix, webhook, count, actor),
+    do: if(pause_unreadable_one(prefix, webhook, actor), do: count + 1, else: count)
+
+  @doc """
+  Pauses `webhook` by hand while its stored secret is still the one `webhook` holds,
+  which did not decrypt, and it still sends or resumes by itself: what
+  `pause_unreadable/2` does for each. Returns whether it did.
+  """
   @spec pause_unreadable_one(String.t() | nil, Webhook.t(), term()) :: boolean()
   def pause_unreadable_one(prefix, %Webhook{} = webhook, actor) do
     {paused, rows} =
@@ -771,9 +774,9 @@ defmodule Brando.Webhooks do
 
     acc = batch |> Enum.filter(&(secret(&1) == {:error, :secret_unreadable})) |> Enum.reduce(acc, fun)
 
-    case List.last(batch) do
-      %Webhook{id: last} when length(batch) == @batch_size -> reduce_unreadable(prefix, last, acc, fun)
-      _ -> acc
+    case batch do
+      [] -> acc
+      _ -> reduce_unreadable(prefix, batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
     end
   end
 

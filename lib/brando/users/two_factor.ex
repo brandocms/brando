@@ -454,8 +454,11 @@ defmodule Brando.Users.TwoFactor do
     forgot?
   end
 
-  @doc false
-  # Whether `ciphertext` is a two-factor secret of `user_id` that decrypts here
+  @doc """
+  Whether `ciphertext`, stored as `user_id`'s two-factor secret, decrypts
+  with this installation's secret, for `Brando.Crypto.Audit`.
+  """
+  @spec readable_secret?(integer(), String.t()) :: boolean()
   def readable_secret?(user_id, ciphertext),
     do: Brando.Crypto.decrypt(ciphertext, encryption_context(%{id: user_id})) != :error
 

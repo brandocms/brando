@@ -83,9 +83,9 @@ defmodule Brando.Crypto.Audit do
   def unreadable?(counts), do: Enum.any?(@kinds, &(Map.get(counts, &1, 0) > 0))
 
   @doc """
-  The schemas that hold webhooks and notification routes: nil for `public`,
-  then the prefix of every environment of every site, whatever the site's
-  status. Without tenancy, `public` only.
+  Where to look for webhooks and notification routes: nil for `public`, then
+  the prefix of every environment of every site, whatever the site's status.
+  Without tenancy, `public` only.
   """
   @spec prefixes() :: [String.t() | nil]
   def prefixes do
@@ -138,28 +138,13 @@ defmodule Brando.Crypto.Audit do
 
   defp do_forget(actor, opts) do
     {users, failed} =
-      attempt(:users, 0, [], fn ->
-        reduce_users(0, fn user_id, ciphertext, count ->
-          if TwoFactor.forget_unreadable(user_id, ciphertext, actor, keep_id: opts[:keep_id]),
-            do: count + 1,
-            else: count
-        end)
-      end)
+      attempt(:users, 0, [], fn -> reduce_users(0, &forget_user(&1, &2, &3, actor, opts[:keep_id])) end)
 
     {outbound, failed} =
       Enum.reduce(prefixes(), {%{webhooks: 0, notification_routes: 0}, failed}, fn prefix, {acc, failed} ->
         {counts, failed} =
           attempt(prefix || "public", %{webhooks: 0, notification_routes: 0}, failed, fn ->
-            # A schema's pauses commit together, or not at all
-            {:ok, counts} =
-              Repo.transaction(fn ->
-                %{
-                  webhooks: Webhooks.pause_unreadable(prefix, actor),
-                  notification_routes: Routing.pause_unreadable(prefix, actor)
-                }
-              end)
-
-            counts
+            pause_unreadable(prefix, actor)
           end)
 
         {Map.merge(acc, counts, fn _kind, a, b -> a + b end), failed}
@@ -182,6 +167,23 @@ defmodule Brando.Crypto.Audit do
     |> Map.merge(outbound)
     |> Map.merge(figma)
     |> Map.merge(%{failed: Enum.reverse(failed), marker: marker})
+  end
+
+  defp forget_user(user_id, ciphertext, count, actor, keep_id) do
+    if TwoFactor.forget_unreadable(user_id, ciphertext, actor, keep_id: keep_id), do: count + 1, else: count
+  end
+
+  # A schema's pauses commit together, or not at all
+  defp pause_unreadable(prefix, actor) do
+    {:ok, counts} =
+      Repo.transaction(fn ->
+        %{
+          webhooks: Webhooks.pause_unreadable(prefix, actor),
+          notification_routes: Routing.pause_unreadable(prefix, actor)
+        }
+      end)
+
+    counts
   end
 
   defp write_marker do
@@ -219,9 +221,9 @@ defmodule Brando.Crypto.Audit do
       |> Enum.reject(fn {user_id, ciphertext} -> TwoFactor.readable_secret?(user_id, ciphertext) end)
       |> Enum.reduce(acc, fn {user_id, ciphertext}, acc -> fun.(user_id, ciphertext, acc) end)
 
-    case List.last(batch) do
-      {last, _ciphertext} when length(batch) == @batch_size -> reduce_users(last, acc, fun)
-      _ -> acc
+    case batch do
+      [] -> acc
+      _ -> reduce_users(batch |> Enum.map(&elem(&1, 0)) |> Enum.max(), acc, fun)
     end
   end
 
@@ -238,9 +240,9 @@ defmodule Brando.Crypto.Audit do
 
     acc = Enum.reduce(batch, acc, fun)
 
-    case List.last(batch) do
-      %Setting{id: last} when length(batch) == @batch_size -> reduce_settings(last, acc, fun)
-      _ -> acc
+    case batch do
+      [] -> acc
+      _ -> reduce_settings(batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
     end
   end
 

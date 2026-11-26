@@ -239,10 +239,11 @@ defmodule Brando.Figma.OAuth do
 
   ## What another secret wrote
 
-  @doc false
-  # Which of `setting`'s groups (its site and environment preloaded) hold a
-  # value that does not decrypt here (`Brando.Crypto.Audit`): `:app`,
-  # `:connection` and `:pending`
+  @doc """
+  Which of `setting`'s groups (its site and environment preloaded) hold a
+  value that does not decrypt with this installation's secret, for
+  `Brando.Crypto.Audit`: `:app`, `:connection` and `:pending`.
+  """
   @spec unreadable_groups(Setting.t()) :: [:app | :connection | :pending]
   def unreadable_groups(%Setting{} = setting) do
     tenant = tenant_of(setting)

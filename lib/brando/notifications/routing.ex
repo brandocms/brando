@@ -922,17 +922,20 @@ defmodule Brando.Notifications.Routing do
   @spec pause_unreadable(String.t() | nil, term()) :: non_neg_integer()
   def pause_unreadable(prefix, actor) do
     if tables?(schema(prefix)) do
-      reduce_unreadable(prefix, 0, 0, fn route, count ->
-        if pause_unreadable_one(prefix, route, actor), do: count + 1, else: count
-      end)
+      reduce_unreadable(prefix, 0, 0, &count_paused(prefix, &1, &2, actor))
     else
       0
     end
   end
 
-  @doc false
-  # Pauses `route` while its stored url is still `url_ciphertext`, one that
-  # did not decrypt, and it still sends or resumes by itself
+  defp count_paused(prefix, route, count, actor),
+    do: if(pause_unreadable_one(prefix, route, actor), do: count + 1, else: count)
+
+  @doc """
+  Pauses `route` by hand while its stored URL is still the one `route` holds,
+  which did not decrypt, and it still sends or resumes by itself: what
+  `pause_unreadable/2` does for each. Returns whether it did.
+  """
   @spec pause_unreadable_one(String.t() | nil, Route.t(), term()) :: boolean()
   def pause_unreadable_one(prefix, %Route{} = route, actor) do
     {paused, rows} =
@@ -965,9 +968,9 @@ defmodule Brando.Notifications.Routing do
 
     acc = batch |> Enum.filter(&(url(&1) == {:error, :url_unreadable})) |> Enum.reduce(acc, fun)
 
-    case List.last(batch) do
-      %Route{id: last} when length(batch) == @batch_size -> reduce_unreadable(prefix, last, acc, fun)
-      _ -> acc
+    case batch do
+      [] -> acc
+      _ -> reduce_unreadable(prefix, batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
     end
   end
 
