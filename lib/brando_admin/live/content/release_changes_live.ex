@@ -625,11 +625,12 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     end
   end
 
-  # After a refused apply, the drop as it would be planned now, unticked,
-  # when it changed since the dialog opened
+  # After a refused apply, the drop as it would be planned now. The box is
+  # unticked when what it covers changed since the dialog opened, or when it
+  # is over the limit now.
   defp replan_drop(%{assigns: %{drop: %{digest: digest}}} = socket) do
     case drop_plan(socket.assigns) do
-      %{digest: ^digest} -> socket
+      %{digest: ^digest, over_limit: nil} = drop -> assign(socket, drop: drop)
       drop -> assign(socket, drop: drop, drop?: false)
     end
   end

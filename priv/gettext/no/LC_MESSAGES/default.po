@@ -16372,13 +16372,13 @@ msgstr "Formål"
 #, elixir-autogen, elixir-format
 msgid "Put back %{values} dropped values in 1 block."
 msgid_plural "Put back %{values} dropped values in %{count} blocks."
-msgstr[0] "La tilbake %{values} fjernede verdier i 1 blokk."
-msgstr[1] "La tilbake %{values} fjernede verdier i %{count} blokker."
+msgstr[0] "Satte tilbake %{values} fjernede verdier i 1 blokk."
+msgstr[1] "Satte tilbake %{values} fjernede verdier i %{count} blokker."
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "Put back 1 dropped value in its block."
-msgstr "La tilbake 1 fjernet verdi i blokken sin."
+msgstr "Satte tilbake 1 fjernet verdi i blokken sin."
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format

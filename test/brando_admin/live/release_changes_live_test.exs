@@ -548,6 +548,34 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     end
 
     test "over the limit, the box is disabled with the reason", %{conn: conn} = c do
+      hold_wide_over_the_limit!(c)
+      remove_wide!(c)
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      assert has_element?(view, "[data-testid=release-drop][disabled]")
+      assert has_element?(view, "[data-testid=release-drop-limit]", "1500 blocks")
+    end
+
+    test "refused because editors pushed the drop over the limit, the box is unticked and disabled", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> drop_box() |> render_click()
+      assert has_element?(view, "[data-testid=release-drop][checked]")
+      hold_wide_over_the_limit!(c)
+
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert has_element?(view, "#release-confirm[data-open=true] .release-confirm-warning")
+      refute Batches.pending()
+      assert has_element?(view, "[data-testid=release-drop][disabled]")
+      refute has_element?(view, "[data-testid=release-drop][checked]")
+      assert has_element?(view, "[data-testid=release-drop-limit]")
+    end
+
+    # More blocks holding the removed var than one apply drops
+    defp hold_wide_over_the_limit!(c) do
       now = NaiveDateTime.utc_now(:second)
 
       blocks =
@@ -569,12 +597,6 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
           do: %{block_id: id, key: "wide", type: :boolean, label: %{"en" => "Wide"}, inserted_at: now, updated_at: now}
         )
       )
-
-      remove_wide!(c)
-      {:ok, view, _html} = live(conn, @path)
-      view |> element("[data-testid=release-apply]") |> render_click()
-      assert has_element?(view, "[data-testid=release-drop][disabled]")
-      assert has_element?(view, "[data-testid=release-drop-limit]", "1500 blocks")
     end
   end
 
