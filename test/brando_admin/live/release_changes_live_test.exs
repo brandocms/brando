@@ -493,6 +493,24 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
       assert has_element?(view, ~s([data-testid=release-drop-keys][data-uid="#{c.case_module.uid}"] code), "wide")
     end
 
+    test "refused because the removals changed, the dialog plans the drop again, unticked", %{conn: conn} = c do
+      block = stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> drop_box() |> render_click()
+      Repo.delete!(wide(block))
+
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert has_element?(view, "#release-confirm[data-open=true] .release-confirm-warning")
+      refute Batches.pending()
+      # Nothing is held any more: no box, and the apply goes through
+      refute has_element?(view, "[data-testid=release-drop]")
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert Batches.pending()
+    end
+
     test "a removed ref whose slot holds footnotes says why it stays", %{conn: conn} = c do
       block =
         Repo.insert!(%Brando.Content.Block{

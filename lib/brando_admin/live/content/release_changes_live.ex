@@ -458,7 +458,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
        |> put_flash(:notice, applied_text(applied, keep_here))
        |> load()}
     else
-      {:error, reason} -> {:noreply, assign(socket, :confirm_error, error_text(reason))}
+      {:error, reason} -> {:noreply, socket |> assign(:confirm_error, error_text(reason)) |> replan_drop()}
     end
   end
 
@@ -624,6 +624,17 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       end
     end
   end
+
+  # After a refused apply, the drop as it would be planned now, unticked,
+  # when it changed since the dialog opened
+  defp replan_drop(%{assigns: %{drop: %{digest: digest}}} = socket) do
+    case drop_plan(socket.assigns) do
+      %{digest: ^digest} -> socket
+      drop -> assign(socket, drop: drop, drop?: false)
+    end
+  end
+
+  defp replan_drop(socket), do: socket
 
   # The versions the operator chose for the rows' conflicts and never
   # applied definitions
