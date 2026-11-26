@@ -300,7 +300,32 @@ row links to **Resolve blocks**
 ([Removing a ref or var](#removing-a-ref-or-var)).
 
 The confirmation repeats what the apply covers, the entries it re-renders,
-what it leaves out, and the entries that failed in Verify. After the apply, a
+what it leaves out, and the entries that failed in Verify. When the apply
+removes refs or vars that blocks hold a value for, it has one box, unticked
+each time it opens: **Also drop the values N blocks hold in the removed refs
+and vars**. Ticked, the apply deletes those values in its own transaction,
+as **Resolve blocks** would drop them, so the blocks end on the module's
+version: each entry gets a revision before and after, Activity records the
+drop on the entries and the module, and editors with an entry open see the
+blocks without them. The apply keeps every value it drops, whole, for
+Revert. The right to apply is all it asks for; it doesn't ask for the right
+to edit each entry, as Resolve blocks does.
+
+The box drops only the removals no `renamed_from` in the release names as
+its source, held under the type the module defines (a value an older change
+left is not this apply's), in blocks of this site's own modules. The dialog
+says what it leaves for **Resolve blocks** instead:
+
+- the modules of a tree whose apply Revert couldn't undo: the reverse needs
+  a migration (the apply adds a child, for one), or a module of the tree
+  moves values under renamed keys;
+- a ref whose slot holds blocks or footnotes;
+- everything, with the box disabled, when the values are in more than 500
+  entries or 1500 blocks: the drop runs while editors' saves wait.
+
+The apply drops what the dialog showed, read again when it runs: when the
+refs and vars it would drop values of changed in between, it applies nothing
+and asks you to review again. After the apply, a
 banner follows the renders until every entry has rendered, and names those
 that failed. Once they have rendered, it counts the blocks in the applied
 modules that still hold values the module no longer defines, with
@@ -322,6 +347,19 @@ banner names the definitions a conflict or a migration also prevents reverting.
 Independent definitions can still be reverted. An
 apply can be reverted, with no time limit, until someone keeps it or the
 next release apply confirms it. Each environment has its own applies.
+
+The banner of an apply that dropped values says how many blocks they were
+in. Revert puts them back for each module it restores, before the blocks
+sync with the restored definition, and says how many values went back and
+how many didn't, and why: a block deleted since, a block now of another
+module, or a key that holds a value again (a scheduled version published
+since brings back the blocks as they were saved, the dropped values with
+them, as leftovers, and Revert leaves those). Each block gets every value it
+held for a key, with a new uid for a ref whose uid was taken since, and
+without what the value pointed at that was deleted since (an image, a form,
+a link's entry, a palette). A module Revert leaves as it is keeps its
+dropped values with the apply's record, and the message counts the blocks.
+Keep, or the next release apply, deletes the values the apply kept.
 
 ### Review and apply on the server
 
@@ -1197,7 +1235,8 @@ resolve line. The status at boot or in a deploy has no user, so its line
 says to resolve the blocks after the apply, under **Resolve blocks** in the
 admin or with `mix brando.modules resolve`. The Release changes screen lists
 the removal under Ready to apply, saying the blocks keep the values until
-they are resolved. After the apply, the module's row says how many blocks
+they are resolved, and its apply dialog can drop them in the apply instead
+([Review and apply in the admin](#review-and-apply-in-the-admin)). After the apply, the module's row says how many blocks
 hold values the module no longer defines and links to **Resolve blocks**,
 where a server without Mix resolves them
 (`Brando.Content.StaleBlocks.apply/4` is the API it uses). Only what still

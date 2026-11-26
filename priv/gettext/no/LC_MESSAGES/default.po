@@ -886,6 +886,11 @@ msgstr "%{host}: installasjonen bruker selv denne verten, til admin, media eller
 msgid "%{images}, %{pages}"
 msgstr "%{images}, %{pages}"
 
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "%{keys} in %{module}"
+msgstr "%{keys} i %{module}"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "%{key} holds content of another type; drop that first"
@@ -979,6 +984,11 @@ msgid "%{module} is used by blocks in one entry, so it can't be deleted: %{place
 msgid_plural "%{module} is used by blocks in %{count} entries, so it can't be deleted: %{places}."
 msgstr[0] "%{module} brukes av blokker i én oppføring, så den kan ikke slettes: %{places}."
 msgstr[1] "%{module} brukes av blokker i %{count} oppføringer, så den kan ikke slettes: %{places}."
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} keeps its values for Resolve blocks: Revert couldn’t undo this apply (%{reason})."
+msgstr "%{module} beholder verdiene til Løs blokker: Tilbakestill kunne ikke ha angret denne endringen (%{reason})."
 
 #: lib/brando_admin/live/mcp/watch_live.ex
 #, elixir-autogen, elixir-format
@@ -1342,6 +1352,34 @@ msgstr[1] "%{count} blokker i %{modules} moduler har verdier modulene ikke lenge
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
+msgid "1 block is gone"
+msgid_plural "%{count} blocks are gone"
+msgstr[0] "1 blokk finnes ikke lenger"
+msgstr[1] "%{count} blokker finnes ikke lenger"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 block is now another module’s"
+msgid_plural "%{count} blocks are now another module’s"
+msgstr[0] "1 blokk tilhører nå en annen modul"
+msgstr[1] "%{count} blokker tilhører nå en annen modul"
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block keeps a ref whose slot holds blocks or footnotes, for Resolve blocks."
+msgid_plural "%{count} blocks keep a ref whose slot holds blocks or footnotes, for Resolve blocks."
+msgstr[0] "1 blokk beholder en ref med blokker eller fotnoter i, til Løs blokker."
+msgstr[1] "%{count} blokker beholder en ref med blokker eller fotnoter i, til Løs blokker."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 block keeps its dropped values with the apply’s record: its module was left as it is."
+msgid_plural "%{count} blocks keep their dropped values with the apply’s record: their modules were left as they are."
+msgstr[0] "1 blokk har de fjernede verdiene lagret med endringen: modulen ble ikke tilbakestilt."
+msgstr[1] "%{count} blokker har de fjernede verdiene lagret med endringen: modulene ble ikke tilbakestilt."
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
 msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
 msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
 msgstr[0] "1 blokk beholder det endringene la til; løs det under Blokkmoduler → Blokker på eldre versjoner."
@@ -1382,12 +1420,26 @@ msgid_plural "%{count} child modules"
 msgstr[0] "1 undermodul"
 msgstr[1] "%{count} undermoduler"
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 could not be written"
+msgid_plural "%{count} could not be written"
+msgstr[0] "1 kunne ikke skrives"
+msgstr[1] "%{count} kunne ikke skrives"
+
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "1 differs"
 msgid_plural "%{count} differ"
 msgstr[0] "1 er ulik"
 msgstr[1] "%{count} er ulike"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 dropped value did not go back: %{reasons}."
+msgid_plural "%{count} dropped values did not go back: %{reasons}."
+msgstr[0] "1 fjernet verdi ble ikke lagt tilbake: %{reasons}."
+msgstr[1] "%{count} fjernede verdier ble ikke lagt tilbake: %{reasons}."
 
 #: lib/brando_admin/components/form/subform.ex
 #, elixir-autogen, elixir-format
@@ -1590,6 +1642,13 @@ msgid "1 warning"
 msgid_plural "%{count} warnings"
 msgstr[0] "1 advarsel"
 msgstr[1] "%{count} advarsler"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 was filled in since"
+msgid_plural "%{count} were filled in since"
+msgstr[0] "1 er fylt ut siden"
+msgstr[1] "%{count} er fylt ut siden"
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
@@ -2883,6 +2942,13 @@ msgstr "Tillatte rsync-mål"
 msgid "Also changed %{fields}"
 msgstr "Endret også %{fields}"
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Also drop the values 1 block holds in the removed refs and vars. Revert puts them back."
+msgid_plural "Also drop the values %{count} blocks hold in the removed refs and vars. Revert puts them back."
+msgstr[0] "Fjern også verdiene 1 blokk har i refs og variabler som fjernes. Tilbakestill legger dem tilbake."
+msgstr[1] "Fjern også verdiene %{count} blokker har i refs og variabler som fjernes. Tilbakestill legger dem tilbake."
+
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Also named in the robots text above, which applies as well."
@@ -3781,10 +3847,20 @@ msgstr "Enkel"
 msgid "Before"
 msgstr "Før"
 
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "Before applying module definitions dropped %{dropped}"
+msgstr "Før moduldefinisjonene ble tatt i bruk, fjernet: %{dropped}"
+
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
 msgid "Before applying module definitions: %{renames}"
 msgstr "Før moduldefinisjonene ble tatt i bruk: %{renames}"
+
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "Before release %{release} dropped %{dropped}"
+msgstr "Før release %{release}, fjernet: %{dropped}"
 
 #: lib/brando/content/definition/renames.ex
 #, elixir-autogen, elixir-format
@@ -3795,6 +3871,11 @@ msgstr "Før release %{release}: %{renames}"
 #, elixir-autogen, elixir-format
 msgid "Before resolving blocks on older versions of %{module}"
 msgstr "Før blokker på eldre versjoner av %{module} ble løst"
+
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "Before reverting release %{release} restored %{restored}"
+msgstr "Før release %{release} ble tilbakestilt, gjenopprettet: %{restored}"
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -7858,6 +7939,13 @@ msgstr "Sluppede medier lager"
 #, elixir-autogen, elixir-format
 msgid "Dropped media goes in"
 msgstr "Sluppede medier legges i"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Dropped what 1 block held in the removed refs and vars."
+msgid_plural "Dropped what %{count} blocks held in the removed refs and vars."
+msgstr[0] "Fjernet det 1 blokk hadde i refs og variabler som ble fjernet."
+msgstr[1] "Fjernet det %{count} blokker hadde i refs og variabler som ble fjernet."
 
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/form/image_drawer.ex
@@ -12582,6 +12670,11 @@ msgstr "Mer informasjon"
 msgid "More specific type (URL)"
 msgstr "Mer presis type (URL)"
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "More than %{max_entries} entries or %{max_blocks} blocks: the apply drops none of them. Resolve the blocks after the apply."
+msgstr "Mer enn %{max_entries} oppføringer eller %{max_blocks} blokker: ingen av verdiene fjernes nå. Løs blokkene etter at endringene er tatt i bruk."
+
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "More video actions"
@@ -16274,6 +16367,13 @@ msgstr "Slettet %{count} versjoner"
 #, elixir-autogen, elixir-format
 msgid "Purpose"
 msgstr "Formål"
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Put back 1 dropped value."
+msgid_plural "Put back %{count} dropped values in %{blocks} blocks."
+msgstr[0] "La tilbake 1 fjernet verdi."
+msgstr[1] "La tilbake %{count} fjernede verdier i %{blocks} blokker."
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
@@ -21004,6 +21104,13 @@ msgstr "Applikasjonen har for øyeblikket ingen globaler konfigurert"
 msgid "The application rules module could not be inspected. Review your application’s authorization code manually."
 msgstr "Modulen med applikasjonsregler kunne ikke undersøkes. Gjennomgå applikasjonens kode for tilgangsstyring manuelt."
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "The apply dropped what 1 block held in the refs and vars it removed. Revert puts it back."
+msgid_plural "The apply dropped what %{count} blocks held in the refs and vars it removed. Revert puts it back."
+msgstr[0] "Endringen fjernet det 1 blokk hadde i refs og variabler den fjernet. Tilbakestill legger det tilbake."
+msgstr[1] "Endringen fjernet det %{count} blokker hadde i refs og variabler den fjernet. Tilbakestill legger det tilbake."
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "The apply is kept."
@@ -25704,6 +25811,11 @@ msgid_plural "affects %{count} live pages"
 msgstr[0] "berører %{count} publisert side"
 msgstr[1] "berører %{count} publiserte sider"
 
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "an apply drops no values in more than %{max_entries} entries or %{max_blocks} blocks; resolve the blocks after the apply"
+msgstr "verdier fjernes ikke i mer enn %{max_entries} oppføringer eller %{max_blocks} blokker om gangen; løs blokkene etter at endringene er tatt i bruk"
+
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen
@@ -26181,6 +26293,11 @@ msgstr "er slått av på denne installasjonen"
 #, elixir-autogen, elixir-format
 msgid "it already has that name"
 msgstr "den har allerede det navnet"
+
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "it moves values under renamed keys: %{renames}"
+msgstr "den flytter verdier til nye navn: %{renames}"
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
@@ -26763,6 +26880,11 @@ msgstr "oppføringens felter"
 #, elixir-autogen, elixir-format
 msgid "the module has no %{kind} %{key}"
 msgstr "modulen har ingen %{kind} %{key}"
+
+#: lib/brando/content/definition/drops.ex
+#, elixir-autogen, elixir-format
+msgid "the refs and vars the apply drops values of changed since you reviewed it; review it again"
+msgstr "refs og variabler som verdiene skulle fjernes fra, er endret siden du så gjennom; se gjennom igjen"
 
 #: lib/brando/content/definitions/release.ex
 #, elixir-autogen, elixir-format
