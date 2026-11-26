@@ -134,7 +134,7 @@ defmodule Brando.Content.Definition.Drops do
         if opts[:lock], do: lock!(module, keys)
         rows = Enum.filter(rows(module, keys), &defined_type?(&1, module))
         slotted = slotted(rows)
-        rows = Enum.reject(rows, &MapSet.member?(slotted, {&1.block_id, &1.key}))
+        rows = Enum.reject(rows, &(&1.kind == :ref and MapSet.member?(slotted, {&1.block_id, &1.key})))
         kept = MapSet.new(rows, & &1.block_id)
         slotted_blocks = slotted |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length()
 

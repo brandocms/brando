@@ -307,6 +307,34 @@ defmodule Brando.Content.DefinitionDropsTest do
       assert ref(plain, "body") == nil
       assert ref(slotted, "body") && ref(noted, "body")
     end
+
+    test "drops a removed var of the same name as a slotted ref", c do
+      pair =
+        ProposalFixtures.module!(c.user, "Pair", "<p>{{ body }}</p>{% ref refs.body %}",
+          refs: [ProposalFixtures.ref("body", %{type: "text", data: %{text: "Default body"}})],
+          vars: [%{type: "string", key: "body", label: "Body", value: "Default"}]
+        )
+
+      block = c.user |> ProposalFixtures.page!("Pair", pair) |> first_block()
+
+      Repo.insert!(%Var{block_id: block.id, key: "body", type: :string, label: %{"en" => "Body"}, value: "Words"})
+
+      Repo.insert!(%Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :slot,
+        slot_kind: :footnote,
+        slot_name: "body",
+        parent_id: block.id
+      })
+
+      export!(c, [c.module.uid, pair.uid])
+      edit!(c, ~r/\n    ref "body", "text" do\n.*?\n    end\n/s, "\n", "pair")
+      edit!(c, ~r/\n    var "body", "string" do\n.*?\n    end\n/s, "\n", "pair")
+
+      assert %{modules: [%{uid: uid, rows: rows}], slotted: 1} = drops(c)
+      assert uid == pair.uid
+      assert [%{kind: :var, key: "body"}] = Enum.filter(rows, &(&1.block_id == block.id))
+    end
   end
 
   describe "a module whose apply Revert couldn't undo" do
