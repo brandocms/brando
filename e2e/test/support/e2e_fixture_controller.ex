@@ -265,6 +265,12 @@ defmodule E2EFixtureController do
         "release-rename" ->
           create_release_removal(:rename)
 
+        # The removal, with the block on a published page (/release-drop)
+        # whose template still reads the var: the apply can drop the value,
+        # and Revert puts it back
+        "release-drop" ->
+          create_release_removal(:drop)
+
         # Screenshots only: the same, with more blocks holding the old key
         # than an apply moves, so the apply leaves them for resolve --map
         "release-rename-over-limit" ->
@@ -524,7 +530,7 @@ defmodule E2EFixtureController do
 
     edited =
       case change do
-        :remove ->
+        removal when removal in [:remove, :drop] ->
           Regex.replace(~r/\n    var "show_border", "boolean" do\n.*?\n    end\n/s, source, "\n")
 
         :rename ->
@@ -536,7 +542,13 @@ defmodule E2EFixtureController do
       end
 
     File.write!(file, edited)
-    if change == :rename, do: publish_renamed_block!(dir, module, block, user)
+
+    case change do
+      :rename -> publish_renamed_block!(dir, module, block, user)
+      :drop -> publish_block!(module, block, user, "Release drop", "release-drop")
+      :remove -> :ok
+    end
+
     user
   end
 
@@ -544,14 +556,19 @@ defmodule E2EFixtureController do
   # template reading the new key under its own attribute: the page shows
   # `data-framed` only once the apply has moved the value and rendered it
   defp publish_renamed_block!(dir, module, block, user) do
-    import Ecto.Query, only: [from: 2]
-
     edit_release_template!(
       dir,
       module,
       ~s({% if show_border %}data-border="true"{% endif %}),
       ~s({% if framed %}data-framed="true"{% endif %})
     )
+
+    publish_block!(module, block, user, "Release rename", "release-rename")
+  end
+
+  # The block alone on a published page at `uri`, rendered
+  defp publish_block!(module, block, user, title, uri) do
+    import Ecto.Query, only: [from: 2]
 
     Brando.Repo.update_all(
       from(b in Brando.Content.Block, where: b.id == ^block.id),
@@ -562,8 +579,8 @@ defmodule E2EFixtureController do
 
     page =
       Brando.Repo.insert!(%Brando.Pages.Page{
-        title: "Release rename",
-        uri: "release-rename",
+        title: title,
+        uri: uri,
         language: :en,
         status: :published,
         template: "default.html",

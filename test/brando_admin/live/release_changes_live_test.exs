@@ -427,6 +427,179 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     end
   end
 
+  describe "dropping leftovers in the apply" do
+    defp wide(block), do: Repo.get_by(Brando.Content.Var, block_id: block.id, key: "wide")
+    defp drop_box(view), do: element(view, "[data-testid=release-drop]")
+
+    test "the dialog has no box when no block holds a removed ref or var", %{conn: conn} = c do
+      remove_wide!(c)
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      refute has_element?(view, "[data-testid=release-drop]")
+      refute has_element?(view, "[data-testid=release-confirm-drop]")
+    end
+
+    test "ticked, the apply drops the values, the banner says so, and Revert puts them back", %{conn: conn} = c do
+      block = stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        view |> element("[data-testid=release-apply]") |> render_click()
+        refute has_element?(view, "[data-testid=release-drop][checked]")
+        assert has_element?(view, "[data-testid=release-confirm-drop]", "1 block")
+
+        view |> drop_box() |> render_click()
+        assert has_element?(view, "[data-testid=release-drop][checked]")
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+        assert wide(block) == nil
+
+        Oban.drain_queue(queue: :default)
+        send(view.pid, :tick)
+        eventually(view, &(&1 =~ "release-banner is-done"))
+        assert has_element?(view, "[data-testid=release-banner-dropped]", "1 block")
+        refute has_element?(view, "[data-testid=release-banner-leftovers]")
+
+        view |> element("[data-testid=release-revert]") |> render_click()
+        refute has_element?(view, "[data-testid=release-banner]")
+        assert wide(block)
+      end)
+    end
+
+    test "starts unticked each time the dialog opens", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> drop_box() |> render_click()
+      assert has_element?(view, "[data-testid=release-drop][checked]")
+
+      view |> element("#release-confirm [phx-click=close_confirm]") |> render_click()
+      view |> element("[data-testid=release-apply]") |> render_click()
+      refute has_element?(view, "[data-testid=release-drop][checked]")
+
+      # Unticked, the apply leaves them
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert Brando.Content.StaleBlocks.count_with_leftovers(case_module(c)) == 1
+    end
+
+    test "the dialog names the refs and vars the drop covers, per module", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      assert has_element?(view, ~s([data-testid=release-drop-keys][data-uid="#{c.case_module.uid}"] code), "wide")
+    end
+
+    test "refused because the removals changed, the dialog plans the drop again, unticked", %{conn: conn} = c do
+      block = stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> drop_box() |> render_click()
+      Repo.delete!(wide(block))
+
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert has_element?(view, "#release-confirm[data-open=true] .release-confirm-warning")
+      refute Batches.pending()
+      # Nothing is held any more: no box, and the apply goes through
+      refute has_element?(view, "[data-testid=release-drop]")
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert Batches.pending()
+    end
+
+    test "a removed ref whose slot holds footnotes says why it stays", %{conn: conn} = c do
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: c.case_module.id,
+          creator_id: c.user.id
+        })
+
+      Repo.insert!(%Brando.Content.Ref{
+        block_id: block.id,
+        name: "cover",
+        uid: Brando.Utils.generate_uid(),
+        data: %Brando.Villain.Blocks.PictureBlock{type: "picture", data: %Brando.Villain.Blocks.PictureBlock.Data{}}
+      })
+
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :slot,
+        slot_kind: :footnote,
+        slot_name: "cover",
+        parent_id: block.id
+      })
+
+      exs = Path.join(c.path, "content/case.exs")
+      source = File.read!(exs)
+      without = Regex.replace(~r/\n    ref "cover", "picture" do\n.*?\n    end\n/s, source, "\n")
+      assert without != source
+      File.write!(exs, without)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      assert has_element?(view, "[data-testid=release-drop-slotted]")
+      refute has_element?(view, "[data-testid=release-drop]")
+    end
+
+    test "over the limit, the box is disabled with the reason", %{conn: conn} = c do
+      hold_wide_over_the_limit!(c)
+      remove_wide!(c)
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      assert has_element?(view, "[data-testid=release-drop][disabled]")
+      assert has_element?(view, "[data-testid=release-drop-limit]", "1500 blocks")
+    end
+
+    test "refused because editors pushed the drop over the limit, the box is unticked and disabled", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> drop_box() |> render_click()
+      assert has_element?(view, "[data-testid=release-drop][checked]")
+      hold_wide_over_the_limit!(c)
+
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      assert has_element?(view, "#release-confirm[data-open=true] .release-confirm-warning")
+      refute Batches.pending()
+      assert has_element?(view, "[data-testid=release-drop][disabled]")
+      refute has_element?(view, "[data-testid=release-drop][checked]")
+      assert has_element?(view, "[data-testid=release-drop-limit]")
+    end
+
+    # More blocks holding the removed var than one apply drops
+    defp hold_wide_over_the_limit!(c) do
+      now = NaiveDateTime.utc_now(:second)
+
+      blocks =
+        for _ <- 1..1501,
+            do: %{
+              uid: Brando.Utils.generate_uid(),
+              type: :module,
+              module_id: c.case_module.id,
+              inserted_at: now,
+              updated_at: now
+            }
+
+      {_, ids} = Repo.insert_all(Brando.Content.Block, blocks, returning: [:id])
+
+      Repo.insert_all(
+        Brando.Content.Var,
+        for(
+          %{id: id} <- ids,
+          do: %{block_id: id, key: "wide", type: :boolean, label: %{"en" => "Wide"}, inserted_at: now, updated_at: now}
+        )
+      )
+    end
+  end
+
   describe "a renamed var" do
     setup c do
       block =

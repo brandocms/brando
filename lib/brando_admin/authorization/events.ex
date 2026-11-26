@@ -296,7 +296,7 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Content.ReleaseChangesLive" => [
       read:
-        ~w(cancel_verify chip choose close_confirm close_diff filter focus_change full_screen open_confirm open_diff page preview_entry select_row sort tab toggle_marks toggle_ready toggle_replace toggle_row toggle_unchanged verify_all verify_current verify_row viewport),
+        ~w(cancel_verify chip choose close_confirm close_diff filter focus_change full_screen open_confirm open_diff page preview_entry select_row sort tab toggle_drop toggle_marks toggle_ready toggle_replace toggle_row toggle_unchanged verify_all verify_current verify_row viewport),
       write: ~w(apply keep_batch revert_batch share_preview)
     ],
     "BrandoAdmin.Content.SharedLibraryLive" => [

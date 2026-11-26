@@ -7,7 +7,7 @@ defmodule Brando.Content.Definition.Importer do
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.{Block, Blocks, Container, Module, ModuleDiff, Palette, Ref, Var}
-  alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Renames, Snapshot, Value}
+  alias Brando.Content.Definition.{Baselines, Drops, Error, Model, Params, Plan, References, Renames, Snapshot, Value}
   alias Brando.Content.Definitions
   alias Brando.Query.Mutations
   alias Brando.Repo
@@ -191,20 +191,24 @@ defmodule Brando.Content.Definition.Importer do
         unless current.fingerprint == plan.fingerprint and Plan.applicable?(current),
           do: Repo.rollback("target changed after planning; create a new plan")
 
-        {changes, current} =
+        # Planned with the definitions as they are here, before they change
+        drops = if digest = opts[:drop], do: Drops.planned!(current, digest)
+
+        {changes, current, dropped} =
           Brando.Activity.with_batch(opts[:batch_id], fn ->
             changes = persist!(current, records, actor, creator)
-            {changes, move!(current, records, changes, creator, opts)}
+            current = move!(current, records, changes, creator, opts)
+            {changes, current, Drops.drop!(drops, changes, creator, opts)}
           end)
 
         Baselines.record!(current, changes, records.snapshots, actor, opts)
         # The caller's own records of the apply, in its transaction
         if in_transaction = opts[:in_transaction], do: in_transaction.(current, changes)
-        {changes, renamed(current, creator)}
+        {changes, renamed(current, creator), dropped}
       end)
 
     case result do
-      {:ok, {changes, renamed}} ->
+      {:ok, {changes, renamed, dropped}} ->
         bundle =
           plan.bundle
           |> Map.merge(%{
@@ -217,7 +221,15 @@ defmodule Brando.Content.Definition.Importer do
         Phoenix.PubSub.broadcast(Brando.pubsub(), Definitions.topic(), {:definitions_applied, prefix})
         Brando.Repo.after_commit(fn -> Brando.Content.Definitions.ReleaseStatus.changed(prefix) end)
 
-        {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id], renamed: renamed}}
+        {:ok,
+         %{
+           changes: changes,
+           refresh: refresh(changes),
+           bundle: bundle,
+           batch_id: opts[:batch_id],
+           renamed: renamed,
+           dropped: dropped
+         }}
 
       {:error, reason} ->
         {:error, reason}
@@ -332,6 +344,7 @@ defmodule Brando.Content.Definition.Importer do
       removes: nil,
       moves: nil,
       remaps: [],
+      unrevertible: nil,
       block_count: 0,
       entry_count: 0
     }
@@ -391,6 +404,7 @@ defmodule Brando.Content.Definition.Importer do
       removes: removes(action, kind, record, {changeset, old, definition}, block_ids, moves),
       moves: moves,
       remaps: remaps,
+      unrevertible: unrevertible(action, definition, old, record, changeset),
       block_count: length(block_ids),
       entry_count: entry_count(block_ids)
     }
@@ -798,15 +812,16 @@ defmodule Brando.Content.Definition.Importer do
         {:migration_required, "table column changes require a migration"}
 
       new["kind"] == "module" ->
-        classify_module_update(new, old, record, cs)
+        classify_module_update(new, old, record, Changeset.apply_changes(cs))
 
       true ->
         {:update, nil}
     end
   end
 
-  defp classify_module_update(new, old, record, cs) do
-    diff = ModuleDiff.diff(record, cs)
+  # `record` as it is here, `module` as the update leaves it
+  defp classify_module_update(new, old, record, module) do
+    diff = ModuleDiff.diff(record, module)
 
     cond do
       old["children"] -- new["children"] != [] ->
@@ -824,13 +839,26 @@ defmodule Brando.Content.Definition.Importer do
       reinterprets?(diff) ->
         {:migration_required, Enum.join(ModuleDiff.summary(%{diff | removed_refs: [], removed_vars: []}), "; ")}
 
-      reason = returning_over_leftovers(record, cs, diff) ->
+      reason = returning_over_leftovers(record, module, diff) ->
         {:migration_required, reason}
 
       true ->
         {:update, nil}
     end
   end
+
+  # Why a revert couldn't apply the definition here again over an update of
+  # a module, the day it is applied: the revert plans the module's previous
+  # version over the one the update leaves (`Release.Batches`), and needs a
+  # migration where this says so. Nil when it could, and for anything else.
+  defp unrevertible(:update, %{"kind" => "module"} = definition, old, record, changeset) do
+    case classify_module_update(old, definition, Changeset.apply_changes(changeset), record) do
+      {:update, nil} -> nil
+      {:migration_required, reason} -> reason
+    end
+  end
+
+  defp unrevertible(_action, _definition, _old, _record, _changeset), do: nil
 
   # A removed ref or var is an update: the blocks keep what they hold in it
   # as a leftover until it is resolved, as after the same save in the admin.
@@ -842,10 +870,9 @@ defmodule Brando.Content.Definition.Importer do
   # leftover of another type for: a sync would copy the new type onto the
   # stored value (`Blocks.reapply_vars/3`), or pass a ref of another type
   # through and never add the new one (`Blocks.sync_module/2`)
-  defp returning_over_leftovers(_record, _cs, %{added_vars: [], added_refs: []}), do: nil
+  defp returning_over_leftovers(_record, _module, %{added_vars: [], added_refs: []}), do: nil
 
-  defp returning_over_leftovers(record, cs, diff) do
-    module = Changeset.apply_changes(cs)
+  defp returning_over_leftovers(record, module, diff) do
     var_types = Map.new(module.vars, &{&1.key, &1.type})
     ref_types = Map.new(module.refs, &{&1.name, &1.data.__struct__})
 

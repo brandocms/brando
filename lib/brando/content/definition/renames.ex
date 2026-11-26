@@ -62,6 +62,9 @@ defmodule Brando.Content.Definition.Renames do
 
   @type rename :: %{kind: :ref | :var, from: String.t(), to: String.t()}
 
+  @doc "How many entries and blocks one apply changes values in: `[entries: count, blocks: count]`."
+  def limit, do: @limit
+
   @doc "The renames `bundle` declares for the module `uid`."
   @spec declared(map(), String.t()) :: [rename()]
   def declared(bundle, uid) do
