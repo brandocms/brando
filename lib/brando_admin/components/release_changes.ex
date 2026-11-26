@@ -1494,6 +1494,16 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
           )}
         </span>
       </label>
+      <ul :if={@drop.modules != [] and !@drop.over_limit} class="release-confirm-drop-keys">
+        <li :for={module <- @drop.modules} data-testid="release-drop-keys" data-uid={module.uid}>
+          <span>{module.name || module.uid}</span>
+          <span>
+            <%= for {{kind, key}, i} <- Enum.with_index(module.keys) do %>
+              <code>{key}</code> {kind}{if i < length(module.keys) - 1, do: ", "}
+            <% end %>
+          </span>
+        </li>
+      </ul>
       <ul :if={@drop.over_limit || @drop.left != [] || @drop.slotted > 0} class="release-confirm-drop-notes">
         <li :if={@drop.over_limit} data-testid="release-drop-limit">
           {gettext(

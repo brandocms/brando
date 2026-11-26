@@ -484,6 +484,15 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
       assert Brando.Content.StaleBlocks.count_with_leftovers(case_module(c)) == 1
     end
 
+    test "the dialog names the refs and vars the drop covers, per module", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      assert has_element?(view, ~s([data-testid=release-drop-keys][data-uid="#{c.case_module.uid}"] code), "wide")
+    end
+
     test "over the limit, the box is disabled with the reason", %{conn: conn} = c do
       now = NaiveDateTime.utc_now(:second)
 
