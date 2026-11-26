@@ -794,7 +794,8 @@ defmodule Brando.MCP do
 
     if count == 1 do
       record_revoked(grant, actor, reason)
-      Brando.MCP.Watch.ended(grant.id)
+      # A caller's transaction may still roll the revocation back
+      Repo.after_commit(fn -> Brando.MCP.Watch.ended(grant.id) end)
     end
 
     :ok
