@@ -407,7 +407,11 @@ sender first, before the first compile.
     under that environment's own `secret_key_base`, stops reading their
     secrets once it has the shared one: those users set it up again, or the
     database is replaced by a copy of production's. An application that
-    already configures `Brando.Crypto`, in any config file, is left alone.
+    already configures `Brando.Crypto` for production (in `config/config.exs`,
+    `config/prod.exs` or `config/runtime.exs`) gets no `config/runtime.exs`
+    lines, and one that configures it for development (in `config/config.exs`,
+    `config/dev.exs` or `config/dev.secret.exs`) no import; a secret in
+    `config/test.exs` decides nothing.
 
 **Not found by any task.** Their correct rewrite depends on the application:
 
@@ -2152,9 +2156,10 @@ has the fixes.
   `config/dev.exs` import `config/dev.secret.exs` when the file exists, and
   adds that file to `.gitignore` and to an existing `.dockerignore`. It
   writes no value: the right one is production's `secret_key_base` (see
-  item 21 in [Fix what the tasks list](#fix-what-the-tasks-list)). An
-  application that configures `Brando.Crypto` in any config file is left
-  alone. `mix brando.upgrade` does the same on every version change;
+  item 21 in [Fix what the tasks list](#fix-what-the-tasks-list)). Each
+  part is left out for an environment whose configuration already sets
+  `Brando.Crypto`'s secret. `mix brando.upgrade` does the same on every
+  version change;
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;

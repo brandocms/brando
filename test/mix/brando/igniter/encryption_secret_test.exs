@@ -72,6 +72,9 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
     refute Igniter.exists?(igniter, "config/dev.secret.exs")
   end
 
+  defp drop_lines(igniter, path, regex),
+    do: Igniter.update_file(igniter, path, &Rewrite.Source.update(&1, :content, fn c -> String.replace(c, regex, "") end))
+
   defp in_docker_context?(igniter, path),
     do: not Docker.context_excludes?(IgniterCase.source(igniter, ".dockerignore"), path)
 
@@ -203,18 +206,77 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       igniter = install(project(%{"config/prod.exs" => own}))
 
       assert igniter.issues == []
-      refute_set_up(igniter)
+      refute IgniterCase.source(igniter, "config/runtime.exs") =~ "BRANDO_ENCRYPTION_SECRET"
       assert IgniterCase.source(igniter, "config/prod.exs") =~ ~s|secret: System.fetch_env!("MY_SECRET")|
       refute IgniterCase.source(igniter, ".envrc.prod") =~ "BRANDO_ENCRYPTION_SECRET"
+      # Development reads no prod.exs: it gets the import, but no value that prod's is not
+      refute Igniter.exists?(igniter, "config/dev.secret.exs")
       assert secrets_task(igniter) == [~w(.envrc.prod .envrc.staging)]
+    end
+
+    test "a secret only the tests configure decides nothing" do
+      test_config = "import Config\nconfig :brando, Brando.Crypto, secret: String.duplicate(\"t\", 32)\n"
+      igniter = install(project(%{"config/test.exs" => test_config}))
+
+      assert IgniterCase.source(igniter, "config/runtime.exs") =~ @fetch
+      assert IgniterCase.source(igniter, "config/dev.exs") =~ ~s|import_config("dev.secret.exs")|
+      assert secrets_task(igniter) == [@secret_files]
+    end
+
+    # A site installed before the secret existed, cloned: Git left out its
+    # environment files, so they are planned again, but production holds its
+    # secret_key_base, which no run can know.
+    test "a rerun in a clone of a site installed without the secret generates no value" do
+      installed = project() |> install() |> filled() |> IgniterCase.apply_and_reload()
+
+      clone =
+        installed
+        |> Igniter.rm(".envrc.prod")
+        |> Igniter.rm(".envrc.staging")
+        |> Igniter.rm("config/dev.secret.exs")
+        |> drop_lines("config/runtime.exs", ~r/^.*BRANDO_ENCRYPTION_SECRET.*\n/m)
+        |> drop_lines("config/dev.exs", ~r/^.*dev\.secret\.exs.*\n/m)
+        |> IgniterCase.apply_and_reload()
+
+      rerun = install(clone)
+
+      assert rerun.issues == []
+      runtime = IgniterCase.source(rerun, "config/runtime.exs")
+      refute runtime =~ ~s|fetch_env!("BRANDO_ENCRYPTION_SECRET")|
+      assert runtime =~ ~s|System.get_env("BRANDO_ENCRYPTION_SECRET", "")|
+      refute Igniter.exists?(rerun, "config/dev.secret.exs")
+      refute IgniterCase.source(rerun, ".envrc.prod") =~ @marker
+      assert secrets_task(rerun) == [~w(.envrc.prod .envrc.staging)]
+    end
+
+    test "a rerun in a clone of a site installed with the secret generates no value" do
+      installed = project() |> install() |> filled() |> IgniterCase.apply_and_reload()
+
+      clone =
+        installed
+        |> Igniter.rm(".envrc.prod")
+        |> Igniter.rm(".envrc.staging")
+        |> Igniter.rm("config/dev.secret.exs")
+        |> IgniterCase.apply_and_reload()
+
+      rerun = install(clone)
+
+      assert rerun.issues == []
+      Igniter.Test.assert_unchanged(rerun, @config_files)
+      refute Igniter.exists?(rerun, "config/dev.secret.exs")
+      refute IgniterCase.source(rerun, ".envrc.prod") =~ @marker
+      refute IgniterCase.source(rerun, ".envrc.staging") =~ @marker
     end
 
     test "a project whose own configuration reads BRANDO_ENCRYPTION_SECRET gets it in new environment files" do
       own = "import Config\nconfig :brando, Brando.Crypto, secret: System.get_env(\"BRANDO_ENCRYPTION_SECRET\")\n"
       igniter = install(project(%{"config/prod.exs" => own}))
 
-      refute_set_up(igniter)
+      refute IgniterCase.source(igniter, "config/runtime.exs") =~ "BRANDO_ENCRYPTION_SECRET"
       assert IgniterCase.source(igniter, ".envrc.prod") =~ ~s(export BRANDO_ENCRYPTION_SECRET="#{@marker}")
+      # Development gets the same value
+      assert IgniterCase.source(igniter, "config/dev.secret.exs") =~ @marker
+      assert secrets_task(igniter) == [@secret_files]
     end
   end
 
@@ -415,19 +477,47 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       refute notice?(rerun, "BRANDO_ENCRYPTION_SECRET")
     end
 
-    test "a project that configures the secret, in any file and form, is not touched" do
-      for {path, contents} <- [
-            {"config/runtime.exs", "import Config\nconfig :brando, Brando.Crypto, secret: System.fetch_env!(\"X\")\n"},
-            {"config/prod.exs", "import Config\nconfig :brando, Brando.Crypto, [secret: \"literal-secret\"]\n"},
-            {"config/config.exs", "import Config\nalias Brando.Crypto\nconfig :brando, Crypto, secret: \"x\"\n"},
-            {"config/secrets/prod.exs", "import Config\nconfig :brando, [{Brando.Crypto, secret: \"x\"}]\n"}
+    test "a project that configures the secret for every environment, in any form, is not touched" do
+      for files <- [
+            %{"config/config.exs" => "import Config\nalias Brando.Crypto\nconfig :brando, Crypto, secret: \"x\"\n"},
+            %{"config/config.exs" => "import Config\nconfig :brando, [{Brando.Crypto, secret: \"x\"}]\n"},
+            %{
+              "config/runtime.exs" => "import Config\nconfig :brando, Brando.Crypto, secret: System.fetch_env!(\"X\")\n",
+              "config/dev.exs" => "import Config\nimport_config \"secrets/dev.exs\"\n",
+              "config/secrets/dev.exs" => "import Config\nconfig :brando, Brando.Crypto, [secret: \"literal-secret\"]\n"
+            }
           ] do
-        result = upgrade(project(%{path => contents}))
+        result = upgrade(project(files))
 
         refute_set_up(result)
         refute Igniter.exists?(result, ".gitignore") and IgniterCase.source(result, ".gitignore") =~ "dev.secret.exs"
+        refute notice?(result, "BRANDO_ENCRYPTION_SECRET"), inspect(files)
+      end
+    end
+
+    test "each environment's lines are decided by the configuration that environment reads" do
+      prod = "import Config\nconfig :brando, Brando.Crypto, secret: System.fetch_env!(\"X\")\n"
+
+      for path <- ~w(config/prod.exs config/runtime.exs) do
+        result = upgrade(project(%{path => prod}))
+
+        refute IgniterCase.source(result, "config/runtime.exs") =~ "BRANDO_ENCRYPTION_SECRET", path
+        assert IgniterCase.source(result, "config/dev.exs") =~ ~s|import_config("dev.secret.exs")|, path
         refute notice?(result, "BRANDO_ENCRYPTION_SECRET"), path
       end
+
+      dev = "import Config\nconfig :brando, Brando.Crypto, secret: \"literal-secret\"\n"
+      result = upgrade(project(%{"config/dev.exs" => dev}))
+
+      assert IgniterCase.source(result, "config/runtime.exs") =~ ~s|System.get_env("BRANDO_ENCRYPTION_SECRET", "")|
+      refute IgniterCase.source(result, "config/dev.exs") =~ "dev.secret.exs"
+      assert notice?(result, "BRANDO_ENCRYPTION_SECRET")
+
+      # The tests' own secret reaches no server and no development machine
+      result = upgrade(project(%{"config/test.exs" => dev}))
+
+      assert IgniterCase.source(result, "config/runtime.exs") =~ ~s|System.get_env("BRANDO_ENCRYPTION_SECRET", "")|
+      assert IgniterCase.source(result, "config/dev.exs") =~ ~s|import_config("dev.secret.exs")|
     end
 
     test "mix brando.migrate55 writes the same" do

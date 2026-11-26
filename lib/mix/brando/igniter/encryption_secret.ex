@@ -22,6 +22,11 @@ if Code.ensure_loaded?(Igniter) do
     @dev_secret "config/dev.secret.exs"
     @dev "config/dev.exs"
     @runtime "config/runtime.exs"
+    # What each environment reads, with the files these import by a literal
+    # path. phx.new's import_config "#{config_env()}.exs" is not followed: a
+    # secret config/test.exs sets reaches neither.
+    @prod_configs ~w(config/config.exs config/prod.exs config/runtime.exs)
+    @dev_configs ~w(config/config.exs config/dev.exs config/dev.secret.exs)
 
     @doc "The development file that holds the secret."
     def dev_secret, do: @dev_secret
@@ -30,72 +35,115 @@ if Code.ensure_loaded?(Igniter) do
     def gitignore, do: {"Brando.Crypto's secret for development", ["/" <> @dev_secret]}
 
     @doc """
-    Reads the project's configuration (every `config/**/*.exs`):
-    `:configured?` when any file configures `Brando.Crypto`, in any form, and
-    `:reads_variable?` when any names `BRANDO_ENCRYPTION_SECRET`.
+    Reads how the project configures `Brando.Crypto`, in any form: `:prod?`
+    when `config/config.exs`, `config/prod.exs` or `config/runtime.exs` do,
+    `:dev?` when `config/config.exs`, `config/dev.exs` or
+    `config/dev.secret.exs` do (each with the files it imports by a literal
+    path), and `:reads_variable?` when prod's names `BRANDO_ENCRYPTION_SECRET`.
     """
     def existing(igniter) do
-      igniter = Igniter.include_glob(igniter, "config/**/*.exs")
-
-      contents =
-        for source <- Rewrite.sources(igniter.rewrite),
-            String.starts_with?(source.path, "config/"),
-            Path.extname(source.path) == ".exs",
-            do: Source.get(source, :content)
+      {igniter, prod} = contents(igniter, @prod_configs, MapSet.new())
+      {igniter, dev} = contents(igniter, @dev_configs, MapSet.new())
 
       {igniter,
        %{
-         configured?: Enum.any?(contents, &configures_crypto?/1),
-         reads_variable?: Enum.any?(contents, &String.contains?(&1, @variable))
+         prod?: Enum.any?(prod, &configures_crypto?/1),
+         dev?: Enum.any?(dev, &configures_crypto?/1),
+         reads_variable?: Enum.any?(prod, &String.contains?(&1, @variable))
        }}
     end
 
     @doc """
-    Sets up the secret for an install whose environment files will all hold
-    `BRANDO_ENCRYPTION_SECRET`: `config/runtime.exs` reads it in prod,
-    `config/dev.secret.exs` holds the marker and `config/dev.exs` imports it.
-    Returns the files with a marker to fill in.
+    Sets up the secret in `mix brando.install`, for what the project's
+    configuration (`existing/1`) leaves to Brando. A new install whose
+    environment files will all hold `BRANDO_ENCRYPTION_SECRET`
+    (`every_envrc?`) reads it in prod with `System.fetch_env!/1`, and
+    `config/dev.secret.exs` holds the marker. Otherwise prod gets what an
+    upgrade writes (`upgrade/1`), and no value is made: a rerun may be
+    a clone of a site whose environment files Git left out, and production's
+    value is its own. Returns whether new environment files get the variable,
+    and the files with a marker to fill in.
     """
-    def install(igniter) do
+    def install(igniter, config, every_envrc?, fresh?) do
+      variable? = fresh? and if(config.prod?, do: config.reads_variable?, else: every_envrc?)
+
       igniter =
         igniter
-        |> dev_secret_file()
-        |> import_dev_secret()
-        |> Igniter.Project.Config.configure_runtime_env(
-          :prod,
-          :brando,
-          [Brando.Crypto, :secret],
-          {:code, Sourceror.parse_string!(~s|System.fetch_env!("#{@variable}")|)}
-        )
+        |> unless_configured(config.prod?, if(variable?, do: &fetch_runtime/1, else: &soft_runtime/1))
+        |> unless_configured(config.dev?, &import_dev_secret/1)
 
-      {igniter, [@dev_secret]}
+      if variable? and not config.dev?,
+        do: {dev_secret_file(igniter), true, [@dev_secret]},
+        else: {igniter, variable?, []}
     end
 
     @doc """
-    Sets up an existing site, whose value is production's `secret_key_base`,
-    which no task can know: `config/runtime.exs` reads
+    Sets up an existing site (`mix brando.upgrade`), whose value is
+    production's `secret_key_base`, which no task can know: unless its
+    configuration sets the secret there, `config/runtime.exs` reads
     `BRANDO_ENCRYPTION_SECRET` in prod only when it is set, so a release
-    deployed before the variable exists boots as before, and `config/dev.exs`
-    imports `config/dev.secret.exs` when it exists. With `ignores: true`, also
-    the `.gitignore` line and, in an existing `.dockerignore`, the exclusion;
-    the installer adds those itself. A notice lists what is left to do.
+    deployed before the variable exists boots as before, and a notice lists
+    what is left to do; unless development's does, `config/dev.exs` imports
+    `config/dev.secret.exs` when it exists. With either, the `.gitignore` line
+    and, in an existing `.dockerignore`, the exclusion.
     """
-    def existing_site(igniter, opts \\ []) do
-      igniter
-      |> soft_runtime()
-      |> import_dev_secret()
-      |> ignores(opts[:ignores] == true)
-      |> Igniter.add_notice(steps())
-    end
-
-    defp ignores(igniter, false), do: igniter
-    defp ignores(igniter, true), do: igniter |> Deployment.gitignore([gitignore()]) |> Docker.exclude_dev_secret()
-
-    @doc "`existing_site/2` for a project that does not configure `Brando.Crypto` yet (`mix brando.upgrade`)."
     def upgrade(igniter) do
       case existing(igniter) do
-        {igniter, %{configured?: true}} -> igniter
-        {igniter, _existing} -> existing_site(igniter, ignores: true)
+        {igniter, %{prod?: true, dev?: true}} ->
+          igniter
+
+        {igniter, config} ->
+          igniter
+          |> unless_configured(config.prod?, &soft_runtime/1)
+          |> unless_configured(config.dev?, &import_dev_secret/1)
+          |> Deployment.gitignore([gitignore()])
+          |> Docker.exclude_dev_secret()
+      end
+    end
+
+    defp unless_configured(igniter, true, _set_up), do: igniter
+    defp unless_configured(igniter, false, set_up), do: set_up.(igniter)
+
+    defp fetch_runtime(igniter) do
+      Igniter.Project.Config.configure_runtime_env(
+        igniter,
+        :prod,
+        :brando,
+        [Brando.Crypto, :secret],
+        {:code, Sourceror.parse_string!(~s|System.fetch_env!("#{@variable}")|)}
+      )
+    end
+
+    # The contents of `paths` and of the files they import by a literal path.
+    defp contents(igniter, [], _seen), do: {igniter, []}
+
+    defp contents(igniter, [path | paths], seen) do
+      if path in seen or not Igniter.exists?(igniter, path) do
+        contents(igniter, paths, MapSet.put(seen, path))
+      else
+        igniter = Igniter.include_existing_file(igniter, path)
+        content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+        {igniter, rest} = contents(igniter, paths ++ imports(path, content), MapSet.put(seen, path))
+        {igniter, [content | rest]}
+      end
+    end
+
+    defp imports(path, content) do
+      case Code.string_to_quoted(content) do
+        {:ok, quoted} ->
+          {_, imports} =
+            Macro.prewalk(quoted, [], fn
+              {:import_config, _, [import]} = node, imports when is_binary(import) ->
+                {node, [import |> Path.expand(Path.dirname(Path.expand(path))) |> Path.relative_to_cwd() | imports]}
+
+              node, imports ->
+                {node, imports}
+            end)
+
+          Enum.reverse(imports)
+
+        {:error, _} ->
+          []
       end
     end
 
@@ -155,7 +203,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # A block of its own at the end of the file: Igniter's code insertion
-    # separates comments from the code they precede.
+    # separates comments from the code they precede. A notice lists what is
+    # left to do.
     defp soft_runtime(igniter) do
       block = """
       # Brando.Crypto's secret, the same in every environment of the site. Until
@@ -169,9 +218,11 @@ if Code.ensure_loaded?(Igniter) do
       end
       """
 
-      Igniter.create_or_update_file(igniter, @runtime, "import Config\n\n" <> block, fn source ->
+      igniter
+      |> Igniter.create_or_update_file(@runtime, "import Config\n\n" <> block, fn source ->
         Source.update(source, :content, &(String.trim_trailing(&1) <> "\n\n" <> block))
       end)
+      |> Igniter.add_notice(steps())
     end
 
     # Any reference to the module counts: it has no other configuration.
