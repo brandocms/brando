@@ -13,11 +13,14 @@
  *   data-focus     a block uid to scroll to
  *
  * Brando.ReleaseDialog — the apply confirmation, a native <dialog> the view
- * opens and closes with `data-open`; Esc tells the view (`data-close`).
+ * opens and closes with `data-open`, with the shared dialog motion
+ * (`nativeDialogMotion.js`); Esc and the backdrop tell the view (`data-close`).
  *
  * Brando.ReleaseChanges — the preview's frame: Esc leaves full screen, and
  * `release:copy` puts a shared preview link on the clipboard.
  */
+import { openDialog, closeDialog, resetDialog, onDialogClose } from '../../nativeDialogMotion'
+
 const WIDTHS = { mobile: 390, tablet: 820, desktop: 1366 }
 
 export const ReleasePreview = () => ({
@@ -91,11 +94,19 @@ export const ReleasePreview = () => ({
 
 export const ReleaseDialog = () => ({
   mounted() {
+    this.dialog = this.el
+    this.close = () => this.pushEvent(this.el.dataset.close, {})
     this.onCancel = event => {
       event.preventDefault()
-      this.pushEvent(this.el.dataset.close, {})
+      this.close()
+    }
+    // A click on the backdrop lands on the dialog itself
+    this.onClick = event => {
+      if (event.target === this.el) this.close()
     }
     this.el.addEventListener('cancel', this.onCancel)
+    this.el.addEventListener('click', this.onClick)
+    onDialogClose(this, () => resetDialog(this))
     this.sync()
   },
 
@@ -104,16 +115,18 @@ export const ReleaseDialog = () => ({
   },
 
   destroyed() {
+    clearTimeout(this.closeTimer)
     this.el.removeEventListener('cancel', this.onCancel)
+    this.el.removeEventListener('click', this.onClick)
   },
 
   sync() {
     const open = this.el.dataset.open === 'true'
-    if (open && !this.el.open) {
-      this.el.showModal()
+    if (open && (!this.el.open || this.closing)) {
+      openDialog(this)
       this.el.querySelector('[autofocus]')?.focus()
-    } else if (!open && this.el.open) {
-      this.el.close()
+    } else if (!open) {
+      closeDialog(this)
     }
   },
 })

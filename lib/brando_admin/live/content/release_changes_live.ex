@@ -186,7 +186,11 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     assign(socket, :detail, %{definitions: definitions})
   end
 
+  # Blocks holding leftovers are counted here: when the screen loads, after
+  # an apply, Keep or Revert, and once an apply's entries have rendered
   defp load_batch(socket) do
+    socket = assign(socket, :leftovers, StaleBlocks.modules_with_leftovers())
+
     case Batches.pending() do
       nil ->
         socket = assign(socket, batch: nil, batch_status: nil, renders: nil, applied_entries: [])
@@ -750,6 +754,13 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp applied_items(%{batch: %{definitions: %{"items" => items}}}), do: items
   defp applied_items(_), do: []
 
+  # The modules with leftovers the pending apply changed, for its banner,
+  # and the others, for the notice above the review
+  defp split_leftovers(assigns) do
+    uids = MapSet.new(applied_items(assigns), & &1["uid"])
+    Enum.split_with(assigns.leftovers, &MapSet.member?(uids, &1.module.uid))
+  end
+
   defp confirm_entries(assigns) do
     Map.new(assigns.rows, fn row ->
       entries = assigns.entries_by_row[row.uid] || []
@@ -802,6 +813,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             renders={@renders}
             changed_since={@batch_status.changed_since}
             irreversible={@batch_status.irreversible}
+            leftovers={elem(split_leftovers(assigns), 0)}
           />
           <RC.summary
             report={@report}
@@ -812,6 +824,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             selected_count={MapSet.size(@selected)}
             waiting?={!!(@renders && @renders.pending > 0)}
           />
+          <RC.leftovers :if={elem(split_leftovers(assigns), 1) != []} leftovers={elem(split_leftovers(assigns), 1)} />
           <p :if={@rows == [] and !@batch} class="release-tab-note" data-testid="release-nothing">
             {gettext("Nothing to apply: this site has every definition in the release.")}
           </p>

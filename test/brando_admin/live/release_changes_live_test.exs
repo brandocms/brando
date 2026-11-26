@@ -325,6 +325,108 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
     end)
   end
 
+  describe "blocks that hold values their module no longer defines" do
+    # A block of `module` on an older version, holding a var `key`
+    defp stale_block!(c, module, key) do
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: module.id,
+          creator_id: c.user.id
+        })
+
+      Repo.insert!(%Brando.Content.Var{block_id: block.id, key: key, type: :boolean, label: %{"en" => key}})
+      block
+    end
+
+    # The release no longer defines the Case module's `wide` var
+    defp remove_wide!(c) do
+      exs = Path.join(c.path, "content/case.exs")
+      source = File.read!(exs)
+      without = Regex.replace(~r/\n    var "wide", "boolean" do\n.*?\n    end\n/s, source, "\n")
+      assert without != source
+      File.write!(exs, without)
+    end
+
+    defp apply_all(view) do
+      view |> element("[data-testid=release-apply]") |> render_click()
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+      Oban.drain_queue(queue: :default)
+      send(view.pid, :tick)
+      eventually(view, &(&1 =~ "release-banner is-done"))
+    end
+
+    defp resolve_path(module), do: "/admin/config/content/modules/update/#{module.id}/stale-blocks"
+
+    test "the applied banner counts them and links to the module's Resolve blocks; after Keep the notice stays until they are resolved",
+         %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        # The release still waits: the module defines the var
+        refute has_element?(view, "[data-testid=release-leftovers]")
+
+        apply_all(view)
+        assert has_element?(view, "[data-testid=release-banner-leftovers]", "1 block")
+        assert has_element?(view, ~s([data-testid=release-banner-resolve][href="#{resolve_path(c.case_module)}"]))
+        # The banner names them: the notice above the review does not again
+        refute has_element?(view, "[data-testid=release-leftovers]")
+
+        view |> element("[data-testid=release-keep]") |> render_click()
+        assert has_element?(view, "[data-testid=release-nothing]")
+        assert has_element?(view, ~s([data-testid=release-leftovers-resolve][href="#{resolve_path(c.case_module)}"]))
+
+        {:ok, _} = Brando.Content.StaleBlocks.apply(case_module(c), %{{:var, "wide"} => :drop}, c.user)
+        {:ok, view, _html} = live(conn, @path)
+        refute has_element?(view, "[data-testid=release-leftovers]")
+      end)
+    end
+
+    test "the applied banner names none when the apply left none", %{conn: conn} = c do
+      release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        apply_all(view)
+        refute has_element?(view, "[data-testid=release-banner-leftovers]")
+        refute has_element?(view, "[data-testid=release-banner-resolve]")
+      end)
+    end
+
+    test "the applied banner links to the list when several applied modules have them", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      stale_block!(c, c.text_module, "gone")
+      remove_wide!(c)
+      release_template!(c, "text", "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}")
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        apply_all(view)
+        assert has_element?(view, "[data-testid=release-banner-leftovers]", "2 blocks")
+
+        assert has_element?(
+                 view,
+                 ~s([data-testid=release-banner-resolve][href="/admin/config/content/modules/stale-blocks"])
+               )
+      end)
+    end
+
+    test "the notice shows while changes wait, and a block only on an older version does not count",
+         %{conn: conn} = c do
+      stale_block!(c, c.text_module, "gone")
+      # Behind, but holding only what the module defines
+      stale_block!(c, c.case_module, "wide")
+      release_template!(c, "case", "<div class=\"case v2\">{{ heading }}</div>")
+
+      {:ok, view, _html} = live(conn, @path)
+      assert has_element?(view, "[data-testid=release-row][data-uid=#{c.case_module.uid}]")
+      assert has_element?(view, ~s([data-testid=release-leftovers-resolve][href="#{resolve_path(c.text_module)}"]))
+    end
+  end
+
   describe "a renamed var" do
     setup c do
       block =

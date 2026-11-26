@@ -51,10 +51,13 @@
   .release-banner-body > p { color: var(--brando-muted); font-size: var(--brando-text-md); line-height: 20px; max-width: 78ch; }
   .release-banner-actions { display: flex; gap: 8px; align-items: center; }
   .release-banner-hint { grid-column: 2 / -1; color: var(--brando-muted); font-size: var(--brando-text-xs); }
-  .release-banner-conflict { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--brando-attention-line); border-radius: 6px; background: var(--brando-attention); color: var(--brando-attention-ink); font-size: var(--brando-text-sm); line-height: 18px; }
-  .release-banner-conflict [data-icon] { width: 14px; height: 14px; margin-top: 2px; flex: none; }
-  .release-banner-conflict strong { font-weight: 500; }
+  :is(.release-banner-conflict, .release-banner-leftovers) { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--brando-attention-line); border-radius: 6px; background: var(--brando-attention); color: var(--brando-attention-ink); font-size: var(--brando-text-sm); line-height: 18px; }
+  :is(.release-banner-conflict, .release-banner-leftovers) [data-icon] { width: 14px; height: 14px; margin-top: 2px; flex: none; }
+  :is(.release-banner-conflict, .release-banner-leftovers) strong { font-weight: 500; }
 }
+
+/* Blocks on this site that hold values their modules no longer define */
+.release-leftovers { margin-bottom: 24px; }
 
 .release-progress {
   display: flex; flex-direction: column; gap: 8px; margin-top: 6px;
