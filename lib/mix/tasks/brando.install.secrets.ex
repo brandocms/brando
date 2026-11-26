@@ -22,17 +22,16 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
   # interrupted run leaves behind stays out of Git and the Docker build.
   @temporary_suffix ".brando-secrets-"
 
-  @doc false
+  @doc "The files this task fills in, in the order it fills them."
   def files, do: @files
 
-  @doc false
+  @doc "A new temporary path beside `path`, which the ignore lines cover."
   def temporary_path(path), do: path <> @temporary_suffix <> Integer.to_string(System.unique_integer([:positive]))
 
   @doc "The `.gitignore` line for the temporary files, at any depth."
   def temporary_ignore, do: "*" <> @temporary_suffix <> "*"
 
-  @doc false
-  # An empty file only its owner can read, for the secrets to be written to.
+  @doc "Creates an empty file at `path` only its owner can read, for the secrets to be written to."
   def create_private!(path) do
     File.write!(path, "", [:exclusive])
     File.chmod!(path, 0o600)
