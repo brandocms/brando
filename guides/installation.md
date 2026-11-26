@@ -281,10 +281,26 @@ The installer writes:
   all with `--origin '//*.example.com'`.
 - `.envrc.prod` and `.envrc.staging` for Florist, with `PHX_HOST` set to the
   domain and the staging host, `PHX_SERVER`, a `SECRET_KEY_BASE`, a
-  `DATABASE_URL` and a `RELEASE_NODE` default. They use the names a Phoenix
+  `DATABASE_URL`, a `RELEASE_NODE` default and the site's
+  `BRANDO_ENCRYPTION_SECRET`. They use the names a Phoenix
   `config/runtime.exs` reads and are added to `.gitignore` because they hold
   secrets. The diff and `--dry-run` show markers in place of the secrets,
   which the installer fills in after you accept the changes.
+- `config/dev.secret.exs`, with the same encryption secret for development,
+  which `config/dev.exs` imports, and the line in `config/runtime.exs` that
+  reads `BRANDO_ENCRYPTION_SECRET` in production. Each environment file gets
+  its own `SECRET_KEY_BASE`, but the encryption secret is one value for the
+  whole site, so a database copied between its environments stays readable
+  (see [Encryption secret](deployment.md#encryption-secret)). An application
+  that configures `Brando.Crypto` itself keeps its configuration, for each
+  environment it reaches: production's in `config/config.exs`,
+  `config/prod.exs` or `config/runtime.exs`, development's in
+  `config/config.exs`, `config/dev.exs` or `config/dev.secret.exs`, each with
+  the files it imports by a literal path. A secret in `config/test.exs`
+  decides nothing. A rerun over an installed application, such as a clone
+  whose environment files Git left out, generates no value: it writes what
+  `mix brando.upgrade` writes, and new environment files get no
+  `BRANDO_ENCRYPTION_SECRET`; copy production's into them.
 - `rel/env.sh.eex`, which makes the release source the environment file
   Florist copies into it (`.envrc.runtime`), sets long node names and starts
   the release in interactive mode (see

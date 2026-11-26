@@ -35,7 +35,8 @@ if Code.ensure_loaded?(Igniter) do
     names, adds the explicit listing component imports, adds
     `use Brando.SoftDelete.Repo` to Brando's Repo (`--repo MyApp.Repo`, else
     `config :brando, repo_module:`, else the application's only one) without
-    it, gives Villain parsers
+    it, has `Brando.Crypto` read the site's encryption secret from
+    `BRANDO_ENCRYPTION_SECRET` when it configures none, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
     Swoosh's API client, points Brando at the application's mailer (creating
@@ -142,6 +143,7 @@ if Code.ensure_loaded?(Igniter) do
       |> EntriesFromIdentifiers.rewrite()
       |> SourceUpgrade.start_endpoint_last()
       |> SoftDeleteRepo.plan(igniter.args.options[:repo])
+      |> Mix.Brando.Igniter.EncryptionSecret.upgrade()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
       |> Assets.notice_native_europa()

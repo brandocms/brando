@@ -183,7 +183,9 @@ or 24.04 (or the site moves to a new server).
 Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's
-`release-archives/` and `sql/` dumps, and the `.envrc*` files with secrets.
+`release-archives/` and `sql/` dumps, the `.envrc*` files with secrets and
+`config/dev.secret.exs`, the development copy of the
+[encryption secret](../guides/deployment.md#encryption-secret).
 With `multi` it also keeps out each site project's `assets/sites/*/node_modules`
 and `assets/sites/*/dist`: the release does not serve a site's build, which
 is uploaded as the site's asset set. `mix brando.gen.site --site KEY` adds

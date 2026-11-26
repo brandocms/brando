@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Mix.Brando.Igniter.AgentFiles
     alias Mix.Brando.Igniter.AIDependency
+    alias Mix.Brando.Igniter.EncryptionSecret
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Migrations
@@ -183,10 +184,13 @@ if Code.ensure_loaded?(Igniter) do
         # dependency upgrade to a 0.55 prerelease without a recipe. lazy_html,
         # optional too, becomes a runtime dependency the same way: those
         # builds parsed HTML with Floki, beside phx.new's test-only lazy_html.
+        # Brando.Crypto's secret is read from BRANDO_ENCRYPTION_SECRET when
+        # set, for an application that configures none.
         igniter
         |> compose_recipes(from, to)
         |> AIDependency.plan()
         |> LazyHTMLDependency.plan()
+        |> EncryptionSecret.upgrade()
         |> AgentFiles.plan()
         |> installed_files()
         |> migrations()

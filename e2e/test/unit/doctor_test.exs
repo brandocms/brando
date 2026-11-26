@@ -40,6 +40,8 @@ defmodule E2eProject.DoctorTest do
     assert %{"status" => "ok"} = checks["migrations"]
     # Every Blueprint with an admin editor has its form route
     assert %{"status" => "ok"} = checks["admin_routes"]
+    # config/test.exs gives the app an encryption secret of its own
+    assert %{"status" => "ok"} = checks["encryption_secret"]
 
     assert status == if(report["status"] == "error", do: 1, else: 0)
     assert report["versions"]["brando"] == Brando.version()

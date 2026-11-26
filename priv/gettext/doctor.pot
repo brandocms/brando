@@ -760,6 +760,11 @@ msgstr ""
 msgid "Deprecations"
 msgstr ""
 
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "Encryption secret"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Endpoint URL: %{url}"
@@ -1140,6 +1145,11 @@ msgstr ""
 #: lib/brando/doctor/checks/preview_hosts.ex
 #, elixir-autogen, elixir-format
 msgid "a preview host per static site under %{base}"
+msgstr ""
+
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "a secret of its own"
 msgstr ""
 
 #: lib/brando/doctor/checks/preview_hosts.ex
@@ -1548,6 +1558,11 @@ msgstr ""
 msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build installs from package.json, the lockfile and the Yalc copy alone"
 msgstr ""
 
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "give the endpoint a new SECRET_KEY_BASE and deploy: everyone is signed out once, and encrypted values stay readable"
+msgstr ""
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "identity complete"
@@ -1774,6 +1789,11 @@ msgstr ""
 msgid "no scheduled publishing sweep"
 msgstr ""
 
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "no secret of at least 32 bytes: two-factor sign-in fails"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no sender address"
@@ -1807,6 +1827,11 @@ msgstr ""
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "none in the release"
+msgstr ""
+
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "none of its own: encrypted values use the endpoint's secret_key_base"
 msgstr ""
 
 #: lib/brando/doctor.ex
@@ -1985,6 +2010,11 @@ msgstr ""
 msgid "run mix brando.images.adopt, or Utilities → Recreate changed images, which records them without recreating them"
 msgstr ""
 
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "run mix brando.install again: it fills in the secret in .envrc.prod, .envrc.staging and config/dev.secret.exs"
+msgstr ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "run mix brando.migrate"
@@ -2030,6 +2060,11 @@ msgstr ""
 msgid "session cookie sent to preview hosts"
 msgstr ""
 
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "set BRANDO_ENCRYPTION_SECRET on the servers, and config/dev.secret.exs in development, to one value for the whole site: on a site in production, production's current SECRET_KEY_BASE. See the deployment guide"
+msgstr ""
+
 #: lib/brando/doctor/checks/deploy_hosts.ex
 #, elixir-autogen, elixir-format
 msgid "set PHX_HOST in them to the host each release serves before deploying; the installer writes it from --domain only when the files are new"
@@ -2038,6 +2073,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
+msgstr ""
+
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "set config :brando, Brando.Crypto, secret: to the site's encryption secret"
 msgstr ""
 
 #: lib/brando/doctor/checks/preview_hosts.ex
@@ -2073,6 +2113,11 @@ msgstr ""
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "static_paths/0 matches the endpoint's Plug.Static only:"
+msgstr ""
+
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "still the installer's placeholder: two-factor sign-in fails"
 msgstr ""
 
 #: lib/brando/doctor/checks/test_database.ex
@@ -2123,6 +2168,11 @@ msgstr ""
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
+msgstr ""
+
+#: lib/brando/doctor/checks/encryption_secret.ex
+#, elixir-autogen, elixir-format
+msgid "the same value as the endpoint's secret_key_base"
 msgstr ""
 
 #: lib/brando/doctor/checks/preview_hosts.ex

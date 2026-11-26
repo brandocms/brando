@@ -1,18 +1,29 @@
 defmodule Brando.Crypto do
   @moduledoc """
-  Encryption and keyed hashing for secrets Brando keeps in the database, such
-  as a user's two-factor secret and recovery codes.
+  Encryption and keyed hashing for secrets Brando keeps in the database: a
+  user's two-factor secret and recovery codes, passkey user handles, webhook
+  and notification route secrets, MCP and Figma credentials, translation work
+  tokens.
 
   Keys are derived from one secret with `Plug.Crypto.KeyGenerator`, a
-  separate key for each purpose. The secret is the endpoint's
-  `secret_key_base`, unless the application sets its own:
+  separate key for each purpose. The secret is the site's own, the same value
+  in every environment, so a database copied between them stays readable:
 
+      # config/runtime.exs, in its prod block
       config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECRET")
 
-  Either way, it must stay the same: with a new secret, encrypted values can
+      # config/dev.secret.exs, kept out of Git, which config/dev.exs imports
+      config :brando, Brando.Crypto, secret: "…"
+
+  `mix brando.install` writes both, with one value in `.envrc.prod`,
+  `.envrc.staging` and `config/dev.secret.exs`. Without a secret configured,
+  Brando uses the endpoint's `secret_key_base`, which differs per environment,
+  and `mix brando.doctor` warns. With one, `secret_key_base` can be rotated.
+  See "Encryption secret" in the deployment guide.
+
+  The secret itself must stay the same: with a new one, encrypted values can
   no longer be read and hashed codes no longer match. Users would have to set
-  up two-factor authentication again. Set a dedicated secret if
-  `secret_key_base` may be rotated.
+  up two-factor authentication again.
 
   Encryption is `Plug.Crypto.MessageEncryptor` (XChaCha20-Poly1305). The
   `context` given to `encrypt/2` is bound to the ciphertext as additional
@@ -49,6 +60,11 @@ defmodule Brando.Crypto do
 
   defp secret do
     case Brando.config(__MODULE__)[:secret] || Brando.endpoint().config(:secret_key_base) do
+      "__BRANDO_" <> _ ->
+        raise ArgumentError,
+              "Brando.Crypto's secret is still the installer's placeholder: run mix brando.install again " <>
+                "to fill in .envrc.prod, .envrc.staging and config/dev.secret.exs"
+
       secret when is_binary(secret) and byte_size(secret) >= 32 ->
         secret
 
