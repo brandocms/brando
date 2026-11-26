@@ -1319,6 +1319,13 @@ msgid_plural "%{count} blocks differ"
 msgstr[0] "1 blokk er ulik"
 msgstr[1] "%{count} blokker er ulike"
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block holds values its module no longer defines"
+msgid_plural "%{count} blocks in one module hold values it no longer defines"
+msgstr[0] "1 blokk har verdier modulen ikke lenger definerer"
+msgstr[1] "%{count} blokker i én modul har verdier den ikke lenger definerer"
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 block holds values the module no longer defines"
@@ -1326,12 +1333,26 @@ msgid_plural "%{count} blocks hold values the module no longer defines"
 msgstr[0] "1 blokk har verdier modulen ikke lenger definerer"
 msgstr[1] "%{count} blokker har verdier modulen ikke lenger definerer"
 
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block in %{modules} modules holds values its module no longer defines"
+msgid_plural "%{count} blocks in %{modules} modules hold values their modules no longer define"
+msgstr[0] "1 blokk i %{modules} moduler har verdier modulen ikke lenger definerer"
+msgstr[1] "%{count} blokker i %{modules} moduler har verdier modulene ikke lenger definerer"
+
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 block keeps what the apply added; resolve it under Block modules → Blocks on older versions."
 msgid_plural "%{count} blocks keep what the apply added; resolve them under Block modules → Blocks on older versions."
 msgstr[0] "1 blokk beholder det endringene la til; løs det under Blokkmoduler → Blokker på eldre versjoner."
 msgstr[1] "%{count} blokker beholder det endringene la til; løs det under Blokkmoduler → Blokker på eldre versjoner."
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "1 block still holds values the applied modules no longer define."
+msgid_plural "%{count} blocks still hold values the applied modules no longer define."
+msgstr[0] "1 blokk har fortsatt verdier de oppdaterte modulene ikke lenger definerer."
+msgstr[1] "%{count} blokker har fortsatt verdier de oppdaterte modulene ikke lenger definerer."
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
@@ -17546,6 +17567,7 @@ msgstr[0] "Løse %{count} blokk?"
 msgstr[1] "Løse %{count} blokker?"
 
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/components/stale_blocks.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -17557,6 +17579,11 @@ msgstr "Løs blokker"
 #, elixir-autogen, elixir-format
 msgid "Resolve conflicts or required migrations before importing. Export the current definitions into a new bundle and reconcile your edits."
 msgstr "Løs konflikter eller nødvendige migreringer før du importerer. Eksporter de gjeldende definisjonene til en ny pakke og samordne endringene dine."
+
+#: lib/brando_admin/components/release_changes.ex
+#, elixir-autogen, elixir-format
+msgid "Resolve them to drop the values or move them onto refs and vars the modules define now."
+msgstr "Løs dem for å fjerne verdiene eller flytte dem til refs og variabler modulene definerer nå."
 
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
@@ -22330,6 +22357,7 @@ msgstr "De flyttes til papirkurven, og kommer tilbake hvis siden gjenopprettes."
 msgid "They can be loaded once the revision you have open is closed, or the save in progress is done."
 msgstr "De kan lastes inn når revisjonen du har åpen er lukket, eller lagringen som pågår er ferdig."
 
+#: lib/brando_admin/components/release_changes.ex
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
 msgid "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."

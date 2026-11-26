@@ -302,7 +302,17 @@ row links to **Resolve blocks**
 The confirmation repeats what the apply covers, the entries it re-renders,
 what it leaves out, and the entries that failed in Verify. After the apply, a
 banner follows the renders until every entry has rendered, and names those
-that failed. Activity records the apply with the release version.
+that failed. Once they have rendered, it counts the blocks in the applied
+modules that still hold values the module no longer defines, with
+**Resolve blocks** beside Keep and Revert: to the module's blocks, or to the
+list of modules when several have them. Activity records the apply with the
+release version.
+
+While any module on the site has such blocks, a notice above the review
+counts them and links to **Resolve blocks** the same way, whichever apply or
+module save left them (those of an apply's modules are in its banner until
+it is kept or reverted); it goes once they are resolved. A block that is only
+behind its module's version, with nothing left over, does not count.
 
 **Keep** and **Revert** wait for the renders. Revert applies again the
 definitions the apply replaced, through the same plan and apply, and

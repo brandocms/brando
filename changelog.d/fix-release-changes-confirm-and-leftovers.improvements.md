@@ -1,0 +1,1 @@
+- Release changes: the applied banner counts the blocks its modules left holding values they no longer define, with a Resolve blocks link, and the overview keeps a notice of every such block on the site until they are resolved.

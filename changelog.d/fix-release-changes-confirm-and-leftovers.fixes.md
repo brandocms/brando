@@ -1,0 +1,1 @@
+- Release changes: the apply confirmation shows when it opens instead of staying invisible and blocking the screen, and it no longer prints "false" after a module without children.
