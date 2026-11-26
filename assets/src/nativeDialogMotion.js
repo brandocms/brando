@@ -34,6 +34,16 @@ export function onDialogClose(hook, callback) {
   })
 }
 
+// A click on the backdrop has the dialog as its target, and so does a click in
+// the dialog's own padding. Only a point outside its box is the backdrop.
+export function isBackdropClick(event, dialog) {
+  if (event.target !== dialog) return false
+  const box = dialog.getBoundingClientRect()
+  return (
+    event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom
+  )
+}
+
 export function resetDialog(hook) {
   clearTimeout(hook.closeTimer)
   hook.closing = false
