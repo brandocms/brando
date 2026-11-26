@@ -292,7 +292,15 @@ The installer writes:
   its own `SECRET_KEY_BASE`, but the encryption secret is one value for the
   whole site, so a database copied between its environments stays readable
   (see [Encryption secret](deployment.md#encryption-secret)). An application
-  that configures `Brando.Crypto` itself keeps its configuration.
+  that configures `Brando.Crypto` itself keeps its configuration, for each
+  environment it reaches: production's in `config/config.exs`,
+  `config/prod.exs` or `config/runtime.exs`, development's in
+  `config/config.exs`, `config/dev.exs` or `config/dev.secret.exs`, each with
+  the files it imports by a literal path. A secret in `config/test.exs`
+  decides nothing. A rerun over an installed application, such as a clone
+  whose environment files Git left out, generates no value: it writes what
+  `mix brando.upgrade` writes, and new environment files get no
+  `BRANDO_ENCRYPTION_SECRET`; copy production's into them.
 - `rel/env.sh.eex`, which makes the release source the environment file
   Florist copies into it (`.envrc.runtime`), sets long node names and starts
   the release in interactive mode (see

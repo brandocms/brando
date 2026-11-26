@@ -37,7 +37,10 @@ if Code.ensure_loaded?(Igniter) do
       # arbitrary suffixes. Exact names such as .envrc.prod leave the rest out.
       {".envrc*", [".envrc", ".envrc.prod", ".envrc.staging", ".envrc.prod.bak", ".envrc~", ".envrc-x9q"]},
       # Brando.Crypto's secret for development: the Dockerfile copies config/.
-      @dev_secret
+      @dev_secret,
+      # What an interrupted brando.install.secrets leaves beside
+      # config/dev.secret.exs; .envrc* covers those beside the .envrc files.
+      {"config/*.brando-secrets-*", ["config/dev.secret.exs.brando-secrets-1"]}
     ]
 
     # In :multi, each site's Vite project in assets/sites/<key>/. The release

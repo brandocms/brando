@@ -4,6 +4,7 @@
 .temp
 _build
 config/dev.secret.exs
+config/*.brando-secrets-*
 __design
 assets/backend/node_modules
 assets/frontend/node_modules

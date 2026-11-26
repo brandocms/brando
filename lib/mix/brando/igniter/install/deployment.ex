@@ -108,10 +108,17 @@ if Code.ensure_loaded?(Igniter) do
     release with its own `.envrc`, so the staging host is a trusted origin of
     the prod config. `.gitignore` gets what Brando's builds, uploads and Florist
     write in the working folder, and what `tenancy_gitignore/2` adds.
+    Brando.Crypto's secret is set up as `EncryptionSecret.install/4` says;
+    `fresh?` is false on a rerun over an installed application.
     """
-    def plan(igniter, project, hosts, existing, tenancy_mode) do
+    def plan(igniter, project, hosts, existing, tenancy_mode, fresh?) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
-      {igniter, encryption_variable?, secret_files} = encryption_secret(igniter, existing, created)
+
+      every_envrc? =
+        Enum.all?(@envrc, fn {flavor, _path} -> created[flavor] || existing.envrc_encryption_secret[flavor] end)
+
+      {igniter, encryption_variable?, secret_files} =
+        EncryptionSecret.install(igniter, existing.encryption_secret, every_envrc?, fresh?)
 
       igniter
       |> check_origin(project, hosts, existing, tenancy_mode)
@@ -124,6 +131,7 @@ if Code.ensure_loaded?(Igniter) do
       |> gitignore([
         {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
         EncryptionSecret.gitignore(),
+        {"Left behind when brando.install.secrets is interrupted", [Mix.Tasks.Brando.Install.Secrets.temporary_ignore()]},
         {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
         | tenancy_ignores(tenancy_mode)
       ])
@@ -272,24 +280,6 @@ if Code.ensure_loaded?(Igniter) do
       installation on <site>.#{apex}, an admin moved to another host through PHX_HOST),
       or trust every subdomain with --origin '//*.#{apex}' if they are all yours.
       """)
-    end
-
-    # Brando.Crypto's secret, BRANDO_ENCRYPTION_SECRET, goes into the new
-    # environment files when every environment file holds it after this run,
-    # with the same value in config/dev.secret.exs, or when the application's
-    # own configuration of Brando.Crypto reads it. A site whose .envrc.prod or
-    # .envrc.staging is kept without it gets what an upgrade writes, which
-    # boots without it.
-    defp encryption_secret(igniter, %{encryption_secret: %{configured?: true} = config}, _created),
-      do: {igniter, config.reads_variable?, []}
-
-    defp encryption_secret(igniter, existing, created) do
-      if Enum.all?(@envrc, fn {flavor, _path} -> created[flavor] || existing.envrc_encryption_secret[flavor] end) do
-        {igniter, files} = EncryptionSecret.install(igniter)
-        {igniter, true, files}
-      else
-        {EncryptionSecret.existing_site(igniter), false, []}
-      end
     end
 
     # The files are planned with markers in place of the secrets, so no diff or

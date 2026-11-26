@@ -432,7 +432,7 @@ and writes the same value to three places:
 The installer's diff and `--dry-run` show a marker in place of the value. A
 run that stopped before all three files were filled in fills in the rest
 when it is run again, with the value the others already hold; files holding
-two different values stop it, naming them. `config/dev.secret.exs` is
+two different values, or a value under 32 bytes, stop it, naming them. `config/dev.secret.exs` is
 readable by its owner only, ignored by Git and kept out of the Docker build
 by `.dockerignore`: the Dockerfile copies `config/` into the build. Give it
 to another developer the way you give them the `.envrc` files. A checkout

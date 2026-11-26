@@ -17,9 +17,25 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
     "__BRANDO_DATABASE_PASSWORD__" => :database_password
   }
   @encryption_marker "__BRANDO_ENCRYPTION_SECRET__"
+  # Each file is written to a temporary file beside it, then moved in place.
+  # The ignore lines brando.install writes cover the name, so one an
+  # interrupted run leaves behind stays out of Git and the Docker build.
+  @temporary_suffix ".brando-secrets-"
 
-  @doc false
+  @doc "The files this task fills in, in the order it fills them."
   def files, do: @files
+
+  @doc "A new temporary path beside `path`, which the ignore lines cover."
+  def temporary_path(path), do: path <> @temporary_suffix <> Integer.to_string(System.unique_integer([:positive]))
+
+  @doc "The `.gitignore` line for the temporary files, at any depth."
+  def temporary_ignore, do: "*" <> @temporary_suffix <> "*"
+
+  @doc "Creates an empty file at `path` only its owner can read, for the secrets to be written to."
+  def create_private!(path) do
+    File.write!(path, "", [:exclusive])
+    File.chmod!(path, 0o600)
+  end
 
   @impl Mix.Task
   def run([_ | _] = paths) do
@@ -57,11 +73,11 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
       end)
 
     if filled != contents do
-      temporary = path <> ".brando-#{System.unique_integer([:positive])}"
+      temporary = temporary_path(path)
 
       try do
-        File.write!(temporary, filled, [:binary, :exclusive])
-        File.chmod!(temporary, 0o600)
+        create_private!(temporary)
+        File.write!(temporary, filled, [:binary])
         File.rename!(temporary, path)
       after
         File.rm(temporary)
@@ -72,13 +88,15 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
   end
 
   # The value one of the files already holds, or a new one. Two different
-  # values are the site's choice to make, not this task's.
+  # values are the site's choice to make, not this task's, and one it cannot
+  # use stops it before it writes anything.
   defp encryption_secret! do
     found =
       for path <- @files,
           {:ok, contents} <- [File.read(path)],
           value <- encryption_values(path, contents),
-          do: {path, value}
+          value not in ["", @encryption_marker],
+          do: {path, usable!(path, value)}
 
     case found |> Enum.map(&elem(&1, 1)) |> Enum.uniq() do
       [] ->
@@ -95,14 +113,41 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
     end
   end
 
-  defp encryption_values("config/dev.secret.exs", contents),
-    do: values(~r/\bsecret:\s*"([^"]*)"/, contents)
+  # Only the secret of a `config :brando, Brando.Crypto` call: other settings
+  # in the file have secrets of their own.
+  defp encryption_values("config/dev.secret.exs" = path, contents) do
+    case Code.string_to_quoted(contents) do
+      {:ok, quoted} ->
+        {_, values} =
+          Macro.prewalk(quoted, [], fn
+            {:config, _, [:brando, {:__aliases__, _, [:Brando, :Crypto]}, opts]} = node, values when is_list(opts) ->
+              {node, values ++ for({:secret, value} <- opts, do: value)}
 
-  defp encryption_values(_envrc, contents),
-    do: values(~r/^[ \t]*(?:export[ \t]+)?BRANDO_ENCRYPTION_SECRET=["']?([^"'\s]*)/m, contents)
+            node, values ->
+              {node, values}
+          end)
 
-  defp values(regex, contents) do
-    for [_, value] <- Regex.scan(regex, contents), value not in ["", @encryption_marker], do: value
+        values
+
+      {:error, _} ->
+        Mix.raise("Cannot read #{path}: it is not valid Elixir. Fix it, then run mix brando.install again.")
+    end
+  end
+
+  defp encryption_values(_envrc, contents) do
+    regex = ~r/^[ \t]*(?:export[ \t]+)?BRANDO_ENCRYPTION_SECRET=["']?([^"'\s]*)/m
+    for [_, value] <- Regex.scan(regex, contents), do: value
+  end
+
+  defp usable!(path, value) do
+    if is_binary(value) and byte_size(value) >= 32 and not String.starts_with?(value, "__BRANDO_") do
+      value
+    else
+      Mix.raise("""
+      #{path} holds a Brando.Crypto secret this task cannot use: the site's value is a string of at \
+      least 32 bytes. Set it there, then run mix brando.install again.\
+      """)
+    end
   end
 
   defp secret(:secret_key_base), do: :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)
