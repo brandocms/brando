@@ -107,6 +107,44 @@ defmodule BrandoAdmin.EncryptedDataLiveTest do
       end
     end
 
+    test "is worked out once when the dashboard mounts, not on each update", %{conn: conn, current_user: superuser} do
+      foreign_marker!(Marker.host())
+      ForeignSecret.two_factor!(user(:editor), false)
+      {:ok, view, _html} = live_isolated(conn, DashboardHost, session: %{"user_id" => superuser.id})
+      assert has_element?(view, "[data-testid=dashboard-encrypted-data]")
+
+      # The audit reads every two-factor secret
+      parent = self()
+      handler = "dashboard-audit-#{inspect(parent)}"
+
+      :telemetry.attach(
+        handler,
+        Brando.repo().config()[:telemetry_prefix] ++ [:query],
+        fn _event, _measurements, %{source: source}, _config ->
+          if source == "users_security", do: send(parent, :audit_read)
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      Phoenix.LiveView.send_update(view.pid, Dashboard, id: "dashboard", current_user: superuser)
+      assert has_element?(view, "[data-testid=dashboard-encrypted-data]")
+      refute_received :audit_read
+    end
+
+    test "is left out when the audit fails, and the dashboard renders", %{current_user: superuser} do
+      ForeignSecret.two_factor!(user(:editor), false)
+      # Without a marker the audit decrypts each secret, and an unusable secret raises
+      put_test_env(Brando.Crypto, secret: "too short")
+
+      {html, log} =
+        ExUnit.CaptureLog.with_log(fn -> render_component(Dashboard, id: "dashboard", current_user: superuser) end)
+
+      refute html =~ "dashboard-encrypted-data"
+      assert log =~ "Could not check the encrypted data"
+    end
+
     test "is not there when everything is readable", %{current_user: superuser} do
       ForeignSecret.two_factor!(user(:editor), true)
       refute render_component(Dashboard, id: "dashboard", current_user: superuser) =~ "dashboard-encrypted-data"

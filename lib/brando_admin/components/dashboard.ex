@@ -11,6 +11,8 @@ defmodule BrandoAdmin.Components.Dashboard do
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Workspace
 
+  require Logger
+
   def update(assigns, socket) do
     {:ok,
      socket
@@ -21,7 +23,7 @@ defmodule BrandoAdmin.Components.Dashboard do
      |> assign(:notifications_queue_missing?, Brando.Notifications.Routing.queue_warning?(assigns.current_user))
      |> assign(:release_changes, release_changes(assigns.current_user))
      |> assign_move(assigns.current_user)
-     |> assign(:encrypted_data, encrypted_data(assigns.current_user))}
+     |> assign_new(:encrypted_data, fn -> encrypted_data(assigns.current_user) end)}
   end
 
   # The webhooks and notification routes paused when the database turned out
@@ -36,7 +38,9 @@ defmodule BrandoAdmin.Components.Dashboard do
   end
 
   # What this installation's secret cannot read, for those who may forget it
-  # (`Brando.Crypto.Audit.forget/2`)
+  # (`Brando.Crypto.Audit.forget/2`). It decrypts every stored value, so it
+  # runs once when the dashboard mounts, not on each update, and one that
+  # fails leaves the notice out
   defp encrypted_data(user) do
     if Brando.Authorization.Boundary.superuser?(user) do
       case Brando.Doctor.Checks.EncryptedData.run(nil) do
@@ -44,6 +48,10 @@ defmodule BrandoAdmin.Components.Dashboard do
         _ -> nil
       end
     end
+  rescue
+    error ->
+      Logger.error("[BrandoAdmin.Components.Dashboard] Could not check the encrypted data: " <> Exception.message(error))
+      nil
   end
 
   def handle_event("dismiss_move_notice", _params, socket) do
