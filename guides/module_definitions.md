@@ -313,7 +313,8 @@ to edit each entry, as Resolve blocks does.
 
 The box drops only the removals no `renamed_from` in the release names as
 its source, held under the type the module defines (a value an older change
-left is not this apply's), in blocks of this site's own modules. The dialog
+left is not this apply's), in blocks of this site's own modules. Under the
+box the dialog lists, per module, the refs and vars it drops values of, and
 says what it leaves for **Resolve blocks** instead:
 
 - the modules of a tree whose apply Revert couldn't undo: the reverse needs
@@ -325,7 +326,8 @@ says what it leaves for **Resolve blocks** instead:
 
 The apply drops what the dialog showed, read again when it runs: when the
 refs and vars it would drop values of changed in between, it applies nothing
-and asks you to review again. After the apply, a
+and asks you to review again, and the dialog lists what it would drop now,
+with the box unticked. After the apply, a
 banner follows the renders until every entry has rendered, and names those
 that failed. Once they have rendered, it counts the blocks in the applied
 modules that still hold values the module no longer defines, with
