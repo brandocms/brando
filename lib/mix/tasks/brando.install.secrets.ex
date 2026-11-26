@@ -72,13 +72,15 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
   end
 
   # The value one of the files already holds, or a new one. Two different
-  # values are the site's choice to make, not this task's.
+  # values are the site's choice to make, not this task's, and one it cannot
+  # use stops it before it writes anything.
   defp encryption_secret! do
     found =
       for path <- @files,
           {:ok, contents} <- [File.read(path)],
           value <- encryption_values(path, contents),
-          do: {path, value}
+          value not in ["", @encryption_marker],
+          do: {path, usable!(path, value)}
 
     case found |> Enum.map(&elem(&1, 1)) |> Enum.uniq() do
       [] ->
@@ -95,14 +97,41 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
     end
   end
 
-  defp encryption_values("config/dev.secret.exs", contents),
-    do: values(~r/\bsecret:\s*"([^"]*)"/, contents)
+  # Only the secret of a `config :brando, Brando.Crypto` call: other settings
+  # in the file have secrets of their own.
+  defp encryption_values("config/dev.secret.exs" = path, contents) do
+    case Code.string_to_quoted(contents) do
+      {:ok, quoted} ->
+        {_, values} =
+          Macro.prewalk(quoted, [], fn
+            {:config, _, [:brando, {:__aliases__, _, [:Brando, :Crypto]}, opts]} = node, values when is_list(opts) ->
+              {node, values ++ for({:secret, value} <- opts, do: value)}
 
-  defp encryption_values(_envrc, contents),
-    do: values(~r/^[ \t]*(?:export[ \t]+)?BRANDO_ENCRYPTION_SECRET=["']?([^"'\s]*)/m, contents)
+            node, values ->
+              {node, values}
+          end)
 
-  defp values(regex, contents) do
-    for [_, value] <- Regex.scan(regex, contents), value not in ["", @encryption_marker], do: value
+        values
+
+      {:error, _} ->
+        Mix.raise("Cannot read #{path}: it is not valid Elixir. Fix it, then run mix brando.install again.")
+    end
+  end
+
+  defp encryption_values(_envrc, contents) do
+    regex = ~r/^[ \t]*(?:export[ \t]+)?BRANDO_ENCRYPTION_SECRET=["']?([^"'\s]*)/m
+    for [_, value] <- Regex.scan(regex, contents), do: value
+  end
+
+  defp usable!(path, value) do
+    if is_binary(value) and byte_size(value) >= 32 and not String.starts_with?(value, "__BRANDO_") do
+      value
+    else
+      Mix.raise("""
+      #{path} holds a Brando.Crypto secret this task cannot use: the site's value is a string of at \
+      least 32 bytes. Set it there, then run mix brando.install again.\
+      """)
+    end
   end
 
   defp secret(:secret_key_base), do: :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64)

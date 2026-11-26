@@ -234,6 +234,13 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       value
     end
 
+    defp crypto_secret("config/dev.secret.exs") do
+      [_, value] = Regex.run(~r/Brando\.Crypto, secret: "([^"]+)"/, File.read!("config/dev.secret.exs"))
+      value
+    end
+
+    defp crypto_secret(path), do: encryption_secret(path)
+
     test "gives the three files one value, and each its own secret_key_base", %{tmp_dir: dir} do
       marked_files(dir)
 
@@ -287,8 +294,12 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       marked_files(dir)
 
       File.cd!(dir, fn ->
-        File.write!(".envrc.prod", ~s(export BRANDO_ENCRYPTION_SECRET="production's"\n))
-        File.write!("config/dev.secret.exs", ~s(import Config\nconfig :brando, Brando.Crypto, secret: "another"\n))
+        File.write!(".envrc.prod", ~s(export BRANDO_ENCRYPTION_SECRET="#{String.duplicate("p", 32)}"\n))
+
+        File.write!(
+          "config/dev.secret.exs",
+          ~s(import Config\nconfig :brando, Brando.Crypto, secret: "#{String.duplicate("d", 32)}"\n)
+        )
 
         assert_raise Mix.Error, ~r/\.envrc\.prod, config\/dev\.secret\.exs hold different Brando\.Crypto secrets/, fn ->
           Secrets.run(~w(.envrc.staging))
@@ -296,6 +307,43 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
 
         assert File.read!(".envrc.staging") =~ @marker
       end)
+    end
+
+    test "another setting's secret in config/dev.secret.exs is not the value", %{tmp_dir: dir} do
+      marked_files(dir)
+
+      File.cd!(dir, fn ->
+        File.write!("config/dev.secret.exs", """
+        import Config
+        config :studio, :stripe, secret: "sk_test_abc"
+
+        config :brando, Brando.Crypto, secret: "#{@marker}"
+        """)
+
+        Secrets.run(@secret_files)
+
+        assert [value] = @secret_files |> Enum.map(&crypto_secret/1) |> Enum.uniq()
+        assert byte_size(value) == 64
+        assert File.read!("config/dev.secret.exs") =~ ~s(secret: "sk_test_abc")
+      end)
+    end
+
+    test "a value it cannot use stops it before any file is written, naming the file", %{tmp_dir: dir} do
+      for {path, contents} <- [
+            {".envrc.prod", ~s(export BRANDO_ENCRYPTION_SECRET="too short"\n)},
+            {"config/dev.secret.exs", ~s(import Config\nconfig :brando, Brando.Crypto, secret: "too short"\n)},
+            {"config/dev.secret.exs", ~s[import Config\nconfig :brando, Brando.Crypto, secret: System.get_env("X")\n]}
+          ] do
+        marked_files(dir)
+
+        File.cd!(dir, fn ->
+          File.write!(path, contents)
+          others = @secret_files -- [path]
+
+          assert_raise Mix.Error, ~r/#{Regex.escape(path)}/, fn -> Secrets.run(others) end
+          for other <- others, do: assert(File.read!(other) =~ @marker, other)
+        end)
+      end
     end
   end
 
