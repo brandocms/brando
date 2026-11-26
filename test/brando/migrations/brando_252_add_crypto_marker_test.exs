@@ -25,7 +25,9 @@ defmodule Brando.Migrations.Brando252AddCryptoMarkerTest do
           query!(
             "INSERT INTO public.crypto_marker (id, value, host, inserted_at, updated_at) VALUES (2, '', '', now(), now())"
           )
-        end, mode: :savepoint)
+        end,
+        mode: :savepoint
+      )
     end
 
     down(@file_name, version)

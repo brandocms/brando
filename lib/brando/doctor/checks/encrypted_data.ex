@@ -40,7 +40,8 @@ defmodule Brando.Doctor.Checks.EncryptedData do
 
         if key == :foreign or Audit.unreadable?(counts),
           do: foreign(state, counts),
-          else: ok(dgettext("doctor", "readable with this installation's secret; the marker is written at the next start"))
+          else:
+            ok(dgettext("doctor", "readable with this installation's secret; the marker is written at the next start"))
     end
   end
 

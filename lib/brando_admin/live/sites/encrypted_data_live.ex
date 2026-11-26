@@ -6,7 +6,6 @@ defmodule BrandoAdmin.Sites.EncryptedDataLive do
   # superuser, in both authorization modes. The clean-up asks for the
   # password, a code or a passkey when the session has not confirmed lately.
   use BrandoAdmin, :live_view
-  use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Authorization.Boundary
@@ -119,13 +118,17 @@ defmodule BrandoAdmin.Sites.EncryptedDataLive do
   def handle_event("forget_unreadable", _params, socket) do
     case Audit.forget(socket.assigns.current_user, keep_id: socket.assigns.session_id) do
       {:ok, forgotten} ->
-        send(self(), {:toast, gettext("Unreadable values forgotten")})
+        BrandoAdmin.Toast.send_to(socket.assigns.current_user, gettext("Unreadable values forgotten"))
         {:noreply, socket |> assign(:forgotten, forgotten) |> load()}
 
       {:error, :forbidden} ->
         {:noreply, push_navigate(socket, to: "/admin/access-denied")}
     end
   end
+
+  # The security emails of the users it reset, in tests (Swoosh's test adapter)
+  @impl Phoenix.LiveView
+  def handle_info(_message, socket), do: {:noreply, socket}
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language
