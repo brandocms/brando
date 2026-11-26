@@ -1350,20 +1350,6 @@ msgid_plural "%{count} blocks in %{modules} modules hold values their modules no
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/live/content/release_changes_live.ex
-#, elixir-autogen, elixir-format
-msgid "1 block is gone"
-msgid_plural "%{count} blocks are gone"
-msgstr[0] ""
-msgstr[1] ""
-
-#: lib/brando_admin/live/content/release_changes_live.ex
-#, elixir-autogen, elixir-format
-msgid "1 block is now another module’s"
-msgid_plural "%{count} blocks are now another module’s"
-msgstr[0] ""
-msgstr[1] ""
-
 #: lib/brando_admin/components/release_changes.ex
 #, elixir-autogen, elixir-format
 msgid "1 block keeps a ref whose slot holds blocks or footnotes, for Resolve blocks."
@@ -1647,6 +1633,20 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "1 was filled in since"
 msgid_plural "%{count} were filled in since"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 whose block is gone"
+msgid_plural "%{count} whose block is gone"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 whose block is now another module’s"
+msgid_plural "%{count} whose block is now another module’s"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -16370,10 +16370,15 @@ msgstr ""
 
 #: lib/brando_admin/live/content/release_changes_live.ex
 #, elixir-autogen, elixir-format
-msgid "Put back 1 dropped value."
-msgid_plural "Put back %{count} dropped values in %{blocks} blocks."
+msgid "Put back %{values} dropped values in 1 block."
+msgid_plural "Put back %{values} dropped values in %{count} blocks."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "Put back 1 dropped value in its block."
+msgstr ""
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format

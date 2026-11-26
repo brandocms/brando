@@ -713,20 +713,16 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp dropped_text(nil), do: []
 
   defp dropped_text(%{"values" => values, "blocks" => blocks, "skipped" => skipped, "left" => left}) do
-    reasons =
-      for {reason, count} <- Enum.sort(skipped) do
-        case reason do
-          "block_gone" -> ngettext("1 block is gone", "%{count} blocks are gone", count)
-          "other_module" -> ngettext("1 block is now another module’s", "%{count} blocks are now another module’s", count)
-          "filled" -> ngettext("1 was filled in since", "%{count} were filled in since", count)
-          _ -> ngettext("1 could not be written", "%{count} could not be written", count)
-        end
-      end
+    reasons = for {reason, count} <- Enum.sort(skipped), do: skipped_text(reason, count)
 
     [
-      values > 0 &&
-        ngettext("Put back 1 dropped value.", "Put back %{count} dropped values in %{blocks} blocks.", values,
-          blocks: blocks
+      values == 1 && gettext("Put back 1 dropped value in its block."),
+      values > 1 &&
+        ngettext(
+          "Put back %{values} dropped values in 1 block.",
+          "Put back %{values} dropped values in %{count} blocks.",
+          blocks,
+          values: values
         ),
       reasons != [] &&
         ngettext(
@@ -743,6 +739,16 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         )
     ]
   end
+
+  # Counts values, not blocks: a block can have held several
+  defp skipped_text("block_gone", count),
+    do: ngettext("1 whose block is gone", "%{count} whose block is gone", count)
+
+  defp skipped_text("other_module", count),
+    do: ngettext("1 whose block is now another module’s", "%{count} whose block is now another module’s", count)
+
+  defp skipped_text("filled", count), do: ngettext("1 was filled in since", "%{count} were filled in since", count)
+  defp skipped_text(_reason, count), do: ngettext("1 could not be written", "%{count} could not be written", count)
 
   defp error_text(:forbidden), do: gettext("You do not have permission for this action.")
   defp error_text(:kept), do: gettext("This apply is already kept.")
