@@ -172,7 +172,8 @@ The installer adds to `.gitignore` what a Brando application builds,
 uploads or downloads in its working folder and phx.new does not ignore: the
 asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), all of
 `/priv/static/`, `/media/` (uploads), `/log/`, and Florist's
-`/release-archives/` and `/sql/` (database dumps). Uploaded and captured asset
+`/release-archives/` and `/sql/` (database dumps), and `/config/dev.secret.exs`
+([Encryption secret](#encryption-secret)). Uploaded and captured asset
 sets live in `/site_assets/` with `none` or `single` tenancy, which it adds
 then, and in each site's folder under `/sites/` with `multi`. With `single` or
 `multi` it adds `/sites/`, which site provisioning creates, and with `multi`
@@ -365,7 +366,8 @@ wins.
 `mix brando.install` generates both files and `rel/env.sh.eex` for a new
 application (see [Deployment hosts](installation.md#deployment-hosts)), with the
 variables a Phoenix `config/runtime.exs` reads: `PHX_HOST`, `PHX_SERVER`,
-`DATABASE_URL` and `SECRET_KEY_BASE`, plus that `RELEASE_NODE` default. Their
+`DATABASE_URL` and `SECRET_KEY_BASE`, plus that `RELEASE_NODE` default and
+the site's `BRANDO_ENCRYPTION_SECRET` ([Encryption secret](#encryption-secret)). Their
 `DATABASE_URL` uses the user `<app>` for prod (Florist's default) and
 `<app>_staging` for staging, whose target sets
 `set :user, "${PROJECT_NAME}_staging"`. Use whichever
@@ -406,6 +408,50 @@ Upload it with:
 ```bash
 florist prod env:upload
 ```
+
+### Encryption secret
+
+Brando encrypts some of what it keeps in the database with `Brando.Crypto`:
+users' two-factor secrets, webhook and notification route secrets, MCP and
+Figma credentials, and translation work tokens. It also keys the hashes of
+recovery codes and passkey user handles with it. A site has one secret for
+this, the same in every environment, so a database copied from one
+environment to another (production to development to debug a problem,
+development to production at launch, staging to production) still reads
+them: users keep signing in with their authenticator app and recovery codes,
+and webhooks keep their signing secrets.
+
+`mix brando.install` generates the value once, after you accept its changes,
+and writes the same value to three places:
+
+| Environment | The value | Read by |
+| --- | --- | --- |
+| Production and staging | `BRANDO_ENCRYPTION_SECRET` in `.envrc.prod` and `.envrc.staging` | `config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECRET")` in the prod block of `config/runtime.exs` |
+| Development | `config :brando, Brando.Crypto, secret: "…"` in `config/dev.secret.exs` | `config/dev.exs`, which imports the file when it exists |
+
+The installer's diff and `--dry-run` show a marker in place of the value. A
+run that stopped before all three files were filled in fills in the rest
+when it is run again, with the value the others already hold; files holding
+two different values stop it, naming them. `config/dev.secret.exs` is
+readable by its owner only, ignored by Git and kept out of the Docker build
+by `.dockerignore`: the Dockerfile copies `config/` into the build. Give it
+to another developer the way you give them the `.envrc` files. A checkout
+without it still runs, encrypting with the endpoint's `secret_key_base`
+instead, and then reads nothing that production encrypted.
+
+Without `config :brando, Brando.Crypto, secret:`, Brando uses the endpoint's
+`secret_key_base`, which differs per environment; to set up a site that runs
+this way, see [The encryption secret](migrating_from_053.md#fix-what-the-tasks-list)
+in the migration guide. `mix brando.doctor` warns then, and while the secret
+is the same value as `secret_key_base`. With several sites in one
+installation (`tenancy_mode: :multi`), the sites share the one secret, as
+they share the users table.
+
+Since the secret is not `secret_key_base`, `SECRET_KEY_BASE` can be replaced
+whenever it needs to be: everyone is signed out once, and what Brando
+encrypted stays readable. The encryption secret itself stays: values
+encrypted with it do not decrypt with another, and users would set
+two-factor authentication up again.
 
 ## Bootstrapping a server
 
@@ -616,7 +662,9 @@ or 24.04 (or the site moves to a new server).
 Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's
-`release-archives/` and `sql/` dumps, and the `.envrc*` files with secrets.
+`release-archives/` and `sql/` dumps, the `.envrc*` files with secrets and
+`config/dev.secret.exs`, the development copy of the
+[encryption secret](#encryption-secret).
 With `multi` it also keeps out each site project's `assets/sites/*/node_modules`
 and `assets/sites/*/dist`: the release does not serve a site's build, which
 is uploaded as the site's asset set. `mix brando.gen.site --site KEY` adds

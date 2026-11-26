@@ -129,6 +129,10 @@ config :brando, BrandoIntegrationWeb.Endpoint,
   live_view: [signing_salt: "testsigningsalt"],
   pubsub_server: BrandoIntegration.PubSub
 
+# One encryption secret for the site, apart from secret_key_base, as an
+# installed application has (Doctor's encryption secret check)
+config :brando, Brando.Crypto, secret: String.duplicate("test-encryption", 4)
+
 config :brando, Oban,
   crontab: false,
   queues: false,

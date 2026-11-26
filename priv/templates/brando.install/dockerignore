@@ -3,6 +3,7 @@
 .git
 .temp
 _build
+config/dev.secret.exs
 __design
 assets/backend/node_modules
 assets/frontend/node_modules

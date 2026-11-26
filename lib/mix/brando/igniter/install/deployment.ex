@@ -6,12 +6,14 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
 
     alias Igniter.Project.Config
+    alias Mix.Brando.Igniter.EncryptionSecret
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Install.Hosts
     alias Mix.Brando.Install.Templates
     alias Rewrite.Source
 
     @envrc [prod: ".envrc.prod", staging: ".envrc.staging"]
+    @encryption_variable ~r/^\s*(?:export\s+)?BRANDO_ENCRYPTION_SECRET=/m
     # dev.exs turns the check off for development; it does not apply to a release.
     # Files these import with a literal path are read too.
     @origin_configs ~w(config/config.exs config/prod.exs config/runtime.exs)
@@ -46,29 +48,42 @@ if Code.ensure_loaded?(Igniter) do
     @multi_site_ignores ~w(/assets/sites/*/node_modules/ /assets/sites/*/dist/)
 
     @doc """
-    Reads what the application already has: the `.envrc.<flavor>` files and the
-    hosts they set, any `check_origin` in its base, prod or runtime configuration
-    (or a file those import), and its release environment script. Existing files
-    and settings are never replaced.
+    Reads what the application already has: the `.envrc.<flavor>` files, the
+    hosts they set and whether they set `BRANDO_ENCRYPTION_SECRET`, any
+    `check_origin` in its base, prod or runtime configuration (or a file those
+    import), how it configures `Brando.Crypto` (`EncryptionSecret.existing/1`),
+    and its release environment script. Existing files and settings are never
+    replaced.
     """
     def existing(igniter) do
       {igniter, check_origin?} = check_origin?(igniter, @origin_configs, MapSet.new())
 
-      {igniter, envrc, unfilled} =
-        Enum.reduce(@envrc, {igniter, %{}, []}, fn {flavor, path}, {igniter, envrc, unfilled} ->
+      {igniter, envrc} =
+        Enum.reduce(@envrc, {igniter, %{}}, fn {flavor, path}, {igniter, envrc} ->
           {igniter, contents} = contents(igniter, path)
-          unfilled = if contents && contents =~ "__BRANDO_", do: unfilled ++ [path], else: unfilled
-          {igniter, Map.put(envrc, flavor, contents && envrc_host(contents)), unfilled}
+          {igniter, Map.put(envrc, flavor, contents)}
         end)
 
+      {igniter, dev_secret} = contents(igniter, EncryptionSecret.dev_secret())
+      {igniter, encryption_secret} = EncryptionSecret.existing(igniter)
       {igniter, release_env} = contents(igniter, @release_env)
+
+      # Files an earlier run left with markers: its secrets task never ran, or
+      # stopped partway (a failed deps.get, an interrupted install).
+      files =
+        Enum.map(@envrc, fn {flavor, path} -> {path, envrc[flavor]} end) ++ [{EncryptionSecret.dev_secret(), dev_secret}]
+
+      hosts = for {_flavor, contents} <- envrc, contents, do: envrc_host(contents)
 
       {igniter,
        %{
          check_origin?: check_origin?,
-         envrc: Map.new(envrc, fn {flavor, host} -> {flavor, host != nil} end),
-         envrc_hosts: envrc |> Map.values() |> Enum.reject(&(&1 in [nil, ""])),
-         unfilled_envrc: unfilled,
+         envrc: Map.new(envrc, fn {flavor, contents} -> {flavor, contents != nil} end),
+         envrc_hosts: Enum.reject(hosts, &(&1 == "")),
+         envrc_encryption_secret:
+           Map.new(envrc, fn {flavor, contents} -> {flavor, contents != nil and contents =~ @encryption_variable} end),
+         encryption_secret: encryption_secret,
+         unfilled: for({path, contents} <- files, contents && contents =~ "__BRANDO_", do: path),
          release_env: release_env
        }}
     end
@@ -96,17 +111,19 @@ if Code.ensure_loaded?(Igniter) do
     """
     def plan(igniter, project, hosts, existing, tenancy_mode) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
+      {igniter, encryption_variable?, secret_files} = encryption_secret(igniter, existing, created)
 
       igniter
       |> check_origin(project, hosts, existing, tenancy_mode)
-      |> envrc(project, hosts, created)
-      |> fill_secrets(existing.unfilled_envrc)
+      |> envrc(project, hosts, created, encryption_variable?)
+      |> fill_secrets(Enum.map(created, &elem(&1, 1)) ++ secret_files ++ existing.unfilled)
       |> release_env(project, existing.release_env)
       |> kept_envrc_notice(hosts, existing)
       |> release_paths()
       |> development_port()
       |> gitignore([
         {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
+        EncryptionSecret.gitignore(),
         {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
         | tenancy_ignores(tenancy_mode)
       ])
@@ -257,23 +274,44 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
-    # The files are planned with markers in place of the secrets, so no diff or
-    # --dry-run shows them; brando.install.secrets fills them in after accepting.
-    defp envrc(igniter, _project, _hosts, []), do: igniter
+    # Brando.Crypto's secret, BRANDO_ENCRYPTION_SECRET, goes into the new
+    # environment files when every environment file holds it after this run,
+    # with the same value in config/dev.secret.exs, or when the application's
+    # own configuration of Brando.Crypto reads it. A site whose .envrc.prod or
+    # .envrc.staging is kept without it gets what an upgrade writes, which
+    # boots without it.
+    defp encryption_secret(igniter, %{encryption_secret: %{configured?: true} = config}, _created),
+      do: {igniter, config.reads_variable?, []}
 
-    defp envrc(igniter, project, hosts, created) do
-      created
-      |> Enum.reduce(igniter, fn {flavor, path}, igniter ->
-        binding = Mix.Brando.Igniter.Install.template_binding(project) ++ [host: host(hosts, flavor)]
-        Igniter.create_new_file(igniter, path, EEx.eval_string(Templates.contents(:eex, path), binding, file: path))
-      end)
-      |> Igniter.add_task("brando.install.secrets", Enum.map(created, &elem(&1, 1)))
+    defp encryption_secret(igniter, existing, created) do
+      if Enum.all?(@envrc, fn {flavor, _path} -> created[flavor] || existing.envrc_encryption_secret[flavor] end) do
+        {igniter, files} = EncryptionSecret.install(igniter)
+        {igniter, true, files}
+      else
+        {EncryptionSecret.existing_site(igniter), false, []}
+      end
     end
 
-    # An earlier run whose secrets task never ran (a failed deps.get, an
-    # interrupted install) left the markers in place; fill them in now.
-    defp fill_secrets(igniter, []), do: igniter
-    defp fill_secrets(igniter, paths), do: Igniter.add_task(igniter, "brando.install.secrets", paths)
+    # The files are planned with markers in place of the secrets, so no diff or
+    # --dry-run shows them; brando.install.secrets fills them in after accepting.
+    defp envrc(igniter, project, hosts, created, encryption_variable?) do
+      Enum.reduce(created, igniter, fn {flavor, path}, igniter ->
+        binding =
+          Mix.Brando.Igniter.Install.template_binding(project) ++
+            [host: host(hosts, flavor), encryption_secret: encryption_variable?]
+
+        Igniter.create_new_file(igniter, path, EEx.eval_string(Templates.contents(:eex, path), binding, file: path))
+      end)
+    end
+
+    # New files, and those an earlier run left with markers (its secrets task
+    # never ran, or stopped partway), in the order the task fills them.
+    defp fill_secrets(igniter, paths) do
+      case Enum.filter(Mix.Tasks.Brando.Install.Secrets.files(), &(&1 in paths)) do
+        [] -> igniter
+        paths -> Igniter.add_task(igniter, "brando.install.secrets", paths)
+      end
+    end
 
     defp release_env(igniter, project, nil),
       do: Mix.Brando.Igniter.Install.copy(igniter, {:eex, @release_env, @release_env}, project)
@@ -317,9 +355,11 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Each group's lines that .gitignore does not cover yet, under the group's
-    # heading.
-    defp gitignore(igniter, groups) do
+    @doc """
+    Adds each group's lines that `.gitignore` does not cover yet, under the
+    group's heading (`{heading, lines}`).
+    """
+    def gitignore(igniter, groups) do
       {igniter, content} = contents(igniter, ".gitignore")
       content = content || ""
       # Git keeps leading spaces and drops unescaped trailing ones.

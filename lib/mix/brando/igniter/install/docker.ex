@@ -24,6 +24,7 @@ if Code.ensure_loaded?(Igniter) do
     # Kept out of the build context: Florist sends it to the Docker daemon,
     # which may be remote, on every build. Each line with the paths it must
     # exclude.
+    @dev_secret {"config/dev.secret.exs", ["config/dev.secret.exs"]}
     @context_exclusions [
       {"_build", ["_build"]},
       {"deps", ["deps"]},
@@ -34,7 +35,9 @@ if Code.ensure_loaded?(Igniter) do
       {"sql", ["sql"]},
       # Names standing for every .envrc* file: none, dotted, backup and
       # arbitrary suffixes. Exact names such as .envrc.prod leave the rest out.
-      {".envrc*", [".envrc", ".envrc.prod", ".envrc.staging", ".envrc.prod.bak", ".envrc~", ".envrc-x9q"]}
+      {".envrc*", [".envrc", ".envrc.prod", ".envrc.staging", ".envrc.prod.bak", ".envrc~", ".envrc-x9q"]},
+      # Brando.Crypto's secret for development: the Dockerfile copies config/.
+      @dev_secret
     ]
 
     # In :multi, each site's Vite project in assets/sites/<key>/. The release
@@ -98,19 +101,33 @@ if Code.ensure_loaded?(Igniter) do
     def dockerignore(igniter, tenancy_mode) do
       exclusions = @context_exclusions ++ if(tenancy_mode == :multi, do: @site_exclusions, else: [])
 
-      if Igniter.exists?(igniter, ".dockerignore") do
-        {igniter, contents} = contents(igniter, ".dockerignore")
-        rules = rules(contents)
-        missing = for {line, paths} <- exclusions, not Enum.all?(paths, &excluded?(rules, &1)), do: line
-        exceptions = for {true, _regex, segments} <- rules, do: segments
-        {conflicting, appendable} = Enum.split_with(missing, &conflicts?(exceptions, &1))
+      if Igniter.exists?(igniter, ".dockerignore"),
+        do: append_missing(igniter, exclusions),
+        else: Files.create(igniter, ".dockerignore", dockerignore_template(tenancy_mode))
+    end
 
-        igniter
-        |> append(appendable)
-        |> dockerignore_notice(conflicting)
-      else
-        Files.create(igniter, ".dockerignore", dockerignore_template(tenancy_mode))
-      end
+    @doc """
+    Appends `config/dev.secret.exs`, Brando.Crypto's secret for development, to
+    an existing `.dockerignore` that does not exclude it yet (an upgrade).
+    """
+    def exclude_dev_secret(igniter) do
+      if Igniter.exists?(igniter, ".dockerignore"), do: append_missing(igniter, [@dev_secret]), else: igniter
+    end
+
+    @doc false
+    # Whether a .dockerignore with `contents` keeps `path` out of the context.
+    def context_excludes?(contents, path), do: excluded?(rules(contents), path)
+
+    defp append_missing(igniter, exclusions) do
+      {igniter, contents} = contents(igniter, ".dockerignore")
+      rules = rules(contents)
+      missing = for {line, paths} <- exclusions, not Enum.all?(paths, &excluded?(rules, &1)), do: line
+      exceptions = for {true, _regex, segments} <- rules, do: segments
+      {conflicting, appendable} = Enum.split_with(missing, &conflicts?(exceptions, &1))
+
+      igniter
+      |> append(appendable)
+      |> dockerignore_notice(conflicting)
     end
 
     defp dockerignore_template(:multi) do

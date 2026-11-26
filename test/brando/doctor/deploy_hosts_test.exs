@@ -10,7 +10,7 @@ defmodule Brando.Doctor.DeployHostsTest do
   @staging_template "priv/templates/brando.install/.envrc.staging"
 
   defp installed(template, host) do
-    EEx.eval_file(template, application_name: "my_app", host: host)
+    EEx.eval_file(template, application_name: "my_app", host: host, encryption_secret: true)
   end
 
   @tag :tmp_dir

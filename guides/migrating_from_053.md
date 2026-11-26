@@ -377,6 +377,37 @@ sender first, before the first compile.
       """
     end
     ```
+21. **The encryption secret.** The task has `config/runtime.exs` read
+    `Brando.Crypto`'s secret from `BRANDO_ENCRYPTION_SECRET` in prod, when it
+    is set, and `config/dev.exs` import `config/dev.secret.exs` when it exists.
+    Until both are set, Brando keeps encrypting two-factor secrets, webhook
+    secrets and the rest with each environment's `secret_key_base`, so a
+    database copied between environments cannot read them
+    ([Encryption secret](deployment.md#encryption-secret)). Production's
+    current `SECRET_KEY_BASE` becomes the site's secret, which keeps what
+    production encrypted readable, without re-encrypting anything:
+
+    1. Set `BRANDO_ENCRYPTION_SECRET` in `.envrc.prod` and `.envrc.staging` to
+       production's current `SECRET_KEY_BASE`, upload them
+       (`florist prod env:upload`, `florist staging env:upload`) and deploy.
+    2. Give production a new `SECRET_KEY_BASE`, upload it and deploy again.
+       Everyone is signed out once. Otherwise the value developers keep would
+       still be the key production signs sessions and tokens with;
+       `mix brando.doctor` warns while the two are the same.
+    3. Write the same value to `config/dev.secret.exs`, which Git and the
+       Docker build leave out:
+
+       ```elixir
+       import Config
+       config :brando, Brando.Crypto, secret: "<production's former SECRET_KEY_BASE>"
+       ```
+
+    What production wrote stays readable everywhere it is copied. A staging or
+    development database whose users set two-factor authentication up there,
+    under that environment's own `secret_key_base`, stops reading their
+    secrets once it has the shared one: those users set it up again, or the
+    database is replaced by a copy of production's. An application that
+    already configures `Brando.Crypto`, in any config file, is left alone.
 
 **Not found by any task.** Their correct rewrite depends on the application:
 
@@ -2115,6 +2146,15 @@ has the fixes.
   under `lib/`; other Repos are left alone, and when it cannot tell which is
   Brando's it says so and names the line to add (`--repo MyApp.Repo` names
   it);
+- has `config/runtime.exs` read `Brando.Crypto`'s secret from
+  `BRANDO_ENCRYPTION_SECRET` in prod when the variable is set and not empty,
+  so a release deployed before it exists boots as before, makes
+  `config/dev.exs` import `config/dev.secret.exs` when the file exists, and
+  adds that file to `.gitignore` and to an existing `.dockerignore`. It
+  writes no value: the right one is production's `secret_key_base` (see
+  item 21 in [Fix what the tasks list](#fix-what-the-tasks-list)). An
+  application that configures `Brando.Crypto` in any config file is left
+  alone. `mix brando.upgrade` does the same on every version change;
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;

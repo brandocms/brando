@@ -231,14 +231,13 @@ superuser must use two-factor authentication before saving a policy that
 applies to them.
 
 **Secrets at rest.** The TOTP secret is encrypted with `Brando.Crypto`
-(XChaCha20-Poly1305), with a key derived from the endpoint's
-`secret_key_base`; recovery codes are stored as keyed hashes. Rotating
-`secret_key_base` makes them unreadable, and users would set two-factor
-authentication up again. To rotate it freely, give Brando its own secret:
-
-```elixir
-config :brando, Brando.Crypto, secret: System.fetch_env!("BRANDO_ENCRYPTION_SECRET")
-```
+(XChaCha20-Poly1305) and recovery codes are stored as keyed hashes, with keys
+derived from the site's encryption secret. Every environment of the site has
+the same one, so a database copied between them keeps its users' two-factor
+authentication, and the endpoint's `secret_key_base` can be rotated without
+touching it ([Encryption secret](deployment.md#encryption-secret)). Under
+another secret, the TOTP secrets no longer decrypt and the recovery codes no
+longer match: the users would set two-factor authentication up again.
 
 ## Passkeys
 

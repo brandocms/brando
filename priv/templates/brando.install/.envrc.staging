@@ -9,7 +9,13 @@ export PHX_HOST="<%= host %>"
 export PHX_SERVER="true"
 export DATABASE_URL="postgres://<%= application_name %>_staging:__BRANDO_DATABASE_PASSWORD__@localhost/<%= application_name %>_staging"
 export SECRET_KEY_BASE="__BRANDO_SECRET_KEY_BASE__"
-
+<%= if encryption_secret do %>
+# Brando.Crypto's secret, for two-factor secrets, webhook secrets and the other
+# values Brando encrypts in the database. The site has one: .envrc.prod,
+# .envrc.staging and config/dev.secret.exs hold the same value, so a database
+# copied between them stays readable. Never change it.
+export BRANDO_ENCRYPTION_SECRET="__BRANDO_ENCRYPTION_SECRET__"
+<% end %>
 # Node name for a :single deployment; blue/green services set their own.
 export RELEASE_NODE="${RELEASE_NODE:-<%= application_name %>_staging@127.0.0.1}"
 

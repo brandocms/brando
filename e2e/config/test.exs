@@ -29,6 +29,10 @@ config :e2e_project, E2eProjectWeb.Endpoint,
   secret_key_base: "ngv3Man7Y6Z2hZhsjWuEoVmZNnVIdoaHFtTzeKNCiIdvs/7vavFhxK1LnmRZ+Nko",
   server: true
 
+# One encryption secret for the site, apart from secret_key_base, as an
+# installed application has (Doctor's encryption secret check)
+config :brando, Brando.Crypto, secret: "e2e-encryption-secret-of-the-e2e-project-site"
+
 config :e2e_project, hmr: false
 
 # In test we don't send emails

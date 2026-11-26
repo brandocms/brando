@@ -32,7 +32,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
   # Covers what the installer ignores for Brando, so these tests see only
   # the environment file rules.
-  @brando_ignores "node_modules/\n.yalc/\nyalc.lock\n/priv/static/\n/media/\n/log/\n/release-archives/\n/sql/\n/site_assets/\n"
+  @brando_ignores "node_modules/\n.yalc/\nyalc.lock\n/priv/static/\n/media/\n/log/\n/release-archives/\n/sql/\n/site_assets/\n/config/dev.secret.exs\n"
 
   defp check_origin(igniter) do
     quoted = igniter.rewrite |> Rewrite.source!("config/prod.exs") |> Rewrite.Source.get(:quoted)
@@ -94,7 +94,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     assert prod_env =~ ~s(export RELEASE_NODE="${RELEASE_NODE:-studio_prod@127.0.0.1}")
     assert staging_env =~ ~s(export RELEASE_NODE="${RELEASE_NODE:-studio_staging@127.0.0.1}")
     refute prod_env =~ ~r/^export PORT=/m
-    assert {"brando.install.secrets", [".envrc.prod", ".envrc.staging"]} in igniter.tasks
+    assert {"brando.install.secrets", [".envrc.prod", ".envrc.staging", "config/dev.secret.exs"]} in igniter.tasks
 
     release_env = IgniterCase.source(igniter, "rel/env.sh.eex")
     assert release_env =~ ~s(. "$RELEASE_ROOT/.envrc.runtime")
@@ -439,7 +439,9 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
       |> install(["--yes", "--domain", "example.com"])
 
     assert igniter.issues == []
-    Igniter.Test.assert_unchanged(igniter, ["config/prod.exs", "config/runtime.exs", ".envrc.prod", ".gitignore"])
+    Igniter.Test.assert_unchanged(igniter, ["config/prod.exs", ".envrc.prod", ".gitignore"])
+    # The kept .envrc.prod sets no encryption secret: runtime.exs reads one only when it is set
+    assert IgniterCase.source(igniter, "config/runtime.exs") =~ ~s(check_origin: ["//live.example.com"])
     assert host(igniter, ".envrc.staging") == "staging.example.com"
     assert Enum.any?(igniter.notices, &(&1 =~ "already configures check_origin"))
     assert Enum.any?(igniter.notices, &(&1 =~ "Existing environment files were left unchanged: .envrc.prod"))

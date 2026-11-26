@@ -150,7 +150,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
       ])
 
     assert IgniterCase.source(existing, ".dockerignore") =~
-             "\n# Kept out of the Docker build context by Brando\nassets/sites/*/dist\n"
+             "\n# Kept out of the Docker build context by Brando\nconfig/dev.secret.exs\nassets/sites/*/dist\n"
   end
 
   @phx_dockerfile """
@@ -184,10 +184,10 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert IgniterCase.source(igniter, ".dockerignore") ==
              "_build\ndeps\n.git\n\n# Kept out of the Docker build context by Brando\n" <>
-               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\n"
+               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n"
 
     # Patterns matching a parent directory, at any depth, or with wildcards cover the exclusions.
-    covered = "/_build/\n./deps\n**/node_modules\nmedia/\nrelease-*\nsql\n.envrc*\n"
+    covered = "/_build/\n./deps\n**/node_modules\nmedia/\nrelease-*\nsql\n.envrc*\nconfig/*.secret.exs\n"
     igniter = install(project(%{".dockerignore" => covered}))
     Igniter.Test.assert_unchanged(igniter, ".dockerignore")
 
@@ -212,7 +212,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert IgniterCase.source(igniter, ".dockerignore") ==
              String.trim_trailing(phoenix) <>
                "\n\n# Kept out of the Docker build context by Brando\n" <>
-               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\n"
+               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n"
 
     refute notice?(igniter, ".dockerignore has exceptions")
 
@@ -221,12 +221,13 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     igniter = install(project(%{".dockerignore" => excepted}))
 
     assert IgniterCase.source(igniter, ".dockerignore") ==
-             excepted <> "\n# Kept out of the Docker build context by Brando\nrelease-archives\nsql\n.envrc*\n"
+             excepted <>
+               "\n# Kept out of the Docker build context by Brando\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n"
 
     refute notice?(igniter, ".dockerignore has exceptions")
 
     # An appended line would override an exception re-including part of what it covers.
-    examples = "_build\ndeps\n**/node_modules\nmedia\nrelease-archives\nsql\n!.envrc.example\n"
+    examples = "_build\ndeps\n**/node_modules\nmedia\nrelease-archives\nsql\nconfig/dev.secret.exs\n!.envrc.example\n"
     igniter = install(project(%{".dockerignore" => examples}))
     Igniter.Test.assert_unchanged(igniter, ".dockerignore")
     assert notice?(igniter, ".dockerignore has exceptions")
@@ -341,6 +342,10 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
       File.write!(Path.join(dir, Path.basename(path)), IgniterCase.source(igniter, path))
     end
 
+    # The prod block reads Brando.Crypto's secret, which the release's environment file sets
+    System.put_env("BRANDO_ENCRYPTION_SECRET", String.duplicate("x", 64))
+    on_exit(fn -> System.delete_env("BRANDO_ENCRYPTION_SECRET") end)
+
     port = fn env, port_env ->
       previous = System.get_env("PORT")
       if port_env, do: System.put_env("PORT", port_env), else: System.delete_env("PORT")
@@ -377,7 +382,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     added = String.replace_prefix(IgniterCase.source(igniter, ".gitignore"), skeleton, "")
 
     assert added ==
-             "\n# Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps\n" <>
+             "\n# Brando.Crypto's secret for development\n/config/dev.secret.exs\n" <>
+               "\n# Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps\n" <>
                "/assets/backend/yalc.lock\n/assets/frontend/yalc.lock\n/log/\n/release-archives/\n" <>
                "\n# Brando: uploaded and captured asset sets\n/site_assets/\n"
 
