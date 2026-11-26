@@ -124,6 +124,7 @@ if Code.ensure_loaded?(Igniter) do
       |> gitignore([
         {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
         EncryptionSecret.gitignore(),
+        {"Left behind when brando.install.secrets is interrupted", [Mix.Tasks.Brando.Install.Secrets.temporary_ignore()]},
         {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
         | tenancy_ignores(tenancy_mode)
       ])

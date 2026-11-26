@@ -150,7 +150,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
       ])
 
     assert IgniterCase.source(existing, ".dockerignore") =~
-             "\n# Kept out of the Docker build context by Brando\nconfig/dev.secret.exs\nassets/sites/*/dist\n"
+             "\n# Kept out of the Docker build context by Brando\nconfig/dev.secret.exs\nconfig/*.brando-secrets-*\nassets/sites/*/dist\n"
   end
 
   @phx_dockerfile """
@@ -184,10 +184,11 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert IgniterCase.source(igniter, ".dockerignore") ==
              "_build\ndeps\n.git\n\n# Kept out of the Docker build context by Brando\n" <>
-               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n"
+               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n" <>
+                 "config/*.brando-secrets-*\n"
 
     # Patterns matching a parent directory, at any depth, or with wildcards cover the exclusions.
-    covered = "/_build/\n./deps\n**/node_modules\nmedia/\nrelease-*\nsql\n.envrc*\nconfig/*.secret.exs\n"
+    covered = "/_build/\n./deps\n**/node_modules\nmedia/\nrelease-*\nsql\n.envrc*\nconfig/*.secret.exs*\n"
     igniter = install(project(%{".dockerignore" => covered}))
     Igniter.Test.assert_unchanged(igniter, ".dockerignore")
 
@@ -212,7 +213,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert IgniterCase.source(igniter, ".dockerignore") ==
              String.trim_trailing(phoenix) <>
                "\n\n# Kept out of the Docker build context by Brando\n" <>
-               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n"
+               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n" <>
+                 "config/*.brando-secrets-*\n"
 
     refute notice?(igniter, ".dockerignore has exceptions")
 
@@ -222,12 +224,14 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert IgniterCase.source(igniter, ".dockerignore") ==
              excepted <>
-               "\n# Kept out of the Docker build context by Brando\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n"
+               "\n# Kept out of the Docker build context by Brando\nrelease-archives\nsql\n.envrc*\nconfig/dev.secret.exs\n" <>
+                 "config/*.brando-secrets-*\n"
 
     refute notice?(igniter, ".dockerignore has exceptions")
 
     # An appended line would override an exception re-including part of what it covers.
-    examples = "_build\ndeps\n**/node_modules\nmedia\nrelease-archives\nsql\nconfig/dev.secret.exs\n!.envrc.example\n"
+    examples =
+      "_build\ndeps\n**/node_modules\nmedia\nrelease-archives\nsql\nconfig/dev.secret.exs\nconfig/*.brando-secrets-*\n!.envrc.example\n"
     igniter = install(project(%{".dockerignore" => examples}))
     Igniter.Test.assert_unchanged(igniter, ".dockerignore")
     assert notice?(igniter, ".dockerignore has exceptions")
@@ -383,6 +387,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert added ==
              "\n# Brando.Crypto's secret for development\n/config/dev.secret.exs\n" <>
+               "\n# Left behind when brando.install.secrets is interrupted\n*.brando-secrets-*\n" <>
                "\n# Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps\n" <>
                "/assets/backend/yalc.lock\n/assets/frontend/yalc.lock\n/log/\n/release-archives/\n" <>
                "\n# Brando: uploaded and captured asset sets\n/site_assets/\n"

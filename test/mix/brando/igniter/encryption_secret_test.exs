@@ -345,6 +345,28 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
         end)
       end
     end
+
+    test "writes each file through a temporary file Git and the Docker build leave out, private from the start",
+         %{tmp_dir: dir} do
+      igniter = install(project())
+      write!(dir, %{".gitignore" => IgniterCase.source(igniter, ".gitignore")})
+      {_, 0} = System.cmd("git", ["init", "--quiet", dir])
+
+      for path <- @secret_files do
+        temporary = Secrets.temporary_path(path)
+        assert {_, 0} = System.cmd("git", ["-C", dir, "check-ignore", "--no-index", temporary]), temporary
+        refute in_docker_context?(igniter, temporary), temporary
+      end
+
+      File.cd!(dir, fn ->
+        File.mkdir_p!("config")
+        temporary = Secrets.temporary_path("config/dev.secret.exs")
+        Secrets.create_private!(temporary)
+        # Mode 0600 before anything is written to it
+        assert File.read!(temporary) == ""
+        assert File.stat!(temporary).mode |> Bitwise.band(0o777) == 0o600
+      end)
+    end
   end
 
   describe "an upgrade" do
