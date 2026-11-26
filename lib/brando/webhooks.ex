@@ -729,23 +729,31 @@ defmodule Brando.Webhooks do
   def pause_unreadable(prefix, actor) do
     if tables?(schema(prefix)) do
       reduce_unreadable(prefix, 0, 0, fn webhook, count ->
-        {paused, rows} =
-          Repo.update_all(
-            from(w in Webhook,
-              where: w.id == ^webhook.id and w.secret_ciphertext == ^webhook.secret_ciphertext,
-              where: w.active == true or w.paused_reason == :environment_copy,
-              select: w
-            ),
-            [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
-            prefix: schema(prefix)
-          )
-
-        record_lifecycle(prefix, rows, actor, %{"webhook" => "paused", "reason" => "manual"})
-        count + paused
+        if pause_unreadable_one(prefix, webhook, actor), do: count + 1, else: count
       end)
     else
       0
     end
+  end
+
+  @doc false
+  # Pauses `webhook` while its stored secret is still `secret_ciphertext`, one that
+  # did not decrypt, and it still sends or resumes by itself
+  @spec pause_unreadable_one(String.t() | nil, Webhook.t(), term()) :: boolean()
+  def pause_unreadable_one(prefix, %Webhook{} = webhook, actor) do
+    {paused, rows} =
+      Repo.update_all(
+        from(w in Webhook,
+          where: w.id == ^webhook.id and w.secret_ciphertext == ^webhook.secret_ciphertext,
+          where: w.active == true or w.paused_reason == :environment_copy,
+          select: w
+        ),
+        [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
+        prefix: schema(prefix)
+      )
+
+    record_lifecycle(prefix, rows, actor, %{"webhook" => "paused", "reason" => "manual"})
+    paused == 1
   end
 
   defp reduce_unreadable(prefix, after_id, acc, fun) do

@@ -923,23 +923,31 @@ defmodule Brando.Notifications.Routing do
   def pause_unreadable(prefix, actor) do
     if tables?(schema(prefix)) do
       reduce_unreadable(prefix, 0, 0, fn route, count ->
-        {paused, rows} =
-          Repo.update_all(
-            from(r in Route,
-              where: r.id == ^route.id and r.url_ciphertext == ^route.url_ciphertext,
-              where: r.active == true or r.paused_reason == :environment_copy,
-              select: r
-            ),
-            [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
-            prefix: schema(prefix)
-          )
-
-        record_lifecycle(prefix, rows, actor, %{"route" => "paused", "reason" => "manual"})
-        count + paused
+        if pause_unreadable_one(prefix, route, actor), do: count + 1, else: count
       end)
     else
       0
     end
+  end
+
+  @doc false
+  # Pauses `route` while its stored url is still `url_ciphertext`, one that
+  # did not decrypt, and it still sends or resumes by itself
+  @spec pause_unreadable_one(String.t() | nil, Route.t(), term()) :: boolean()
+  def pause_unreadable_one(prefix, %Route{} = route, actor) do
+    {paused, rows} =
+      Repo.update_all(
+        from(r in Route,
+          where: r.id == ^route.id and r.url_ciphertext == ^route.url_ciphertext,
+          where: r.active == true or r.paused_reason == :environment_copy,
+          select: r
+        ),
+        [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
+        prefix: schema(prefix)
+      )
+
+    record_lifecycle(prefix, rows, actor, %{"route" => "paused", "reason" => "manual"})
+    paused == 1
   end
 
   defp reduce_unreadable(prefix, after_id, acc, fun) do

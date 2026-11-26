@@ -150,10 +150,16 @@ defmodule Brando.Crypto.Audit do
       Enum.reduce(prefixes(), {%{webhooks: 0, notification_routes: 0}, failed}, fn prefix, {acc, failed} ->
         {counts, failed} =
           attempt(prefix || "public", %{webhooks: 0, notification_routes: 0}, failed, fn ->
-            %{
-              webhooks: Webhooks.pause_unreadable(prefix, actor),
-              notification_routes: Routing.pause_unreadable(prefix, actor)
-            }
+            # A schema's pauses commit together, or not at all
+            {:ok, counts} =
+              Repo.transaction(fn ->
+                %{
+                  webhooks: Webhooks.pause_unreadable(prefix, actor),
+                  notification_routes: Routing.pause_unreadable(prefix, actor)
+                }
+              end)
+
+            counts
           end)
 
         {Map.merge(acc, counts, fn _kind, a, b -> a + b end), failed}
