@@ -139,13 +139,17 @@ defmodule Mix.Tasks.Brando.Install.Secrets do
     for [_, value] <- Regex.scan(regex, contents), do: value
   end
 
+  # The value is written into an Elixir string in one file and a shell string
+  # in the others, unescaped: only characters both read as themselves.
   defp usable!(path, value) do
-    if is_binary(value) and byte_size(value) >= 32 and not String.starts_with?(value, "__BRANDO_") do
+    if is_binary(value) and byte_size(value) >= 32 and value =~ ~r{\A[A-Za-z0-9+/=_.-]+\z} and
+         not String.starts_with?(value, "__BRANDO_") do
       value
     else
       Mix.raise("""
       #{path} holds a Brando.Crypto secret this task cannot use: the site's value is a string of at \
-      least 32 bytes. Set it there, then run mix brando.install again.\
+      least 32 bytes, made of letters, digits and + / = _ . - only. Set it there, then run \
+      mix brando.install again.\
       """)
     end
   end
