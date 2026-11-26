@@ -72,8 +72,9 @@ defmodule Brando.Crypto.Audit do
         |> bump(:figma_token, Brando.MCP.figma_token_unreadable?(setting))
         |> count_groups(Brando.Figma.OAuth.unreadable_groups(setting))
       end)
+      |> ok!()
 
-    %{users: reduce_users(0, fn _user_id, _ciphertext, count -> count + 1 end)}
+    %{users: ok!(reduce_users(0, fn _user_id, _ciphertext, count -> count + 1 end))}
     |> Map.merge(outbound)
     |> Map.merge(figma)
   end
@@ -125,8 +126,10 @@ defmodule Brando.Crypto.Audit do
   every part succeeded: run it again to finish one that failed. Safe to run
   twice and to interrupt.
 
-  Returns `{:ok, result}`: the counts of what it forgot, `:failed` (the parts
-  that failed: `:users`, `:figma`, or a schema, `"public"` or a prefix) and
+  Returns `{:ok, result}`: the counts of what it forgot, also in a part that
+  failed (what it did before it failed), `:failed` (the parts that failed:
+  `:users`, `:figma`, or a schema, `"public"` or a prefix; a part stops at
+  its first failure) and
   `:marker` (`:written` or `:kept`).
   """
   @spec forget(map() | :system, keyword()) :: {:ok, map()} | {:error, :forbidden}
@@ -144,7 +147,7 @@ defmodule Brando.Crypto.Audit do
       Enum.reduce(prefixes(), {%{webhooks: 0, notification_routes: 0}, failed}, fn prefix, {acc, failed} ->
         {counts, failed} =
           attempt(prefix || "public", %{webhooks: 0, notification_routes: 0}, failed, fn ->
-            pause_unreadable(prefix, actor)
+            {:ok, pause_unreadable(prefix, actor)}
           end)
 
         {Map.merge(acc, counts, fn _kind, a, b -> a + b end), failed}
@@ -152,13 +155,15 @@ defmodule Brando.Crypto.Audit do
 
     empty_figma = %{figma_token: 0, figma_app: 0, figma_connection: 0, figma_pending: 0}
 
+    # The pasted tokens, then the OAuth groups: each change commits on its own
     {figma, failed} =
       attempt(:figma, empty_figma, failed, fn ->
-        reduce_settings(empty_figma, fn setting, acc ->
-          acc
-          |> bump(:figma_token, Brando.MCP.forget_unreadable_figma_token(setting, actor))
-          |> count_groups(forget_figma_groups(setting, actor))
-        end)
+        with {:ok, acc} <-
+               reduce_settings(empty_figma, fn setting, acc ->
+                 bump(acc, :figma_token, Brando.MCP.forget_unreadable_figma_token(setting, actor))
+               end) do
+          reduce_settings(acc, &count_groups(&2, forget_figma_groups(&1, actor)))
+        end
       end)
 
     marker = if failed == [], do: write_marker(), else: :kept
@@ -199,16 +204,26 @@ defmodule Brando.Crypto.Audit do
     :written
   end
 
-  # A part that fails is logged and left for a second run; the others go on
+  # A part that fails is logged and left for a second run; the others go on.
+  # What it did before it failed is counted
   defp attempt(part, empty, failed, fun) do
-    {fun.(), failed}
+    case fun.() do
+      {:ok, acc} -> {acc, failed}
+      {:error, acc, error} -> {acc, failed_part(part, error, failed)}
+    end
   rescue
-    error ->
-      Logger.error("[Brando.Crypto.Audit] Could not clean up #{part}: " <> Exception.message(error))
-      {empty, [part | failed]}
+    error -> {empty, failed_part(part, error, failed)}
+  end
+
+  defp failed_part(part, error, failed) do
+    Logger.error("[Brando.Crypto.Audit] Could not clean up #{part}: " <> Exception.message(error))
+    [part | failed]
   end
 
   ## Reading in batches
+
+  # Each reducer returns `{:ok, acc}`, or `{:error, acc, exception}` when a
+  # step or a read raised, with what the steps before it made of `acc`
 
   # Users with a two-factor secret that does not decrypt, by user id
   defp reduce_users(acc, fun), do: reduce_users(0, acc, fun)
@@ -224,20 +239,22 @@ defmodule Brando.Crypto.Audit do
         )
       )
 
-    acc =
+    result =
       batch
       |> Enum.reject(fn {user_id, ciphertext} -> TwoFactor.readable_secret?(user_id, ciphertext) end)
-      |> Enum.reduce(acc, fn {user_id, ciphertext}, acc -> fun.(user_id, ciphertext, acc) end)
+      |> reduce_rows(acc, fn {user_id, ciphertext}, acc -> fun.(user_id, ciphertext, acc) end)
 
-    case batch do
-      [] -> acc
-      _ -> reduce_users(batch |> Enum.map(&elem(&1, 0)) |> Enum.max(), acc, fun)
+    case {batch, result} do
+      {[_ | _], {:ok, acc}} -> reduce_users(batch |> Enum.map(&elem(&1, 0)) |> Enum.max(), acc, fun)
+      _ -> result
     end
+  rescue
+    error -> {:error, acc, error}
   end
 
   # MCP settings rows, with their site and environment
   defp reduce_settings(acc, fun) do
-    if mcp_settings?(), do: reduce_settings(0, acc, fun), else: acc
+    if mcp_settings?(), do: reduce_settings(0, acc, fun), else: {:ok, acc}
   end
 
   defp reduce_settings(after_id, acc, fun) do
@@ -246,13 +263,28 @@ defmodule Brando.Crypto.Audit do
         from(s in Setting, where: s.id > ^after_id, order_by: s.id, limit: @batch_size, preload: [:site, :environment])
       )
 
-    acc = Enum.reduce(batch, acc, fun)
+    result = reduce_rows(batch, acc, fun)
 
-    case batch do
-      [] -> acc
-      _ -> reduce_settings(batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
+    case {batch, result} do
+      {[_ | _], {:ok, acc}} -> reduce_settings(batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
+      _ -> result
     end
+  rescue
+    error -> {:error, acc, error}
   end
+
+  defp reduce_rows(rows, acc, fun) do
+    Enum.reduce_while(rows, {:ok, acc}, fn row, {:ok, acc} ->
+      try do
+        {:cont, {:ok, fun.(row, acc)}}
+      rescue
+        error -> {:halt, {:error, acc, error}}
+      end
+    end)
+  end
+
+  defp ok!({:ok, acc}), do: acc
+  defp ok!({:error, _acc, error}), do: raise(error)
 
   defp mcp_settings? do
     %{rows: [[table]]} = Repo.repo().query!("SELECT to_regclass('public.mcp_settings')::text")

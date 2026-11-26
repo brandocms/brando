@@ -199,6 +199,32 @@ defmodule Brando.Crypto.AuditTest do
       refute Users.get_user_by_session_token(session)
     end
 
+    test "a part that fails part-way counts what it did before it failed" do
+      first = user()
+      second = user()
+      ForeignSecret.two_factor!(first, false)
+      ForeignSecret.two_factor!(second, false)
+      Users.generate_user_session_token(first)
+      Users.generate_user_session_token(second)
+
+      Repo.query!("""
+      CREATE FUNCTION public.refuse_token_delete() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF OLD.user_id = #{second.id} THEN RAISE EXCEPTION 'refused'; END IF; RETURN OLD; END $$
+      """)
+
+      Repo.query!(
+        "CREATE TRIGGER refuse BEFORE DELETE ON public.users_tokens FOR EACH ROW EXECUTE FUNCTION public.refuse_token_delete()"
+      )
+
+      {result, log} = ExUnit.CaptureLog.with_log(fn -> Audit.forget(:system) end)
+
+      assert {:ok, %{users: 1, failed: [:users], marker: :kept} = forgotten} = result
+      assert log =~ "Could not clean up users"
+      assert is_nil(security(first).totp_secret)
+      assert Brando.Release.describe(forgotten) =~ "1 users' two-factor authentication reset"
+      assert Brando.Release.describe(forgotten) =~ "users failed"
+    end
+
     test "the admin who runs it keeps the session they run it from" do
       admin = user(role: :superuser)
       ForeignSecret.two_factor!(admin, false)
@@ -295,7 +321,10 @@ defmodule Brando.Crypto.AuditTest do
           ForeignSecret.figma_setting!(%{app: false, connection: false})
         end)
 
-      on_exit(fn -> Sandbox.unboxed_run(Repo, fn -> Repo.delete_all(from(s in Setting, where: s.id == ^setting.id)) end) end)
+      on_exit(fn ->
+        Sandbox.unboxed_run(Repo, fn -> Repo.delete_all(from(s in Setting, where: s.id == ^setting.id)) end)
+      end)
+
       parent = self()
 
       holder =
