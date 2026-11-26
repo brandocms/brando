@@ -795,8 +795,7 @@ defmodule Brando.Blueprint do
       :persistent_term.put(key, true)
 
       Logger.warning(
-        "#{inspect(module)} failed to load (#{inspect(reason)}), so Brando does not count it as a Blueprint " <>
-          "or datasource. Run `Code.ensure_loaded(#{inspect(module)})` to see why."
+        "#{inspect(module)} failed to load (#{inspect(reason)}), so Brando does not count it as a Blueprint or datasource"
       )
     end
   end
