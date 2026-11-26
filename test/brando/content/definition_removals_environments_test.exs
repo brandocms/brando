@@ -122,6 +122,28 @@ defmodule Brando.Content.DefinitionRemovalsEnvironmentsTest do
     assert theme(@staging, c.holders[@staging]).value == "dark"
   end
 
+  # brandocms/brando#3996: the values kept for Revert stay in that environment
+  test "a drop takes the values of the environment it applies to, and Revert puts them back there", c do
+    {:ok, batch_id} =
+      Tenant.with_prefix(@production, fn ->
+        {:ok, drops} = Release.drops(:all, user: c.user.id)
+        assert [%{uid: "hero-test", keys: [var: "theme"], blocks: 1}] = drops.modules
+        {:ok, %{batch_id: batch_id}} = Release.apply(:all, user: c.user.id, wait: false, drop: drops.digest)
+        {:ok, batch_id}
+      end)
+
+    assert theme(@production, c.holders[@production]) == nil
+    assert theme(@staging, c.holders[@staging]).value == "dark"
+    assert Tenant.with_prefix(@staging, fn -> Repo.aggregate(Brando.Content.DefinitionDrop, :count) end) == 0
+
+    Tenant.with_prefix(@production, fn ->
+      batch = Release.Batches.get(batch_id)
+      assert {:ok, %{dropped: %{"values" => 1}}} = Release.Batches.revert(batch, c.user)
+    end)
+
+    assert theme(@production, c.holders[@production]).value == "dark"
+  end
+
   # brandocms/brando#3900
   test "a rename over the apply's limit leaves the values, and the status's --map line moves them in that environment",
        c do

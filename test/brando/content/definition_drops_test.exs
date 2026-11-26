@@ -501,6 +501,40 @@ defmodule Brando.Content.DefinitionDropsTest do
     end
   end
 
+  describe "a synchronized translation" do
+    test "loses the value in its own blocks with the source's, and Revert gives both back", c do
+      {:ok, source} =
+        Brando.SyncTest.create_article(
+          %{title: "Tittel", slug: "tittel", language: "no", status: "published", year: 2020, subtitle: ""},
+          c.user
+        )
+
+      source_block = Brando.TranslationFixtures.add_block(source, c.module, c.user, "Første avsnitt", 0)
+      hold!(source_block, "Kilde")
+      {:ok, target} = Brando.Translations.create_target(Brando.SyncTest.Article, source.id, :en, c.user)
+
+      [target_block] =
+        Repo.all(
+          from(b in Block,
+            join: j in Brando.SyncTest.Article.Blocks,
+            on: j.block_id == b.id,
+            where: j.entry_id == ^target.id
+          )
+        )
+
+      assert var(target_block, "tagline").value == "Kilde"
+      remove_tagline!(c)
+
+      %{batch: batch} = apply!(c, drops(c))
+      assert var(source_block, "tagline") == nil
+      assert var(target_block, "tagline") == nil
+
+      assert %{"values" => 2} = revert!(c, batch).dropped
+      assert var(source_block, "tagline").value == "Kilde"
+      assert var(target_block, "tagline").value == "Kilde"
+    end
+  end
+
   describe "planning and status" do
     test "do not load the dropped rows", c do
       c.identity |> first_block() |> hold!("Kept words")
