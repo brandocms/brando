@@ -125,7 +125,16 @@ if ! grep -qE '^[[:space:]]*\{:lazy_html, "[^"]+"\},?$' mix.exs; then echo "bran
 # consumer, its admin and its site below run with AI unavailable.
 if grep -q ':req_llm' mix.exs; then echo "brando.install added req_llm without --ai" >&2; exit 1; fi
 mix run --no-start -e 'false = Code.ensure_loaded?(ReqLLM); false = Brando.AI.available?(); false = Brando.AI.enabled?()' > "$smoke_root/logs/check-without-req-llm.log" 2>&1
-if grep -l '__BRANDO_' .envrc.prod .envrc.staging; then echo "brando.install.secrets left markers in the files above" >&2; exit 1; fi
+if grep -l '__BRANDO_' .envrc.prod .envrc.staging config/dev.secret.exs; then echo "brando.install.secrets left markers in the files above" >&2; exit 1; fi
+# Brando.Crypto's secret: one value for the site, in the three files.
+encryption_secrets="$(
+  { sed -n 's/^export BRANDO_ENCRYPTION_SECRET="\(.*\)"$/\1/p' .envrc.prod .envrc.staging
+    sed -n 's/.*Brando\.Crypto, secret: "\(.*\)"$/\1/p' config/dev.secret.exs; } | sort -u
+)"
+if [[ "$(printf '%s\n' "$encryption_secrets" | grep -c .)" -ne 1 ]]; then
+  echo "brando.install did not give .envrc.prod, .envrc.staging and config/dev.secret.exs one encryption secret" >&2
+  exit 1
+fi
 # What Florist's release build needs, and the live preview of CMS pages.
 cmp Dockerfile "$brando_dir/priv/templates/brando.install/Dockerfile"
 # With :multi the installer also keeps each site project's dependencies and build out of the context.
