@@ -82,7 +82,8 @@ test('reviews, verifies, applies and reverts a release’s module definitions', 
 
   // Apply the one ready change. `toBeVisible()` passes for a dialog left at
   // opacity 0, which takes every click on the screen, so the check is its
-  // computed opacity. Escape and the backdrop close it, and it opens again.
+  // computed opacity. Escape and the backdrop close it, and it opens again. A
+  // click in the dialog's own padding is not the backdrop.
   const confirm = page.locator('#release-confirm')
   await page.getByTestId('release-apply').click()
   await expect(confirm).toHaveCSS('opacity', '1')
@@ -94,6 +95,9 @@ test('reviews, verifies, applies and reverts a release’s module definitions', 
   await expect(confirm).toBeHidden()
   await page.getByTestId('release-apply').click()
   await expect(confirm).toHaveCSS('opacity', '1')
+  await confirm.click({ position: { x: 4, y: 4 } })
+  await syncLV(page)
+  await expect(confirm).toHaveAttribute('data-dialog-open', 'true')
   await confirm.getByTestId('release-confirm-apply').click()
   await expect(confirm).toBeHidden()
   const banner = page.getByTestId('release-banner')

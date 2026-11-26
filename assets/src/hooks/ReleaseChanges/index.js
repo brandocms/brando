@@ -19,7 +19,7 @@
  * Brando.ReleaseChanges — the preview's frame: Esc leaves full screen, and
  * `release:copy` puts a shared preview link on the clipboard.
  */
-import { openDialog, closeDialog, resetDialog, onDialogClose } from '../../nativeDialogMotion'
+import { openDialog, closeDialog, resetDialog, onDialogClose, isBackdropClick } from '../../nativeDialogMotion'
 
 const WIDTHS = { mobile: 390, tablet: 820, desktop: 1366 }
 
@@ -100,9 +100,8 @@ export const ReleaseDialog = () => ({
       event.preventDefault()
       this.close()
     }
-    // A click on the backdrop lands on the dialog itself
     this.onClick = event => {
-      if (event.target === this.el) this.close()
+      if (isBackdropClick(event, this.el)) this.close()
     }
     this.el.addEventListener('cancel', this.onCancel)
     this.el.addEventListener('click', this.onClick)
