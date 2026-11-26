@@ -453,6 +453,102 @@ encrypted stays readable. The encryption secret itself stays: values
 encrypted with it do not decrypt with another, and users would set
 two-factor authentication up again.
 
+### Copying a database between environments
+
+With the [encryption secret](#encryption-secret) shared, a database copied
+between a site's environments reads as it did where it came from: users sign
+in with their authenticator app, recovery codes and passkeys, webhooks and
+notification routes keep their secrets and URLs.
+
+Brando keeps a marker in the database (`public.crypto_marker`, one row): a
+value encrypted with the installation's secret, and the host of the
+endpoint's URL (`url: [host: …]`) that wrote it. A node that serves the
+endpoint checks it as it starts, before Oban works a queue; `mix
+brando.doctor`, `bin/my_app eval`, other Mix tasks and the tests do not. A
+check never stops a boot, and nothing is forgotten by itself.
+
+**Another host wrote it.** The database is a copy: production's on a
+developer's machine, staging's on production, development's on production at
+launch. So that the copy calls no real endpoint, every active webhook and
+notification route, email routes included, in `public` and every site
+environment, is paused by hand, with its secret or URL kept. The dashboard
+says where the database came from and which were paused, with links, to
+those who manage webhooks or notification routes, until one of them
+dismisses it. Resume the ones this environment should send, on Webhooks and
+Notifications under Configuration. This happens once per move: the marker
+then takes this host. Jobs that were queued in the copied database (scheduled
+publishing, emails, deliveries) run in the copy, and an MCP client connected
+to the other environment may have to connect again.
+
+**Another secret wrote it.** The node logs a warning, and `mix
+brando.doctor`, Utilities → System check and the dashboard (for superusers)
+report an error that counts what this secret cannot read: users' two-factor
+secrets, webhooks' secrets, notification routes' URLs, and Figma tokens,
+apps, connections and connections being made. Recovery codes and passkeys
+are keyed hashes and cannot be tested, so they are not counted. The message
+tells the two causes apart, because the fix differs:
+
+- The marker's host is this host: this installation's secret has changed, or
+  is mistyped. Put the right one back in `BRANDO_ENCRYPTION_SECRET` (or
+  `config/dev.secret.exs`) and restart. Nothing is lost.
+- The database came from another host: give this environment that
+  installation's secret, and restart. Only when that secret cannot be had,
+  forget what this one cannot read, below.
+
+A database without a marker (one older than the marker, or never started by
+a serving node) gets one at the next start when everything in it reads with
+this secret; otherwise the warning above, with no record of where it came
+from, so nothing is paused.
+
+**Forgetting what cannot be read.** Configuration → Encrypted data (for
+superusers, reached from the dashboard's notice and the System check),
+behind a confirmation and the password, or on the server:
+
+```bash
+bin/my_app eval "Brando.Release.forget_unreadable()"
+# in development
+mix run -e "Brando.Release.forget_unreadable()"
+```
+
+It forgets only what does not decrypt, and prints what it did:
+
+- each user whose two-factor secret cannot be read has two-factor
+  authentication reset, as an administrator's reset does (recovery codes,
+  lockout, sessions and MCP connections end), but keeps their passkeys,
+  which do not depend on the secret. They sign in with their password and,
+  where the sign-in policy requires it, set two-factor authentication up
+  again. A superuser who runs it from the admin keeps the session they run it
+  in;
+- webhooks and notification routes whose secret or URL cannot be read, among
+  those that send or would resume when their environment goes live, are
+  paused by hand, their secrets kept. Rotate the secret or replace the URL,
+  then resume them;
+- Figma credentials that cannot be read are removed, each group as the admin
+  removes it: a pasted token; the OAuth app (with the connection made with
+  it); the OAuth connection; a connection being made. A readable group stays.
+
+Then it writes the marker with this secret and host. Something written
+meanwhile (a user who sets two-factor authentication up again, a webhook
+given a new secret, a Figma connection that lands) stays. It is safe to run
+twice or to interrupt: a part that fails is logged, the marker stays as it
+was, and running it again finishes the rest.
+
+**One user who cannot sign in.** Someone whose passkey was made for another
+domain, or who lost their phone, when there is no second administrator to
+reset it:
+
+```bash
+bin/my_app eval 'Brando.Release.reset_two_factor("admin@example.com")'
+# in development
+mix run -e 'Brando.Release.reset_two_factor("admin@example.com")'
+```
+
+It does what an administrator's reset does, passkeys included, recorded in
+the user's security log as done by the system. `eval` starts a new VM with
+the repo and nothing else: no endpoint, so neither function sends the
+security emails, and admin tabs open on the server are not told (their
+sessions end all the same).
+
 ## Bootstrapping a server
 
 Bootstrap sets up everything on a fresh server. Run it once per target:
@@ -889,6 +985,8 @@ server. These have a release form:
 | `mix brando.identifiers.sync` | Configuration → Utilities → Sync identifiers, in each environment with tenancy |
 | `mix brando.translations.split_galleries` | `bin/my_app rpc "Brando.Translations.SharedGalleries.repair()"` |
 | `mix brando.doctor` | Configuration → Utilities, the System check card |
+| `mix run -e "Brando.Release.forget_unreadable()"` | `bin/my_app eval "Brando.Release.forget_unreadable()"` ([Copying a database between environments](#copying-a-database-between-environments)) |
+| `mix run -e 'Brando.Release.reset_two_factor("…")'` | `bin/my_app eval 'Brando.Release.reset_two_factor("…")'` |
 | `mix brando.seeds.remove_defaults` (`--yes`) | `bin/my_app rpc "Brando.Setup.Seeds.remove_defaults()"` (`remove_defaults(yes: true)`; [Removing the demo](installation.md#removing-the-demo)) |
 
 `Brando.Content.Resave.run/1` re-renders and stores every entry's blocks, as

@@ -102,8 +102,8 @@ defmodule BrandoAdmin.Components.Dashboard do
         </ul>
         <p :if={@elsewhere > 0}>
           {ngettext(
-            "1 more was paused in other site environments.",
-            "%{count} more were paused in other site environments.",
+            "1 of them is in another site environment.",
+            "%{count} of them are in other site environments.",
             @elsewhere
           )}
         </p>

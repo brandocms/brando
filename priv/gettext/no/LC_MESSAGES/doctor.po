@@ -44,6 +44,34 @@ msgid_plural "%{count} Blueprints link to admin routes the router does not defin
 msgstr[0] "%{count} Blueprint lenker til admin-ruter som ruteren ikke definerer"
 msgstr[1] "%{count} Blueprints lenker til admin-ruter som ruteren ikke definerer"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Figma app"
+msgid_plural "%{count} Figma apps"
+msgstr[0] "%{count} Figma-app"
+msgstr[1] "%{count} Figma-apper"
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Figma connection"
+msgid_plural "%{count} Figma connections"
+msgstr[0] "%{count} Figma-tilkobling"
+msgstr[1] "%{count} Figma-tilkoblinger"
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Figma connection being made"
+msgid_plural "%{count} Figma connections being made"
+msgstr[0] "%{count} Figma-tilkobling under oppretting"
+msgstr[1] "%{count} Figma-tilkoblinger under oppretting"
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Figma token"
+msgid_plural "%{count} Figma tokens"
+msgstr[0] "%{count} Figma-token"
+msgstr[1] "%{count} Figma-tokener"
+
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} HEEx template uses a link global as a string, which raises or compares false since link globals are vars"
@@ -275,6 +303,13 @@ msgid_plural "%{count} new Brando migrations not copied"
 msgstr[0] "%{count} ny Brando-migrering ikke kopiert"
 msgstr[1] "%{count} nye Brando-migreringer ikke kopiert"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} notification route's URL"
+msgid_plural "%{count} notification routes' URLs"
+msgstr[0] "URL-en til %{count} varslingsrute"
+msgstr[1] "URL-ene til %{count} varslingsruter"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} on the CDN only"
@@ -373,6 +408,13 @@ msgid_plural "%{count} upgrade migrations differ from Brando's templates"
 msgstr[0] "%{count} oppgraderingsmigrering avviker fra Brandos mal"
 msgstr[1] "%{count} oppgraderingsmigreringer avviker fra Brandos maler"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} user's two-factor secret"
+msgid_plural "%{count} users' two-factor secrets"
+msgstr[0] "Tofaktorhemmeligheten til %{count} bruker"
+msgstr[1] "Tofaktorhemmelighetene til %{count} brukere"
+
 #: lib/brando/doctor/checks/video_providers.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} video provider problem: video uploads can fail"
@@ -386,6 +428,13 @@ msgid "%{count} warning"
 msgid_plural "%{count} warnings"
 msgstr[0] "%{count} advarsel"
 msgstr[1] "%{count} advarsler"
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} webhook's secret"
+msgid_plural "%{count} webhooks' secrets"
+msgstr[0] "Hemmeligheten til %{count} webhook"
+msgstr[1] "Hemmelighetene til %{count} webhooks"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
@@ -761,6 +810,16 @@ msgstr "Publiseringsmål: ett nettsted"
 msgid "Deprecations"
 msgstr "Utfasede funksjoner"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "Either this installation's encryption secret changed, or the database came from another installation: put back the secret it was written with, in BRANDO_ENCRYPTION_SECRET (config/dev.secret.exs in development), and restart. When that secret cannot be had, forget what this one cannot read."
+msgstr "Enten er denne installasjonens krypteringsnøkkel endret, eller så kom databasen fra en annen installasjon: legg tilbake nøkkelen den ble skrevet med, i BRANDO_ENCRYPTION_SECRET (config/dev.secret.exs i utvikling), og start på nytt. Når den nøkkelen ikke finnes, glem det denne ikke kan lese."
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "Encrypted data"
+msgstr "Krypterte data"
+
 #: lib/brando/doctor/checks/encryption_secret.ex
 #, elixir-autogen, elixir-format
 msgid "Encryption secret"
@@ -951,6 +1010,11 @@ msgstr "OK"
 msgid "Oban queues"
 msgstr "Oban-køer"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "Open Encrypted data"
+msgstr "Åpne Krypterte data"
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "Open SEO"
@@ -1077,6 +1141,16 @@ msgstr "Testdatabase"
 #, elixir-autogen, elixir-format
 msgid "The checks could not run. Check the application logs, or run mix brando.doctor."
 msgstr "Kontrollene kunne ikke kjøres. Se i applikasjonsloggene, eller kjør mix brando.doctor."
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "The database came from %{host}: give this environment that installation's encryption secret in BRANDO_ENCRYPTION_SECRET (config/dev.secret.exs in development) and restart. When that secret cannot be had, forget what this one cannot read."
+msgstr "Databasen kom fra %{host}: gi dette miljøet den installasjonens krypteringsnøkkel i BRANDO_ENCRYPTION_SECRET (config/dev.secret.exs i utvikling) og start på nytt. Når den nøkkelen ikke finnes, glem det denne ikke kan lese."
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "This installation wrote the database, so its encryption secret has changed or is mistyped: put the right one back in BRANDO_ENCRYPTION_SECRET (config/dev.secret.exs in development) and restart, which loses nothing. Forget what it cannot read only when that secret is lost."
+msgstr "Denne installasjonen skrev databasen, så krypteringsnøkkelen er endret eller feilskrevet: legg den riktige tilbake i BRANDO_ENCRYPTION_SECRET (config/dev.secret.exs i utvikling) og start på nytt, uten at noe går tapt. Glem det den ikke kan lese bare når den nøkkelen er tapt."
 
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
@@ -1720,6 +1794,11 @@ msgstr "ingen problemer med tilgangsnøkler"
 msgid "no database name to compare"
 msgstr "ingen databasenavn å sammenligne"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "no encryption marker table: run the migrations"
+msgstr "ingen tabell for krypteringsmerket: kjør migreringene"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no endpoint URL"
@@ -1951,6 +2030,11 @@ msgstr "kø %{queue}, grense %{limit}, satt på pause"
 msgid "read the Repo url: in config/runtime.exs only outside tests, inside if config_env() != :test do … end"
 msgstr "les Repo-ens url: i config/runtime.exs bare utenfor tester, inni if config_env() != :test do … end"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "readable with this installation's secret; the marker is written at the next start"
+msgstr "kan leses med denne installasjonens nøkkel; merket skrives ved neste oppstart"
+
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
 msgid "remove the entry, or correct its site key, in config :brando, site_frontends"
@@ -2141,6 +2225,11 @@ msgstr "admin- og frontend-ressursene bygges med %{advice}"
 msgid "the config files read Mix.env(), which cannot be read for :test from here"
 msgstr "konfigurasjonsfilene leser Mix.env(), som ikke kan leses for :test herfra"
 
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "the database holds values encrypted with another secret"
+msgstr "databasen har verdier kryptert med en annen nøkkel"
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "the default branch"
@@ -2255,3 +2344,8 @@ msgstr "der malen setter sammen, sammenligner eller bearbeider globalen, eller g
 #, elixir-autogen, elixir-format
 msgid "write each deploy target setting as a list of destinations, or as a map from each site key, a string, to a list of destinations"
 msgstr "skriv hver innstilling for publiseringsmål som en liste over mål, eller som et kart fra hver nettstedsnøkkel, en streng, til en liste over mål"
+
+#: lib/brando/doctor/checks/encrypted_data.ex
+#, elixir-autogen, elixir-format
+msgid "written with this installation's secret"
+msgstr "skrevet med denne installasjonens nøkkel"

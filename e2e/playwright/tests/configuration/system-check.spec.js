@@ -15,6 +15,7 @@ test('Utilities runs the system check beside the page and links fixes', async ({
     'migrations',
     'oban',
     'configuration',
+    'encrypted_data',
     'video_providers',
     'admin_assets',
     'image_configs',
@@ -32,6 +33,8 @@ test('Utilities runs the system check beside the page and links fixes', async ({
   // The server runs from the project, so the source checks run.
   await expect(card.locator('li[data-check="admin_assets"]')).toHaveAttribute('data-status', 'ok')
   await expect(card.locator('li[data-check="deprecations"]')).toHaveAttribute('data-status', 'ok')
+  // Seeded with the E2E app's own encryption secret
+  await expect(card.locator('li[data-check="encrypted_data"]')).toHaveAttribute('data-status', 'ok')
   // Bunny is fully configured and the default strategy is :local.
   await expect(card.locator('li[data-check="video_providers"]')).toHaveAttribute('data-status', 'ok')
 
