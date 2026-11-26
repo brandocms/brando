@@ -105,6 +105,7 @@ defmodule Brando.Webhooks do
   @default_concurrency 2
   @default_site_concurrency 3
   @test_event "webhook.test"
+  @batch_size 500
 
   ## Configuration
 
@@ -672,10 +673,129 @@ defmodule Brando.Webhooks do
       0
   end
 
+  ## A database from another installation
+
+  @doc """
+  Pauses by hand (`:manual`) every active webhook of the environment at
+  `prefix` (nil for `public`), and every one paused for an environment copy,
+  which would resume when the environment goes live, keeping its secret and
+  delivery log, after the database was copied from another installation
+  (`Brando.Crypto.Marker`). In batches. Returns how many, with the id and
+  name of the first `named`.
+  """
+  @spec pause_active(String.t() | nil, term(), non_neg_integer()) :: %{count: non_neg_integer(), named: [map()]}
+  def pause_active(prefix, actor, named) do
+    if tables?(schema(prefix)),
+      do: pause_active_batches(prefix, actor, named, %{count: 0, named: []}),
+      else: %{count: 0, named: []}
+  end
+
+  defp pause_active_batches(prefix, actor, named, acc) do
+    batch =
+      from(w in Webhook,
+        where: w.active == true or w.paused_reason == :environment_copy,
+        select: w.id,
+        limit: @batch_size
+      )
+
+    {count, paused} =
+      Repo.update_all(
+        from(w in Webhook, where: w.id in subquery(Ecto.Query.put_query_prefix(batch, schema(prefix))), select: w),
+        [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
+        prefix: schema(prefix)
+      )
+
+    record_lifecycle(prefix, paused, actor, %{"webhook" => "paused", "reason" => "manual"})
+    names = paused |> Enum.sort_by(& &1.id) |> Enum.map(&%{"id" => &1.id, "name" => &1.name})
+    acc = %{count: acc.count + count, named: Enum.take(acc.named ++ names, named)}
+
+    if count < @batch_size, do: acc, else: pause_active_batches(prefix, actor, named, acc)
+  end
+
+  @doc """
+  How many webhooks of the environment at `prefix` (nil for `public`) have a
+  secret this installation's secret cannot decrypt, among those that send or
+  resume by themselves: active ones, and those paused for an environment
+  copy. Read in batches.
+  """
+  @spec count_unreadable(String.t() | nil) :: non_neg_integer()
+  def count_unreadable(prefix) do
+    if tables?(schema(prefix)),
+      do: reduce_unreadable(prefix, 0, 0, fn _webhook, count -> count + 1 end),
+      else: 0
+  end
+
+  @doc """
+  Pauses by hand (`:manual`) the webhooks `count_unreadable/1` counts, keeping
+  their secrets: one whose secret changed meanwhile, or that was paused or
+  resumed by hand, is left as it is. A webhook paused for an environment copy
+  then no longer resumes when the environment goes live. Returns how many.
+  """
+  @spec pause_unreadable(String.t() | nil, term()) :: non_neg_integer()
+  def pause_unreadable(prefix, actor) do
+    if tables?(schema(prefix)) do
+      reduce_unreadable(prefix, 0, 0, &count_paused(prefix, &1, &2, actor))
+    else
+      0
+    end
+  end
+
+  defp count_paused(prefix, webhook, count, actor),
+    do: if(pause_unreadable_one(prefix, webhook, actor), do: count + 1, else: count)
+
+  @doc """
+  Pauses `webhook` by hand while its stored secret is still the one `webhook` holds,
+  which did not decrypt, and it still sends or resumes by itself: what
+  `pause_unreadable/2` does for each. Returns whether it did.
+  """
+  @spec pause_unreadable_one(String.t() | nil, Webhook.t(), term()) :: boolean()
+  def pause_unreadable_one(prefix, %Webhook{} = webhook, actor) do
+    {paused, rows} =
+      Repo.update_all(
+        from(w in Webhook,
+          where: w.id == ^webhook.id and w.secret_ciphertext == ^webhook.secret_ciphertext,
+          where: w.active == true or w.paused_reason == :environment_copy,
+          select: w
+        ),
+        [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
+        prefix: schema(prefix)
+      )
+
+    record_lifecycle(prefix, rows, actor, %{"webhook" => "paused", "reason" => "manual"})
+    paused == 1
+  end
+
+  defp reduce_unreadable(prefix, after_id, acc, fun) do
+    batch =
+      Repo.all(
+        from(w in Webhook,
+          where: w.id > ^after_id and (w.active == true or w.paused_reason == :environment_copy),
+          where: not is_nil(w.secret_ciphertext) and w.secret_ciphertext != "",
+          order_by: w.id,
+          limit: @batch_size,
+          select: struct(w, [:id, :secret_ciphertext])
+        ),
+        prefix: schema(prefix)
+      )
+
+    acc = batch |> Enum.filter(&(secret(&1) == {:error, :secret_unreadable})) |> Enum.reduce(acc, fun)
+
+    case batch do
+      [] -> acc
+      _ -> reduce_unreadable(prefix, batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
+    end
+  end
+
+  defp schema(nil), do: "public"
+  defp schema(prefix), do: prefix
+
+  defp in_schema(nil, fun), do: Brando.Tenant.with_public(fun)
+  defp in_schema(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
+
   defp record_lifecycle(_prefix, [], _actor, _details), do: :ok
 
   defp record_lifecycle(prefix, webhooks, actor, details) do
-    Brando.Tenant.with_prefix(prefix, fn ->
+    in_schema(prefix, fn ->
       Enum.each(webhooks, fn webhook ->
         Activity.setting_changed(:updated, webhook, webhook.name, actor, fields: ["active"], details: details)
       end)

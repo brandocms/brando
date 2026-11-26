@@ -539,9 +539,14 @@ defmodule Brando.Users do
   def disconnect_session(token) when is_binary(token) do
     Repo.after_commit(fn ->
       endpoint = Brando.endpoint()
-      endpoint.broadcast(live_socket_id(token), "disconnect", %{})
-      # Tabs opened before the id was hashed. TODO: remove in 0.56
-      endpoint.broadcast(legacy_live_socket_id(token), "disconnect", %{})
+
+      # Not in a release's `eval` (`Brando.Release`), which has no endpoint:
+      # the session ends with its token all the same
+      if Process.whereis(endpoint) do
+        endpoint.broadcast(live_socket_id(token), "disconnect", %{})
+        # Tabs opened before the id was hashed. TODO: remove in 0.56
+        endpoint.broadcast(legacy_live_socket_id(token), "disconnect", %{})
+      end
     end)
   end
 
@@ -911,10 +916,17 @@ defmodule Brando.Users do
   """
   @spec notify_security(user, atom(), map()) :: :ok
   def notify_security(user, kind, details \\ %{}) do
-    if Brando.Mailer.configured?() and not is_nil(Brando.Mailer.sender()[:from]) do
-      _ = UserNotifier.deliver_security_notice(user, kind, details)
-    else
-      Logger.info("[Brando.Users] No email sent to user ##{user.id} about #{kind}: no mailer configured")
+    cond do
+      not (Brando.Mailer.configured?() and not is_nil(Brando.Mailer.sender()[:from])) ->
+        Logger.info("[Brando.Users] No email sent to user ##{user.id} about #{kind}: no mailer configured")
+
+      # A release's `eval` (`Brando.Release`) has no endpoint to link to, nor
+      # Oban to queue the email with
+      is_nil(Process.whereis(Brando.endpoint())) ->
+        Logger.info("[Brando.Users] No email sent to user ##{user.id} about #{kind}: the endpoint is not running")
+
+      true ->
+        _ = UserNotifier.deliver_security_notice(user, kind, details)
     end
 
     :ok

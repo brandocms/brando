@@ -1565,6 +1565,13 @@ msgid_plural "%{count} of %{total} blocks hold a value"
 msgstr[0] "1 av %{total} blokker har en verdi"
 msgstr[1] "%{count} av %{total} blokker har en verdi"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "1 of them is in another site environment."
+msgid_plural "%{count} of them are in other site environments."
+msgstr[0] "1 av dem er i et annet nettstedsmiljø."
+msgstr[1] "%{count} av dem er i andre nettstedsmiljøer."
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgctxt "delete"
@@ -5355,8 +5362,8 @@ msgstr "Kodeblokk"
 
 #: lib/brando_admin/controllers/user_session_controller.ex
 #, elixir-autogen, elixir-format
-msgid "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication."
-msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk en gjenopprettingskode, eller be en administrator om å tilbakestille tofaktorautentiseringen."
+msgid "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication. Whoever runs the server can reset it too."
+msgstr "Koder fra appen kan ikke sjekkes på dette nettstedet akkurat nå. Bruk en gjenopprettingskode, eller be en administrator om å tilbakestille tofaktorautentiseringen. Den som drifter serveren kan også tilbakestille den."
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -7533,6 +7540,7 @@ msgid "Disconnected: a used token was presented again"
 msgstr "Koblet fra: et token som allerede var brukt, ble brukt igjen"
 
 #: lib/brando_admin/components/assets/sort_by_use.ex
+#: lib/brando_admin/components/dashboard.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/suggestion_review.ex
@@ -8488,6 +8496,11 @@ msgstr "Aktiver gruppebasert tilgangsstyring"
 msgid "Enable synchronization"
 msgstr "Aktiver synkronisering"
 
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Encrypted data"
+msgstr "Krypterte data"
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -8904,6 +8917,11 @@ msgstr "Alle som kan se denne listen, mister visningen."
 #, elixir-autogen, elixir-format
 msgid "Everything"
 msgstr "Alt"
+
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Everything can be read"
+msgstr "Alt kan leses"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -9541,6 +9559,16 @@ msgstr "For eksempel: Teksten øverst i rammen er oppføringens felt Overskrift 
 msgid "For when the user cannot get email from this site. They are logged out everywhere, and must choose their own password the next time they log in. Unsaved changes in the form are lost."
 msgstr "Til bruk når brukeren ikke kan få e-post fra dette nettstedet. Brukeren logges ut overalt, og må velge sitt eget passord neste gang vedkommende logger inn. Endringer i skjemaet som ikke er lagret, går tapt."
 
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Forget unreadable values"
+msgstr "Glem verdier som ikke kan leses"
+
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Forget what this secret cannot read?"
+msgstr "Glemme det denne nøkkelen ikke kan lese?"
+
 #: lib/brando_admin/live/user_login_live.ex
 #, elixir-autogen, elixir-format
 msgid "Forgot password?"
@@ -9555,6 +9583,11 @@ msgstr "Glemt det nåværende passordet? Logg ut og bruk «Glemt passord?» på 
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
 msgstr "Glemt passordet?"
+
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Forgotten"
+msgstr "Glemt"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -14018,6 +14051,7 @@ msgstr "Ikke tillatt"
 msgid "Not available in this installation"
 msgstr "Ikke tilgjengelig i denne installasjonen"
 
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
@@ -14481,6 +14515,11 @@ msgstr "Ingenting mer sendes på den, og leveringsloggen fjernes."
 msgid "Nothing more is sent to it, and its delivery log is removed."
 msgstr "Ingenting mer sendes til den, og leveringsloggen fjernes."
 
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing needed forgetting."
+msgstr "Ingenting måtte glemmes."
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing needs translating or reviewing."
@@ -14619,6 +14658,11 @@ msgstr "Varslingsrute"
 #, elixir-autogen, elixir-format
 msgid "Notification route settings"
 msgstr "Innstillinger for varslingsrute"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Notification routes"
+msgstr "Varslingsruter"
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format
@@ -20024,6 +20068,13 @@ msgstr "Smart tekst"
 msgid "Snippet length"
 msgstr "Lengde på tekstutdrag"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "So that this copy calls no real endpoint, 1 webhook or notification route was paused when this installation started with it. Resume what this environment should send."
+msgid_plural "So that this copy calls no real endpoint, %{count} webhooks and notification routes were paused when this installation started with it. Resume what this environment should send."
+msgstr[0] "Slik at denne kopien ikke kaller noe ekte endepunkt, ble 1 webhook eller varslingsrute satt på pause da denne installasjonen startet med den. Gjenoppta det dette miljøet skal sende."
+msgstr[1] "Slik at denne kopien ikke kaller noe ekte endepunkt, ble %{count} webhooks og varslingsruter satt på pause da denne installasjonen startet med den. Gjenoppta det dette miljøet skal sende."
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Some %{kind} still refer to it."
@@ -20060,6 +20111,11 @@ msgstr "Noen bilder kunne ikke beskrives"
 #, elixir-autogen, elixir-format
 msgid "Some images could not be recreated"
 msgstr "Noen bilder kunne ikke lages på nytt"
+
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some of it could not be forgotten (see the log). Run it again to finish."
+msgstr "Noe kunne ikke glemmes (se loggen). Kjør det igjen for å fullføre."
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -22698,6 +22754,16 @@ msgstr "Denne innholdstypen har ingen forhåndsvisning."
 msgid "This copy needs attention"
 msgstr "Denne kopien må gjennomgås"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "This database came from %{host}"
+msgstr "Denne databasen kom fra %{host}"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "This database was encrypted with another secret"
+msgstr "Denne databasen ble kryptert med en annen nøkkel"
+
 #: lib/brando_admin/components/form/block.ex
 #, elixir-autogen, elixir-format
 msgid "This destination is no longer available. Choose an empty compatible region."
@@ -23680,6 +23746,11 @@ msgstr "Tofaktorautentisering ble slått av"
 msgid "Two-factor authentication was turned on"
 msgstr "Tofaktorautentisering ble slått på"
 
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor secrets, webhook secrets, notification routes and Figma credentials are kept encrypted with this installation's secret."
+msgstr "Tofaktorhemmeligheter, webhook-hemmeligheter, varslingsruter og Figma-tilganger lagres kryptert med denne installasjonens nøkkel."
+
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -23882,6 +23953,11 @@ msgstr "Avpublisert som planlagt"
 #, elixir-autogen, elixir-format
 msgid "Unpublished translations"
 msgstr "Upubliserte oversettelser"
+
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unreadable values forgotten"
+msgstr "Verdier som ikke kunne leses er glemt"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -24466,6 +24542,11 @@ msgstr "Brukere"
 msgid "Users it applies to set it up the next time they log in."
 msgstr "Brukere det gjelder, setter det opp neste gang de logger inn."
 
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Users whose two-factor secret cannot be read sign in with their password and set it up again; their passkeys stay. Webhooks and routes are paused, with their secrets. Values that can be read are not touched."
+msgstr "Brukere med en tofaktorhemmelighet som ikke kan leses logger inn med passordet og setter det opp igjen; tilgangsnøklene deres beholdes. Webhooks og ruter settes på pause, med hemmelighetene sine. Verdier som kan leses røres ikke."
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Users with the roles or in the groups you choose."
@@ -24515,6 +24596,11 @@ msgstr "Verdiene flyttes til refsene og variablene som får nytt navn"
 #, elixir-autogen, elixir-format
 msgid "Values stay under the old names until you move them"
 msgstr "Verdiene blir stående under de gamle navnene til du flytter dem"
+
+#: lib/brando_admin/live/sites/encrypted_data_live.ex
+#, elixir-autogen, elixir-format
+msgid "Values this installation cannot read"
+msgstr "Verdier denne installasjonen ikke kan lese"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
@@ -24927,6 +25013,7 @@ msgstr "Webhook-URL"
 msgid "Webhook settings"
 msgstr "Innstillinger for webhook"
 
+#: lib/brando_admin/components/dashboard.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -25827,6 +25914,7 @@ msgstr "verdier fjernes ikke i mer enn %{max_entries} oppføringer eller %{max_b
 msgid "and"
 msgstr "og"
 
+#: lib/brando_admin/components/dashboard.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format

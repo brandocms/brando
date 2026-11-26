@@ -58,6 +58,17 @@ defmodule E2EFixtureController do
         "loose-blocks" ->
           create_loose_blocks()
 
+        # The dashboard after a database copied from another host started
+        # here: two webhooks and a notification route paused
+        # (`Brando.Crypto.Marker`)
+        "database-moved" ->
+          create_database_moved()
+
+        # A database another encryption secret wrote: a user whose
+        # two-factor secret and a webhook whose secret do not decrypt
+        "encrypted-foreign" ->
+          create_encrypted_foreign()
+
         # Utilities → Image sizes partway through a run the E2E admin started:
         # images waiting, and its work at 12 of 65. The work is in the
         # registry's memory, not the sandbox, so it gives up after a minute.
@@ -365,7 +376,10 @@ defmodule E2EFixtureController do
           MultiSiteHosts.setup(get_admin_user(), published: true)
 
         "multi-site-publish-" <> state when state in ~w(changes ready failed publishing) ->
-          MultiSiteHosts.setup(get_admin_user(), published: true, publish: String.to_existing_atom(state))
+          MultiSiteHosts.setup(get_admin_user(),
+            published: true,
+            publish: String.to_existing_atom(state)
+          )
 
         "multi-site-static-no-preview-host" ->
           MultiSiteHosts.setup(get_admin_user(), published: true, no_preview_host: true)
@@ -587,7 +601,9 @@ defmodule E2EFixtureController do
         creator_id: user.id
       })
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
+    )
 
     {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
   end
@@ -737,7 +753,8 @@ defmodule E2EFixtureController do
     for {type, label, code} <- [
           {:liquid, "Liquid",
            "<div class=\"single-project\">{% for entry in entries %}{{ entry.title }}{% endfor %}</div>"},
-          {:heex, "HEEx", "<div class=\"single-project\"><span :for={entry <- @entries}>{entry.title}</span></div>"}
+          {:heex, "HEEx",
+           "<div class=\"single-project\"><span :for={entry <- @entries}>{entry.title}</span></div>"}
         ] do
       Brando.Repo.insert!(%Brando.Content.Module{
         uid: Brando.Utils.generate_uid(),
@@ -888,7 +905,9 @@ defmodule E2EFixtureController do
       |> Brando.Content.Block.recursive_block_changeset(params, user)
       |> Brando.Repo.insert!()
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
+    )
 
     Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
     user
@@ -909,7 +928,8 @@ defmodule E2EFixtureController do
         class: "frontend-edit-headline",
         namespace: %{"en" => "Content"},
         help_text: %{},
-        code: ~s(<div class="fe-block"><h2 class="fe-headline">{{ headline }}</h2>{% ref refs.body %}</div>),
+        code:
+          ~s(<div class="fe-block"><h2 class="fe-headline">{{ headline }}</h2>{% ref refs.body %}</div>),
         refs: [
           %Brando.Content.Ref{
             name: "body",
@@ -1079,7 +1099,9 @@ defmodule E2EFixtureController do
     [intro, container, embed, picture, title_block, featured]
     |> Enum.with_index()
     |> Enum.each(fn {root, sequence} ->
-      Brando.Repo.insert!(struct(source, %{entry_id: page.id, block_id: root.id, sequence: sequence}))
+      Brando.Repo.insert!(
+        struct(source, %{entry_id: page.id, block_id: root.id, sequence: sequence})
+      )
     end)
 
     {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
@@ -1252,8 +1274,10 @@ defmodule E2EFixtureController do
     context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
 
     for {title, uri, new_title, summary} <- [
-          {"MCP review", "mcp-review", "MCP review, from Claude Code", "Retitle the MCP review page"},
-          {"MCP rejected", "mcp-rejected", "Should not be applied", "Retitle the MCP rejected page"}
+          {"MCP review", "mcp-review", "MCP review, from Claude Code",
+           "Retitle the MCP review page"},
+          {"MCP rejected", "mcp-rejected", "Should not be applied",
+           "Retitle the MCP rejected page"}
         ] do
       {:ok, page} =
         Brando.Pages.create_page(
@@ -1630,7 +1654,8 @@ defmodule E2EFixtureController do
         "uid" => "swap",
         "texts" => %{
           "h1" => "Why work with us?",
-          "p" => "We work with students, designers, companies and schools that want to shape design practice."
+          "p" =>
+            "We work with students, designers, companies and schools that want to shape design practice."
         }
       },
       %{"op" => "delete_block", "target" => target, "block_uid" => old}
@@ -1674,7 +1699,9 @@ defmodule E2EFixtureController do
     fields = %{"label" => "Planted", "key" => "planted", "language" => "en"}
 
     record
-    |> Ecto.Changeset.change(operations: [%{stored | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}])
+    |> Ecto.Changeset.change(
+      operations: [%{stored | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}]
+    )
     |> Brando.Repo.update!()
 
     user
@@ -1690,10 +1717,14 @@ defmodule E2EFixtureController do
     user = get_admin_user()
 
     section =
-      Brando.Repo.one!(from(m in Brando.Content.Module, where: m.class == "team-section", limit: 1))
+      Brando.Repo.one!(
+        from(m in Brando.Content.Module, where: m.class == "team-section", limit: 1)
+      )
 
     member =
-      Brando.Repo.one!(from(m in Brando.Content.Module, where: m.parent_id == ^section.id, limit: 1))
+      Brando.Repo.one!(
+        from(m in Brando.Content.Module, where: m.parent_id == ^section.id, limit: 1)
+      )
 
     {identity, [video | _]} =
       team_page!(
@@ -1709,9 +1740,10 @@ defmodule E2EFixtureController do
 
     targets =
       for {page, members} <- [
-            {{"Strategy", "projects/category/strategy-and-positioning-for-growing-companies", "en", :published},
+            {{"Strategy", "projects/category/strategy-and-positioning-for-growing-companies",
+              "en", :published}, ["Example Hotel", "Aker"]},
+            {{"Strategi", "prosjekter/kategori/strategi", "no", :published},
              ["Example Hotel", "Aker"]},
-            {{"Strategi", "prosjekter/kategori/strategi", "no", :published}, ["Example Hotel", "Aker"]},
             {{"Branding", "projects/category/branding", "en", :draft}, ["Example Hotel"]}
           ] do
         team_page!(user, section, member, page, members)
@@ -1774,7 +1806,9 @@ defmodule E2EFixtureController do
         ]).uid
       end
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: team.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: team.id, sequence: 0})
+    )
 
     # The revision an undo goes back to holds the blocks too.
     {:ok, _} =
@@ -1815,7 +1849,9 @@ defmodule E2EFixtureController do
     for _ <- 1..3, do: create_image_sizes_image()
 
     images =
-      Brando.Repo.all(from(i in Brando.Images.Image, where: not is_nil(i.config_target), limit: 3))
+      Brando.Repo.all(
+        from(i in Brando.Images.Image, where: not is_nil(i.config_target), limit: 3)
+      )
 
     # Inserted as rows: the E2E server runs jobs inline when Oban inserts them
     for image <- images do
@@ -1900,6 +1936,96 @@ defmodule E2EFixtureController do
     end)
 
     user
+  end
+
+  defp create_database_moved do
+    webhook = fn name ->
+      Brando.Repo.insert!(%Brando.Webhooks.Webhook{
+        name: name,
+        url: "https://hooks.example.com/#{name}",
+        secret_ciphertext: "",
+        active: false,
+        paused_reason: :manual
+      })
+    end
+
+    deploy = webhook.("Deploy hook")
+    cache = webhook.("Cache purge")
+
+    Brando.Repo.insert!(%Brando.Crypto.Marker{
+      id: 1,
+      value: Brando.Crypto.encrypt("brando", "brando.crypto_marker"),
+      host: Brando.Crypto.Marker.host(),
+      moved_from: "www.example.com",
+      moved_at: DateTime.utc_now(),
+      moved_key: "ours",
+      paused: [
+        %{
+          "prefix" => nil,
+          "kind" => "webhook",
+          "count" => 2,
+          "named" => [
+            %{"id" => deploy.id, "name" => deploy.name},
+            %{"id" => cache.id, "name" => cache.name}
+          ]
+        },
+        %{
+          "prefix" => nil,
+          "kind" => "notification_route",
+          "count" => 1,
+          "named" => [%{"id" => 1, "name" => "Editors"}]
+        }
+      ]
+    })
+
+    get_admin_user()
+  end
+
+  defp create_encrypted_foreign do
+    key =
+      Plug.Crypto.KeyGenerator.generate(
+        String.duplicate("another installation", 3),
+        "brando encrypted value", length: 32)
+
+    foreign = fn plaintext, context ->
+      Plug.Crypto.MessageEncryptor.encrypt(plaintext, context, key, "")
+    end
+
+    Brando.Repo.insert!(%Brando.Crypto.Marker{
+      id: 1,
+      value: foreign.("brando", "brando.crypto_marker"),
+      host: "www.example.com"
+    })
+
+    user =
+      Brando.Repo.insert!(%Brando.Users.User{
+        name: "Lost Phone",
+        email: "lost-phone@brandocms.com",
+        password: Bcrypt.hash_pwd_salt("brandocms"),
+        role: :editor,
+        language: :en
+      })
+
+    Brando.Repo.insert!(%Brando.Users.Security{
+      user_id: user.id,
+      totp_secret: foreign.("JBSWY3DPEHPK3PXP", "users.totp_secret:#{user.id}"),
+      totp_enabled_at: DateTime.truncate(DateTime.utc_now(), :second)
+    })
+
+    hook =
+      Brando.Repo.insert!(%Brando.Webhooks.Webhook{
+        name: "Deploy hook",
+        url: "https://hooks.example.com/",
+        secret_ciphertext: ""
+      })
+
+    Brando.Repo.update!(
+      Ecto.Changeset.change(hook,
+        secret_ciphertext: foreign.("whsec_secret", "webhooks.secret:#{hook.id}")
+      )
+    )
+
+    get_admin_user()
   end
 
   defp create_loose_blocks do
@@ -2132,7 +2258,8 @@ defmodule E2EFixtureController do
         [
           {"Campaign launch", "campaign-launch", :published},
           {"Destination page", "destination-page", :published},
-          {"Autumn collection: the people, places and stories behind it", "autumn-collection", :draft}
+          {"Autumn collection: the people, places and stories behind it", "autumn-collection",
+           :draft}
         ],
         fn {title, uri, status} ->
           page =
@@ -2179,7 +2306,9 @@ defmodule E2EFixtureController do
       |> Brando.Content.Block.recursive_block_changeset(params, user)
       |> Brando.Repo.insert!()
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0})
+    )
 
     previous =
       params
@@ -2270,7 +2399,9 @@ defmodule E2EFixtureController do
           refs: [picture.("detail", "Detail", detail_below, 0)]
         })
 
-      Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: story.id, sequence: 1}))
+      Repo.insert!(
+        struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: story.id, sequence: 1})
+      )
     end
 
     # A placement-only alt text change should appear next to its image.
@@ -2462,23 +2593,32 @@ defmodule E2EFixtureController do
     slug = &"#{&1}-#{System.unique_integer([:positive])}"
 
     client =
-      Brando.Repo.insert!(struct(Client, Map.merge(attrs, %{name: "Havglimt", slug: slug.("havglimt")})))
+      Brando.Repo.insert!(
+        struct(Client, Map.merge(attrs, %{name: "Havglimt", slug: slug.("havglimt")}))
+      )
 
     # What a save of the project requires
     attrs = Map.merge(attrs, %{client_id: client.id, introduction: "<p>By the sea.</p>"})
 
     related =
-      Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")})))
+      Brando.Repo.insert!(
+        struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")}))
+      )
 
     project =
-      Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")})))
+      Brando.Repo.insert!(
+        struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")}))
+      )
 
     {:ok, page_identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
     {:ok, related_identifier} = Brando.Content.create_identifier(Project, related)
     join = Project.__schema__(:association, :related_entries).related
 
     for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
-        do: Brando.Repo.insert!(struct(join, parent_id: project.id, identifier_id: identifier.id, sequence: sequence))
+        do:
+          Brando.Repo.insert!(
+            struct(join, parent_id: project.id, identifier_id: identifier.id, sequence: sequence)
+          )
 
     row =
       Brando.Repo.insert!(%InlineRow{
@@ -2491,7 +2631,10 @@ defmodule E2EFixtureController do
     row_join = InlineRow.__schema__(:association, :related_entries).related
 
     for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
-        do: Brando.Repo.insert!(struct(row_join, parent_id: row.id, identifier_id: identifier.id, sequence: sequence))
+        do:
+          Brando.Repo.insert!(
+            struct(row_join, parent_id: row.id, identifier_id: identifier.id, sequence: sequence)
+          )
 
     # The entry a row picks
     {:ok, _} = Brando.Content.create_identifier(Project, project)
@@ -2601,7 +2744,9 @@ defmodule E2EFixtureController do
       secret = Brando.Users.TwoFactor.new_secret()
 
       {:ok, codes} =
-        Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: password)
+        Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret),
+          proof: password
+        )
 
       # The code that turned it on is used up; the spec signs in with the current one.
       import Ecto.Query, only: [from: 2]
@@ -2677,7 +2822,9 @@ defmodule E2EFixtureController do
     secret = Brando.Users.TwoFactor.new_secret()
 
     {:ok, _codes} =
-      Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: password)
+      Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret),
+        proof: password
+      )
 
     import Ecto.Query, only: [from: 2]
 
@@ -2876,7 +3023,9 @@ defmodule E2EFixtureController do
       )
 
     {:ok, target} = Brando.Translations.create_target(Brando.Pages.Page, source.id, :no, user)
-    {:ok, target} = Brando.Pages.update_page(target.id, %{title: "Laget", status: :published}, user)
+
+    {:ok, target} =
+      Brando.Pages.update_page(target.id, %{title: "Laget", status: :published}, user)
 
     if params["trashed"] == "true", do: {:ok, _} = Brando.Pages.delete_page(target.id, user)
 
@@ -2896,7 +3045,9 @@ defmodule E2EFixtureController do
     attrs = %{status: :draft, language: :en, creator_id: user.id}
 
     client =
-      Brando.Repo.insert!(struct(Client, Map.merge(attrs, %{name: "Trash client", slug: slug.("client")})))
+      Brando.Repo.insert!(
+        struct(Client, Map.merge(attrs, %{name: "Trash client", slug: slug.("client")}))
+      )
 
     attrs = Map.merge(attrs, %{client_id: client.id, introduction: "<p>Trashed.</p>"})
 
@@ -2914,7 +3065,9 @@ defmodule E2EFixtureController do
     [old, categorised] =
       for title <- ["Old case", "Categorised case"] do
         project =
-          Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: title, slug: slug.("case")})))
+          Brando.Repo.insert!(
+            struct(Project, Map.merge(attrs, %{title: title, slug: slug.("case")}))
+          )
 
         {:ok, _} = E2eProject.Projects.delete_project(project.id, user)
         project
@@ -3258,7 +3411,9 @@ defmodule E2EFixtureController do
         )
         |> Brando.Repo.insert!()
 
-      Brando.Repo.insert!(struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}))
+      Brando.Repo.insert!(
+        struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence})
+      )
     end
 
     add_sync_block.(source, "Første avsnitt", 0)
@@ -3294,7 +3449,9 @@ defmodule E2EFixtureController do
 
     for join <- loaded.entry_blocks, ref <- Brando.Repo.preload(join.block, :refs).refs do
       ref
-      |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: "<p>First paragraph</p>"}})
+      |> Ecto.Changeset.change(
+        data: %{ref.data | data: %{ref.data.data | text: "<p>First paragraph</p>"}}
+      )
       |> Brando.Repo.update!()
     end
 
@@ -3486,7 +3643,9 @@ defmodule E2EFixtureController do
       )
       |> Brando.Repo.insert!()
 
-    Brando.Repo.insert!(struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Article.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0})
+    )
 
     {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, user)
 
@@ -3588,7 +3747,8 @@ defmodule E2EFixtureController do
 
     [price_list, brochure, floor_plan, _old] =
       for {filename, mime} <- [
-            {"price-list.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+            {"price-list.xlsx",
+             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
             {"spring-brochure.pdf", "application/pdf"},
             {"floor-plan.zip", "application/zip"},
             {"old-terms.pdf", "application/pdf"}
@@ -3642,7 +3802,9 @@ defmodule E2EFixtureController do
         uid: Brando.Utils.generate_uid()
       })
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
+    )
 
     refs =
       Enum.map(media[:videos], &{:video_id, &1.id}) ++ Enum.map(media[:files], &{:file_id, &1.id})
@@ -3746,7 +3908,9 @@ defmodule E2EFixtureController do
         creator_id: owner.id
       })
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
+    )
 
     [template] = module.refs
 
@@ -3819,7 +3983,9 @@ defmodule E2EFixtureController do
     tenant = Brando.MCP.tenant(nil, nil)
 
     :ok =
-      Brando.MCP.put_figma_token(tenant, "figd_e2e-pasted-token-7d3f", admin, expires_on: Date.add(Date.utc_today(), 60))
+      Brando.MCP.put_figma_token(tenant, "figd_e2e-pasted-token-7d3f", admin,
+        expires_on: Date.add(Date.utc_today(), 60)
+      )
 
     :ok =
       Brando.Figma.OAuth.put_app(
@@ -3836,7 +4002,8 @@ defmodule E2EFixtureController do
       Brando.Repo.update_all(Brando.MCP.setting_query(tenant),
         set: [
           figma_oauth_access_token: Brando.Crypto.encrypt("e2e-access", context.(:access_token)),
-          figma_oauth_refresh_token: Brando.Crypto.encrypt("e2e-refresh", context.(:refresh_token)),
+          figma_oauth_refresh_token:
+            Brando.Crypto.encrypt("e2e-refresh", context.(:refresh_token)),
           figma_oauth_expires_at: DateTime.add(DateTime.utc_now(), 86_400, :second),
           figma_oauth_handle: "Ada Designer",
           figma_oauth_connected_at: DateTime.utc_now(),
@@ -4009,7 +4176,9 @@ defmodule E2EFixtureController do
             )
 
           copy
-          |> Ecto.Changeset.change(updated_at: DateTime.add(draft.updated_at, -index * 60, :second))
+          |> Ecto.Changeset.change(
+            updated_at: DateTime.add(draft.updated_at, -index * 60, :second)
+          )
           |> Brando.Repo.update!()
         end)
 

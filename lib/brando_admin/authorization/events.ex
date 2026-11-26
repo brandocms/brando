@@ -93,6 +93,9 @@ defmodule BrandoAdmin.Authorization.Events do
       read: ~w(hide_language_picker show_language_picker),
       own: ~w(select_language)
     ],
+    "BrandoAdmin.Components.Dashboard" => [
+      write: ~w(dismiss_move_notice)
+    ],
     "BrandoAdmin.Components.Form" => [
       read:
         ~w(blur browse_video_thumbnail change_preview_target close_preview_targets commit_tiptap draft_open draft_review focus keep_own_relation load_session_version noop open_block_upload_folder_browser open_footnote open_image_editor open_own_image_editor push_submit push_submit_minor push_submit_new push_submit_redirect recover_drawer_state recover_form reset_file_field reset_image_field reset_video_field save_redirect_target select_tab set_video_aspect_ratio skip_permalink_redirect take_saved_relation tiptap_ai_cancel tiptap_link_dialog tiptap_link_result toggle_preview_targets toggle_revisions_drawer_status validate validate_file validate_image validate_video video_preview_dimensions),
@@ -422,6 +425,9 @@ defmodule BrandoAdmin.Authorization.Events do
         ~w(blur check_create check_deploy_targets check_grant check_languages check_library_group check_name focus refresh),
       write:
         ~w(activate_site archive create_site delete grant measure_usage revoke save_delivery save_deploy_targets save_languages save_name seed_language set_library_group suspend)
+    ],
+    "BrandoAdmin.Sites.EncryptedDataLive" => [
+      write: ~w(forget_unreadable)
     ],
     "BrandoAdmin.Sites.UtilsLive" => [
       read:

@@ -781,6 +781,15 @@ sender first, before the first compile.
   in `public`, when a build's deploy was given up, so the navigation's
   Publish button can say that a deploy failed. Builds made before have none.
   Run `mix brando.gen.migrations` for it, then `mix brando.migrate`.
+- **A database from elsewhere.** `brando_252` adds `crypto_marker` in
+  `public`, the installation's encryption marker. It starts empty: the first
+  start of a node that serves writes it, when everything in the database
+  reads with the installation's secret. A database copied from another host
+  then has its webhooks and notification routes paused at start, and one
+  written with another secret is reported by `mix brando.doctor` and on the
+  dashboard. See
+  [Copying a database between environments](deployment.md#copying-a-database-between-environments).
+  Run `mix brando.gen.migrations` for it, then `mix brando.migrate`.
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

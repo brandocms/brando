@@ -29,6 +29,7 @@ defmodule Brando.Tenant.SharedTables do
     content_proposal_receipts
     content_proposals
     content_transfer_receipts
+    crypto_marker
     entry_drafts
     environments
     markdown_webhook_deliveries

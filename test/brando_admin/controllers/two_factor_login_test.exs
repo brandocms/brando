@@ -181,6 +181,31 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "did not work"
     end
 
+    test "a secret this site cannot decrypt is not counted, and the advice names the server's reset",
+         %{user: user, secret: secret} do
+      Repo.update_all(from(s in Brando.Users.Security, where: s.user_id == ^user.id),
+        set: [totp_secret: Brando.Test.ForeignSecret.encrypt(secret, "users.totp_secret:#{user.id}")]
+      )
+
+      conn = log_in(anonymous(), user)
+      code = %{"two_factor" => %{"code" => TwoFactor.current_code(secret)}}
+
+      {conn, log} =
+        ExUnit.CaptureLog.with_log(fn -> conn |> next() |> post("/admin/login/two-factor", code) end)
+
+      assert log =~ "Brando.Release.reset_two_factor"
+      assert redirected_to(conn) == "/admin/login/two-factor"
+
+      assert Phoenix.Flash.get(conn.assigns.flash, :error) ==
+               Gettext.dgettext(
+                 Brando.Gettext,
+                 "default",
+                 "Codes from your app cannot be checked on this site right now. Use a recovery code, or ask an administrator to reset two-factor authentication. Whoever runs the server can reset it too."
+               )
+
+      refute Brando.Users.Throttle.locked_until(user)
+    end
+
     test "a code works once", %{user: user, secret: secret} do
       code = TwoFactor.current_code(secret)
       conn = log_in(anonymous(), user)

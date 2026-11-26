@@ -286,4 +286,23 @@ defmodule Brando.MCP.WatchTest do
       assert length(Watch.history(grant)) == 50
     end
   end
+
+  describe "a revoked connection" do
+    # A transaction that revokes and then rolls back leaves the connection
+    # live: its page must not have been told that it ended
+    test "is told that it ended once the revocation has committed", %{grant: grant, current_user: user} do
+      Watch.subscribe(grant.id)
+
+      assert {:error, :stopped} =
+               Brando.Repo.transaction(fn ->
+                 MCP.revoke_user_grants(user, "two_factor_off")
+                 Repo.rollback(:stopped)
+               end)
+
+      refute_receive {Watch, :ended}
+
+      assert {:ok, :ok} = Brando.Repo.transaction(fn -> MCP.revoke_user_grants(user, "two_factor_off") end)
+      assert_receive {Watch, :ended}
+    end
+  end
 end

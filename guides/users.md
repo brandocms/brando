@@ -221,6 +221,11 @@ password and set it up again. The reset is recorded with who did it:
 {:ok, user} = Brando.Users.TwoFactor.reset(user.id, current_admin)
 ```
 
+With no second administrator, whoever runs the server resets it, recorded as
+done by the system:
+`bin/my_app eval 'Brando.Release.reset_two_factor("admin@example.com")'`
+([Copying a database between environments](deployment.md#copying-a-database-between-environments)).
+
 **Requiring it.** A superuser chooses who must use it under **Users →
 Sign-in policy** (`/admin/users/sign-in-policy`): nobody, everyone, or the
 users of some roles (with group authorization, some groups). Users are shared
@@ -237,7 +242,12 @@ the same one, so a database copied between them keeps its users' two-factor
 authentication, and the endpoint's `secret_key_base` can be rotated without
 touching it ([Encryption secret](deployment.md#encryption-secret)). Under
 another secret, the TOTP secrets no longer decrypt and the recovery codes no
-longer match: the users would set two-factor authentication up again.
+longer match: the users would set two-factor authentication up again. The
+sign-in screen then says an administrator, or whoever runs the server, can
+reset it. A database written with another secret is reported, and what it
+cannot read can be forgotten, as
+[Copying a database between environments](deployment.md#copying-a-database-between-environments)
+describes.
 
 ## Passkeys
 

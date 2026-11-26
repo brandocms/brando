@@ -59,7 +59,7 @@ defmodule Brando.Crypto do
   defp key(salt), do: KeyGenerator.generate(secret(), salt, length: 32, cache: Plug.Crypto.Keys)
 
   defp secret do
-    case Brando.config(__MODULE__)[:secret] || Brando.endpoint().config(:secret_key_base) do
+    case Brando.config(__MODULE__)[:secret] || secret_key_base() do
       "__BRANDO_" <> _ ->
         raise ArgumentError,
               "Brando.Crypto's secret is still the installer's placeholder: run mix brando.install again " <>
@@ -73,5 +73,13 @@ defmodule Brando.Crypto do
               "Brando.Crypto needs a secret of at least 32 bytes: set the endpoint's :secret_key_base, " <>
                 "or config :brando, Brando.Crypto, secret: ..."
     end
+  end
+
+  # The endpoint's config table is not there until it starts, as in a
+  # release's `eval` (`Brando.Release`)
+  defp secret_key_base do
+    Brando.endpoint().config(:secret_key_base)
+  rescue
+    ArgumentError -> Application.get_env(Brando.otp_app(), Brando.endpoint(), [])[:secret_key_base]
   end
 end

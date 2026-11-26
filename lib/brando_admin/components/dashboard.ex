@@ -11,6 +11,8 @@ defmodule BrandoAdmin.Components.Dashboard do
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Workspace
 
+  require Logger
+
   def update(assigns, socket) do
     {:ok,
      socket
@@ -19,7 +21,150 @@ defmodule BrandoAdmin.Components.Dashboard do
      |> assign(:paused_webhooks, paused_webhooks(assigns.current_user))
      |> assign(:paused_routes, paused_routes(assigns.current_user))
      |> assign(:notifications_queue_missing?, Brando.Notifications.Routing.queue_warning?(assigns.current_user))
-     |> assign(:release_changes, release_changes(assigns.current_user))}
+     |> assign(:release_changes, release_changes(assigns.current_user))
+     |> assign_move(assigns.current_user)
+     |> assign_encrypted_data(assigns.current_user)}
+  end
+
+  # The webhooks and notification routes paused when the database turned out
+  # to come from another installation (`Brando.Crypto.Marker`), for those
+  # who manage either, until one of them dismisses it
+  defp assign_move(socket, user) do
+    move =
+      if Brando.Webhooks.can_manage?(user) or Brando.Notifications.Routing.can_manage?(user),
+        do: Brando.Crypto.Marker.move_notice()
+
+    assign(socket, :move, move)
+  end
+
+  # What this installation's secret cannot read, for those who may forget it
+  # (`Brando.Crypto.Audit.forget/2`), checked on each update. The audit
+  # decrypts every stored value, so it runs at most once per mount, and one
+  # that fails leaves the notice out
+  defp assign_encrypted_data(socket, user) do
+    if Brando.Authorization.Boundary.superuser?(user) do
+      socket = assign_new(socket, :encrypted_data_result, &encrypted_data/0)
+      assign(socket, :encrypted_data, socket.assigns.encrypted_data_result)
+    else
+      assign(socket, :encrypted_data, nil)
+    end
+  end
+
+  defp encrypted_data do
+    case Brando.Doctor.Checks.EncryptedData.run(nil) do
+      %{status: :error} = result -> result
+      _ -> nil
+    end
+  rescue
+    error ->
+      Logger.error("[BrandoAdmin.Components.Dashboard] Could not check the encrypted data: " <> Exception.message(error))
+      nil
+  end
+
+  def handle_event("dismiss_move_notice", _params, socket) do
+    user = socket.assigns.current_user
+
+    if Brando.Webhooks.can_manage?(user) or Brando.Notifications.Routing.can_manage?(user),
+      do: Brando.Crypto.Marker.dismiss_paused()
+
+    {:noreply, assign_move(socket, user)}
+  end
+
+  @doc """
+  The notice that the database came from another host, and which webhooks
+  and notification routes were paused for it: each one of this site
+  environment by name, linked, and how many in the others.
+  """
+  attr :move, :map, required: true
+  attr :myself, :any, required: true
+
+  def move_notice(assigns) do
+    here = Brando.Tenant.current_prefix()
+    {local, elsewhere} = Enum.split_with(assigns.move.paused, &(&1["prefix"] == here))
+
+    local =
+      Enum.map(local, fn group ->
+        named = for item <- group["named"], do: {item["name"], paused_item_path(group["kind"], item["id"])}
+        %{kind: group["kind"], count: group["count"], named: named}
+      end)
+
+    count = assigns.move.paused |> Enum.map(& &1["count"]) |> Enum.sum()
+
+    assigns =
+      assign(assigns,
+        local: local,
+        count: count,
+        elsewhere: elsewhere |> Enum.map(& &1["count"]) |> Enum.sum()
+      )
+
+    ~H"""
+    <div class="dashboard-alert dashboard-move" role="alert" data-testid="dashboard-database-moved">
+      <.icon name="triangle-alert" />
+      <div>
+        <h2>{gettext("This database came from %{host}", host: @move.from)}</h2>
+        <p>
+          {ngettext(
+            "So that this copy calls no real endpoint, 1 webhook or notification route was paused when this installation started with it. Resume what this environment should send.",
+            "So that this copy calls no real endpoint, %{count} webhooks and notification routes were paused when this installation started with it. Resume what this environment should send.",
+            @count
+          )}
+        </p>
+        <ul :if={@local != []} class="dashboard-move-paused">
+          <li :for={group <- @local}>
+            <span>{paused_kind(group.kind)}:</span>
+            <span class="dashboard-move-names">
+              <.link :for={{name, path} <- group.named} navigate={path}>{name}</.link>
+            </span>
+            <.link :if={group.count > length(group.named)} navigate={paused_list_path(group.kind)}>
+              {gettext("and %{count} more", count: group.count - length(group.named))}
+            </.link>
+          </li>
+        </ul>
+        <p :if={@elsewhere > 0}>
+          {ngettext(
+            "1 of them is in another site environment.",
+            "%{count} of them are in other site environments.",
+            @elsewhere
+          )}
+        </p>
+      </div>
+      <button type="button" class="btn" phx-click="dismiss_move_notice" phx-target={@myself}>
+        {gettext("Dismiss")}
+      </button>
+    </div>
+    """
+  end
+
+  defp paused_kind("webhook"), do: gettext("Webhooks")
+  defp paused_kind(_route), do: gettext("Notification routes")
+
+  defp paused_item_path("webhook", id), do: "/admin/config/webhooks/#{id}/edit"
+  defp paused_item_path(_route, id), do: "/admin/config/notifications/#{id}/edit"
+
+  defp paused_list_path("webhook"), do: "/admin/config/webhooks"
+  defp paused_list_path(_route), do: "/admin/config/notifications"
+
+  @doc """
+  The notice that the database holds values this installation's secret
+  cannot read: the System check's result, with a link to Encrypted data,
+  where they can be forgotten.
+  """
+  attr :result, :map, required: true
+
+  def encrypted_data_notice(assigns) do
+    ~H"""
+    <div class="dashboard-alert" role="alert" data-testid="dashboard-encrypted-data">
+      <.icon name="triangle-alert" />
+      <div>
+        <h2>{gettext("This database was encrypted with another secret")}</h2>
+        <p class="dashboard-encrypted-items">{Enum.join(@result.items, ", ")}</p>
+        <p>{@result.fix}</p>
+      </div>
+      <.link navigate="/admin/config/encrypted-data" class="btn" data-testid="dashboard-encrypted-data-review">
+        {gettext("Review")}
+      </.link>
+    </div>
+    """
   end
 
   # The release's module definitions that aren't applied yet
@@ -160,6 +305,8 @@ defmodule BrandoAdmin.Components.Dashboard do
       </div>
       <.notifications_queue_notice :if={@notifications_queue_missing?} />
       <.release_changes_notice :if={@release_changes} changes={@release_changes} />
+      <.move_notice :if={@move} move={@move} myself={@myself} />
+      <.encrypted_data_notice :if={@encrypted_data} result={@encrypted_data} />
       <div class="dashboard-layout">
         <section class="dashboard-recent" aria-labelledby="dashboard-recent-heading">
           <h2 id="dashboard-recent-heading" class="dashboard-heading">{gettext("Recently updated")}</h2>

@@ -114,6 +114,8 @@ defmodule Brando.Notifications.Routing do
 
   @behaviour Brando.ContentEvents.Subscriber
 
+  @batch_size 500
+
   ## Configuration
 
   @doc "Whether notifications are sent at all."
@@ -864,10 +866,130 @@ defmodule Brando.Notifications.Routing do
       0
   end
 
+  ## A database from another installation
+
+  @doc """
+  Pauses by hand (`:manual`) every active route of the environment at
+  `prefix` (nil for `public`), email routes included, and every one paused
+  for an environment copy, which would resume when the environment goes
+  live, keeping its URL and delivery log, after the database was copied from
+  another installation (`Brando.Crypto.Marker`). In batches. Returns how many, with the id and
+  name of the first `named`.
+  """
+  @spec pause_active(String.t() | nil, term(), non_neg_integer()) :: %{count: non_neg_integer(), named: [map()]}
+  def pause_active(prefix, actor, named) do
+    if tables?(schema(prefix)),
+      do: pause_active_batches(prefix, actor, named, %{count: 0, named: []}),
+      else: %{count: 0, named: []}
+  end
+
+  defp pause_active_batches(prefix, actor, named, acc) do
+    batch =
+      from(r in Route,
+        where: r.active == true or r.paused_reason == :environment_copy,
+        select: r.id,
+        limit: @batch_size
+      )
+
+    {count, paused} =
+      Repo.update_all(
+        from(r in Route, where: r.id in subquery(Ecto.Query.put_query_prefix(batch, schema(prefix))), select: r),
+        [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
+        prefix: schema(prefix)
+      )
+
+    record_lifecycle(prefix, paused, actor, %{"route" => "paused", "reason" => "manual"})
+    names = paused |> Enum.sort_by(& &1.id) |> Enum.map(&%{"id" => &1.id, "name" => &1.name})
+    acc = %{count: acc.count + count, named: Enum.take(acc.named ++ names, named)}
+
+    if count < @batch_size, do: acc, else: pause_active_batches(prefix, actor, named, acc)
+  end
+
+  @doc """
+  How many Slack and Teams routes of the environment at `prefix` (nil for
+  `public`) have a webhook URL this installation's secret cannot decrypt,
+  among those that send or resume by themselves: active ones, and those
+  paused for an environment copy. An email route stores no URL and is never
+  counted. Read in batches.
+  """
+  @spec count_unreadable(String.t() | nil) :: non_neg_integer()
+  def count_unreadable(prefix) do
+    if tables?(schema(prefix)),
+      do: reduce_unreadable(prefix, 0, 0, fn _route, count -> count + 1 end),
+      else: 0
+  end
+
+  @doc """
+  Pauses by hand (`:manual`) the routes `count_unreadable/1` counts, keeping
+  their URLs: one whose URL changed meanwhile, or that was paused or resumed
+  by hand, is left as it is. A route paused for an environment copy then no
+  longer resumes when the environment goes live. Returns how many.
+  """
+  @spec pause_unreadable(String.t() | nil, term()) :: non_neg_integer()
+  def pause_unreadable(prefix, actor) do
+    if tables?(schema(prefix)) do
+      reduce_unreadable(prefix, 0, 0, &count_paused(prefix, &1, &2, actor))
+    else
+      0
+    end
+  end
+
+  defp count_paused(prefix, route, count, actor),
+    do: if(pause_unreadable_one(prefix, route, actor), do: count + 1, else: count)
+
+  @doc """
+  Pauses `route` by hand while its stored URL is still the one `route` holds,
+  which did not decrypt, and it still sends or resumes by itself: what
+  `pause_unreadable/2` does for each. Returns whether it did.
+  """
+  @spec pause_unreadable_one(String.t() | nil, Route.t(), term()) :: boolean()
+  def pause_unreadable_one(prefix, %Route{} = route, actor) do
+    {paused, rows} =
+      Repo.update_all(
+        from(r in Route,
+          where: r.id == ^route.id and r.url_ciphertext == ^route.url_ciphertext,
+          where: r.active == true or r.paused_reason == :environment_copy,
+          select: r
+        ),
+        [set: [active: false, paused_reason: :manual, paused_at: DateTime.utc_now()]],
+        prefix: schema(prefix)
+      )
+
+    record_lifecycle(prefix, rows, actor, %{"route" => "paused", "reason" => "manual"})
+    paused == 1
+  end
+
+  defp reduce_unreadable(prefix, after_id, acc, fun) do
+    batch =
+      Repo.all(
+        from(r in Route,
+          where: r.id > ^after_id and (r.active == true or r.paused_reason == :environment_copy),
+          where: not is_nil(r.url_ciphertext),
+          order_by: r.id,
+          limit: @batch_size,
+          select: struct(r, [:id, :url_ciphertext])
+        ),
+        prefix: schema(prefix)
+      )
+
+    acc = batch |> Enum.filter(&(url(&1) == {:error, :url_unreadable})) |> Enum.reduce(acc, fun)
+
+    case batch do
+      [] -> acc
+      _ -> reduce_unreadable(prefix, batch |> Enum.map(& &1.id) |> Enum.max(), acc, fun)
+    end
+  end
+
+  defp schema(nil), do: "public"
+  defp schema(prefix), do: prefix
+
+  defp in_schema(nil, fun), do: Brando.Tenant.with_public(fun)
+  defp in_schema(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
+
   defp record_lifecycle(_prefix, [], _actor, _details), do: :ok
 
   defp record_lifecycle(prefix, routes, actor, details) do
-    Brando.Tenant.with_prefix(prefix, fn ->
+    in_schema(prefix, fn ->
       Enum.each(routes, fn route ->
         Activity.setting_changed(:updated, route, route.name, actor, fields: ["active"], details: details)
       end)

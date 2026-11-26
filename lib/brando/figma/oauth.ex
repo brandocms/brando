@@ -237,6 +237,80 @@ defmodule Brando.Figma.OAuth do
     end
   end
 
+  ## What another secret wrote
+
+  @doc """
+  Which of `setting`'s groups (its site and environment preloaded) hold a
+  value that does not decrypt with this installation's secret, for
+  `Brando.Crypto.Audit`: `:app`, `:connection` and `:pending`.
+  """
+  @spec unreadable_groups(Setting.t()) :: [:app | :connection | :pending]
+  def unreadable_groups(%Setting{} = setting) do
+    tenant = tenant_of(setting)
+
+    Enum.filter([:app, :connection, :pending], fn group ->
+      group |> group_fields() |> Enum.any?(&unreadable?(setting, tenant, &1))
+    end)
+  end
+
+  # Each group's columns, with the field each is encrypted for
+  defp group_fields(:app), do: [figma_client_id: :client_id, figma_client_secret: :client_secret]
+  defp group_fields(:connection), do: [figma_oauth_access_token: :access_token, figma_oauth_refresh_token: :refresh_token]
+  defp group_fields(:pending), do: [figma_oauth_pending: :pending]
+
+  defp unreadable?(setting, tenant, {column, field}) do
+    case Map.fetch!(setting, column) do
+      ciphertext when is_binary(ciphertext) -> Brando.Crypto.decrypt(ciphertext, context(tenant, field)) == :error
+      nil -> false
+    end
+  end
+
+  @doc """
+  Forgets the groups of `setting` (its site and environment preloaded) that
+  hold a value that does not decrypt here, as `actor` (a user or `:system`),
+  each through the path that removes it today: the app as `delete_app/2`
+  (with the connection made with it, which cannot refresh without it), the
+  connection as `disconnect/2`, a connection being made as its callback
+  does. Under the row's lock, read again: a value saved meanwhile, or a
+  callback that landed, decrypts and stays. The pasted token is
+  `Brando.MCP`'s. Returns the groups forgotten, or `{:error, :busy}` when
+  the row stays locked past `lock_timeout`.
+  """
+  @spec forget_unreadable(Setting.t(), User.t() | :system) :: [:app | :connection | :pending] | {:error, term()}
+  def forget_unreadable(%Setting{} = setting, actor) do
+    tenant = tenant_of(setting)
+
+    locked(tenant, fn
+      nil ->
+        []
+
+      current ->
+        groups = unreadable_groups(%{current | site: setting.site, environment: setting.environment})
+        forget_groups(current, groups, tenant, actor)
+        groups
+    end)
+  end
+
+  defp forget_groups(_setting, [], _tenant, _actor), do: :ok
+
+  defp forget_groups(setting, groups, tenant, actor) do
+    fields =
+      cond do
+        :app in groups -> app_fields() ++ connection_fields()
+        :connection in groups -> connection_fields()
+        true -> []
+      end
+
+    fields = if :pending in groups, do: fields ++ pending_fields(), else: fields
+    setting = upsert(tenant, setting, fields)
+
+    cond do
+      :app in groups -> record(tenant, setting, actor, %{"figma_app" => "removed"})
+      :connection in groups -> record(tenant, setting, actor, %{"figma_oauth" => "disconnected"})
+      true -> :ok
+    end
+  end
+
   defp save_app(setting, tenant, client_id, client_secret, actor) do
     same_app? = setting != nil and match?({:ok, ^client_id, _}, app_credentials(setting, tenant))
     replaced? = setting != nil and not is_nil(setting.figma_client_id)
