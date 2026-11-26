@@ -677,8 +677,9 @@ defmodule Brando.Webhooks do
 
   @doc """
   Pauses by hand (`:manual`) every active webhook of the environment at
-  `prefix` (nil for `public`), keeping its secret and delivery log, after
-  the database was copied from another installation
+  `prefix` (nil for `public`), and every one paused for an environment copy,
+  which would resume when the environment goes live, keeping its secret and
+  delivery log, after the database was copied from another installation
   (`Brando.Crypto.Marker`). In batches. Returns how many, with the id and
   name of the first `named`.
   """
@@ -690,7 +691,12 @@ defmodule Brando.Webhooks do
   end
 
   defp pause_active_batches(prefix, actor, named, acc) do
-    batch = from(w in Webhook, where: w.active == true, select: w.id, limit: @batch_size)
+    batch =
+      from(w in Webhook,
+        where: w.active == true or w.paused_reason == :environment_copy,
+        select: w.id,
+        limit: @batch_size
+      )
 
     {count, paused} =
       Repo.update_all(

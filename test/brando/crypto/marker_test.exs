@@ -128,6 +128,32 @@ defmodule Brando.Crypto.MarkerTest do
       assert row().moved_at
     end
 
+    test "another host's database: those paused for an environment copy are paused by hand, so going live resumes none" do
+      marker!(ours(), "prod.example.com")
+      hook = ForeignSecret.webhook!(nil, true, active: false, paused_reason: :environment_copy)
+      teams = ForeignSecret.route!(nil, :teams, true, active: false, paused_reason: :environment_copy)
+      by_hand = ForeignSecret.webhook!(nil, true, active: false, paused_reason: :manual)
+
+      {:ok, _log} = check()
+
+      assert %Webhook{active: false, paused_reason: :manual} = webhook(nil, hook.id)
+      assert %Route{active: false, paused_reason: :manual} = route(nil, teams.id)
+
+      assert [
+               %{"kind" => "webhook", "count" => 1, "named" => [%{"id" => hook_id}]},
+               %{"kind" => "notification_route", "count" => 1}
+             ] = row().paused
+
+      assert hook_id == hook.id
+      # Paused by hand before: not counted again
+      refute hook_id == by_hand.id
+
+      assert Brando.Webhooks.after_going_live("public") == 0
+      assert Brando.Notifications.Routing.after_going_live("public") == 0
+      refute webhook(nil, hook.id).active
+      refute route(nil, teams.id).active
+    end
+
     test "another host's database with a foreign secret: paused, recorded, and the marker kept as it was" do
       marker!(foreign(), "prod.example.com")
       hook = ForeignSecret.webhook!(nil, false)

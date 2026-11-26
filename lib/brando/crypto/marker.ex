@@ -22,7 +22,8 @@ defmodule Brando.Crypto.Marker do
     * another host wrote it: every active webhook and notification route, in
       `public` and every site environment, is paused by hand (`:manual`, its
       secret kept), so a copy of production's database calls no real
-      endpoint. The row records where the database came from, when, and
+      endpoint; so is every one paused for an environment copy, which would
+      resume when that environment goes live. The row records where the database came from, when, and
       what was paused, for the dashboard's notice, and takes this host. That
       happens once per move: the next start finds the same host.
     * no marker: written now, with this secret and host, when

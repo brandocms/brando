@@ -870,9 +870,10 @@ defmodule Brando.Notifications.Routing do
 
   @doc """
   Pauses by hand (`:manual`) every active route of the environment at
-  `prefix` (nil for `public`), email routes included, keeping its URL and
-  delivery log, after the database was copied from another installation
-  (`Brando.Crypto.Marker`). In batches. Returns how many, with the id and
+  `prefix` (nil for `public`), email routes included, and every one paused
+  for an environment copy, which would resume when the environment goes
+  live, keeping its URL and delivery log, after the database was copied from
+  another installation (`Brando.Crypto.Marker`). In batches. Returns how many, with the id and
   name of the first `named`.
   """
   @spec pause_active(String.t() | nil, term(), non_neg_integer()) :: %{count: non_neg_integer(), named: [map()]}
@@ -883,7 +884,12 @@ defmodule Brando.Notifications.Routing do
   end
 
   defp pause_active_batches(prefix, actor, named, acc) do
-    batch = from(r in Route, where: r.active == true, select: r.id, limit: @batch_size)
+    batch =
+      from(r in Route,
+        where: r.active == true or r.paused_reason == :environment_copy,
+        select: r.id,
+        limit: @batch_size
+      )
 
     {count, paused} =
       Repo.update_all(

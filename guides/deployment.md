@@ -471,7 +471,9 @@ check never stops a boot, and nothing is forgotten by itself.
 developer's machine, staging's on production, development's on production at
 launch. So that the copy calls no real endpoint, every active webhook and
 notification route, email routes included, in `public` and every site
-environment, is paused by hand, with its secret or URL kept. The dashboard
+environment, is paused by hand, with its secret or URL kept; so is every one
+paused for an environment copy, which would otherwise resume when that
+environment goes live. The dashboard
 says where the database came from and which were paused, with links, to
 those who manage webhooks or notification routes, until one of them
 dismisses it. Resume the ones this environment should send, on Webhooks and
