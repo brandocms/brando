@@ -114,7 +114,9 @@ defmodule Brando.Content.StaleBlocks do
   """
   @spec modules_with_leftovers() :: [%{module: Module.t(), count: pos_integer()}]
   def modules_with_leftovers do
-    for(%{module: module} <- modules(), count = count_with_leftovers(module), count > 0, do: %{module: module, count: count})
+    modules()
+    |> Enum.map(&%{module: &1.module, count: count_with_leftovers(&1.module)})
+    |> Enum.filter(&(&1.count > 0))
     |> Enum.sort_by(&(-&1.count))
   end
 
