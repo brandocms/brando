@@ -1,0 +1,1 @@
+- A module of the application that fails to load (a mailer missing an optional dependency, say) no longer takes down the admin dashboard and the scheduled-publishing sweep: Brando skips it where it looks for Blueprints and datasources, and logs a warning naming it once.

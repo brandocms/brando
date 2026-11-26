@@ -144,6 +144,8 @@ defmodule Brando.Blueprint do
   alias Brando.Blueprint.Config
   alias Brando.Exception.BlueprintError
 
+  require Logger
+
   defstruct naming: %{},
             modules: %{},
             attributes: [],
@@ -705,7 +707,12 @@ defmodule Brando.Blueprint do
     preloads.for_schema(schema, opts)
   end
 
-  def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
+  @doc """
+  Whether `module` is a Blueprint, loading it if need be. A module that does
+  not load is not one.
+  """
+  @spec blueprint?(module()) :: boolean()
+  def blueprint?(module), do: Code.ensure_loaded?(module) and function_exported?(module, :__blueprint__, 0)
 
   @doc """
   The Blueprint module `name` names (`"Elixir.MyApp.Projects.Project"` or
@@ -717,7 +724,7 @@ defmodule Brando.Blueprint do
   # compile time, and Brando.Utils would tie them to most of Brando.
   def from_name(name) when is_binary(name) do
     module = String.to_existing_atom(if String.starts_with?(name, "Elixir."), do: name, else: "Elixir." <> name)
-    if Code.ensure_loaded?(module) and blueprint?(module), do: module
+    if blueprint?(module), do: module
   rescue
     ArgumentError -> nil
   end
@@ -757,7 +764,7 @@ defmodule Brando.Blueprint do
     app_modules
     |> Enum.uniq()
     |> load_modules()
-    |> Enum.filter(&__MODULE__.blueprint?/1)
+    |> Enum.filter(&function_exported?(&1, :__blueprint__, 0))
   end
 
   @doc """
@@ -766,15 +773,31 @@ defmodule Brando.Blueprint do
   and scans running side by side queue behind each other. Modules already
   loaded are left out of the batch, which costs about half a millisecond
   even when it has nothing to load.
+
+  A module that fails to load stays in the list, unloaded, and is logged as
+  a warning once per node.
   """
   @spec load_modules([module()]) :: [module()]
   def load_modules(modules) do
-    case Enum.reject(modules, &:erlang.module_loaded/1) do
-      [] -> :ok
-      unloaded -> _ = :code.ensure_modules_loaded(unloaded)
+    with [_ | _] = unloaded <- Enum.reject(modules, &:erlang.module_loaded/1),
+         {:error, failures} <- :code.ensure_modules_loaded(unloaded) do
+      Enum.each(failures, &warn_not_loaded/1)
     end
 
     modules
+  end
+
+  # Once: the dashboard scans on every load, the publishing sweep every minute
+  defp warn_not_loaded({module, reason}) do
+    key = {__MODULE__, :not_loaded, module}
+
+    unless :persistent_term.get(key, false) do
+      :persistent_term.put(key, true)
+
+      Logger.warning(
+        "#{inspect(module)} failed to load (#{inspect(reason)}), so Brando does not count it as a Blueprint or datasource"
+      )
+    end
   end
 
   # Brando's own Blueprints, sorted as its application lists its modules.
