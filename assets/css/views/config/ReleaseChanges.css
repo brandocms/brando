@@ -368,6 +368,13 @@
   .release-confirm-warning [data-icon] { width: 14px; height: 14px; margin-top: 2px; }
   .release-confirm-warning strong { font-weight: 500; }
   .release-confirm-undo { font-size: var(--brando-text-xs); }
+  .release-confirm-drop { display: grid; gap: 8px; margin: 0 0 12px; font-size: var(--brando-text-sm); line-height: 18px; }
+  .release-confirm-drop label { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 8px; align-items: start; color: var(--brando-ink); cursor: pointer; }
+  .release-confirm-drop input { margin: 2px 0 0; }
+  .release-confirm-drop input:disabled + span { color: var(--brando-muted); }
+  .admin-dialog-body .release-confirm-drop-notes { margin: 0; padding: 0 0 0 22px; border: 0; }
+  .admin-dialog-body .release-confirm-drop-notes li { display: block; padding: 0; color: var(--brando-muted); font-size: var(--brando-text-xs); }
+  .admin-dialog-body .release-confirm-drop-notes li + li { border-top: 0; margin-top: 4px; }
 }
 
 

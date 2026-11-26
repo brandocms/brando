@@ -1392,6 +1392,8 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :excluded, :list, required: true
   attr :failures, :integer, required: true
   attr :entries, :map, required: true
+  attr :drop, :map, default: nil, doc: "what the apply could drop (`Release.drops/2`), or nil"
+  attr :drop?, :boolean, default: false
   attr :error, :string, default: nil
 
   def confirm(assigns) do
@@ -1433,6 +1435,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             <span>{gettext("Keeps the version here")}</span>
           </li>
         </ul>
+        <.drop_choice :if={@drop && (@drop.modules != [] or @drop.left != [])} drop={@drop} checked={@drop?} />
         <p :if={@failures > 0} class="release-confirm-warning">
           <.icon name="triangle-alert" />
           <span>
@@ -1467,6 +1470,60 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     """
   end
 
+  attr :drop, :map, required: true
+  attr :checked, :boolean, required: true
+
+  # Dropping, in the apply, what blocks hold in the refs and vars it removes,
+  # and where that doesn't reach
+  defp drop_choice(assigns) do
+    ~H"""
+    <div class="release-confirm-drop" data-testid="release-confirm-drop">
+      <label :if={@drop.modules != []}>
+        <input
+          type="checkbox"
+          checked={@checked}
+          disabled={!!@drop.over_limit}
+          phx-click="toggle_drop"
+          data-testid="release-drop"
+        />
+        <span>
+          {ngettext(
+            "Also drop the values 1 block holds in the removed refs and vars. Revert puts them back.",
+            "Also drop the values %{count} blocks hold in the removed refs and vars. Revert puts them back.",
+            @drop.blocks
+          )}
+        </span>
+      </label>
+      <ul :if={@drop.over_limit || @drop.left != [] || @drop.slotted > 0} class="release-confirm-drop-notes">
+        <li :if={@drop.over_limit} data-testid="release-drop-limit">
+          {gettext(
+            "More than %{max_entries} entries or %{max_blocks} blocks: the apply drops none of them. Resolve the blocks after the apply.",
+            max_entries: Brando.Content.Definition.Renames.limit()[:entries],
+            max_blocks: Brando.Content.Definition.Renames.limit()[:blocks]
+          )}
+        </li>
+        <li :for={left <- @drop.left} data-testid="release-drop-left">
+          {gettext("%{module} keeps its values for Resolve blocks: Revert couldn’t undo this apply (%{reason}).",
+            module: left.name || left.uid,
+            reason:
+              if(left.blocker == left.uid,
+                do: left.reason,
+                else: "#{left.blocker_name || left.blocker}: #{left.reason}"
+              )
+          )}
+        </li>
+        <li :if={@drop.slotted > 0}>
+          {ngettext(
+            "1 block keeps a ref whose slot holds blocks or footnotes, for Resolve blocks.",
+            "%{count} blocks keep a ref whose slot holds blocks or footnotes, for Resolve blocks.",
+            @drop.slotted
+          )}
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
   defp scope_line(updates, new, renders, live) do
     changes =
       case {updates, new} do
@@ -1495,6 +1552,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :changed_since, :list, default: []
   attr :irreversible, :list, default: []
   attr :leftovers, :list, default: [], doc: "the applied modules with blocks that hold leftovers"
+  attr :dropped, :integer, default: 0, doc: "the blocks the apply dropped values from"
 
   def banner(assigns) do
     renders = assigns.renders || %{total: 0, pending: 0, failed: 0, rendered: 0, failures: []}
@@ -1546,6 +1604,13 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         <p :if={!@rendering?}>
           {gettext(
             "Revert restores the versions this apply replaced and re-renders their entries. It stays available until someone keeps the changes or applies the next release."
+          )}
+        </p>
+        <p :if={@dropped > 0} data-testid="release-banner-dropped">
+          {ngettext(
+            "The apply dropped what 1 block held in the refs and vars it removed. Revert puts it back.",
+            "The apply dropped what %{count} blocks held in the refs and vars it removed. Revert puts it back.",
+            @dropped
           )}
         </p>
         <div :if={@leftover_blocks > 0} class="release-banner-leftovers" data-testid="release-banner-leftovers">

@@ -287,13 +287,16 @@ defmodule Brando.Content.Definitions.Release do
   @doc """
   What an apply of `selection` (as for `apply/2`, with its `:replace` and
   `:discard`) would drop if asked to: `Brando.Content.Definition.Drops.plan/2`
-  of the plan the apply makes. Takes `:user`. Returns `{:ok, drops}` or
+  of the plan the apply makes, each module it leaves with its `name` and
+  its blocker's (`blocker_name`). Takes `:user`. Returns `{:ok, drops}` or
   `{:error, message}`.
   """
   def drops(selection, opts) do
     with {:ok, uids} <- selection(selection),
          {:ok, %{} = report} <- opts |> Keyword.merge(select: uids, adopt: false) |> plan() |> on(:off) do
-      {:ok, Brando.Content.Definition.Drops.plan(report.plan)}
+      drops = Brando.Content.Definition.Drops.plan(report.plan)
+      names = names(report.plan.bundle)
+      {:ok, %{drops | left: Enum.map(drops.left, &Map.merge(&1, %{name: names[&1.uid], blocker_name: names[&1.blocker]}))}}
     end
   end
 

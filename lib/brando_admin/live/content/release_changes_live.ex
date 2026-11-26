@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.{DefinitionApply, Definitions}
-  alias Brando.Content.Definition.Plan
+  alias Brando.Content.Definition.{Drops, Plan}
   alias Brando.Content.Definitions.Release
   alias Brando.Content.Definitions.Release.{Batches, Entries, Preview, Proposed, Review, Verify}
   alias Brando.Content.StaleBlocks
@@ -57,6 +57,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
            diff: nil,
            confirm?: false,
            confirm_error: nil,
+           drop: nil,
+           drop?: false,
            preview: blank_preview(),
            tick: nil,
            renders: nil
@@ -193,7 +195,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
 
     case Batches.pending() do
       nil ->
-        socket = assign(socket, batch: nil, batch_status: nil, renders: nil, applied_entries: [])
+        socket = assign(socket, batch: nil, batch_status: nil, batch_dropped: 0, renders: nil, applied_entries: [])
 
         # An applied row's selection goes with the banner
         if String.starts_with?(socket.assigns.current || "", "applied:"),
@@ -209,6 +211,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         |> assign(
           batch: batch,
           batch_status: status,
+          batch_dropped: Drops.blocks(batch.batch_id),
           applied_entries: applied_entries
         )
         |> assign_renders(status.renders)
@@ -427,8 +430,20 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     end
   end
 
-  def handle_event("open_confirm", _, socket), do: {:noreply, assign(socket, confirm?: true, confirm_error: nil)}
+  # The values the apply could drop are planned as it would plan them, each
+  # time the dialog opens, and the box starts unticked
+  def handle_event("open_confirm", _, socket) do
+    {:noreply, assign(socket, confirm?: true, confirm_error: nil, drop?: false, drop: drop_plan(socket.assigns))}
+  end
+
   def handle_event("close_confirm", _, socket), do: {:noreply, assign(socket, :confirm?, false)}
+
+  def handle_event("toggle_drop", _, socket) do
+    case socket.assigns.drop do
+      %{modules: [_ | _], over_limit: nil} -> {:noreply, update(socket, :drop?, &(!&1))}
+      _ -> {:noreply, socket}
+    end
+  end
 
   def handle_event("apply", _, socket) do
     user = socket.assigns.current_user
@@ -439,7 +454,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
          {:ok, applied} <- apply_rows(rows, socket.assigns, user) do
       {:noreply,
        socket
-       |> assign(confirm?: false, selected: nil, choices: %{}, replace: MapSet.new())
+       |> assign(confirm?: false, selected: nil, choices: %{}, replace: MapSet.new(), drop: nil, drop?: false)
        |> put_flash(:notice, applied_text(applied, keep_here))
        |> load()}
     else
@@ -588,8 +603,31 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp apply_rows([], _assigns, _user), do: {:ok, nil}
 
   defp apply_rows(rows, assigns, user) do
-    uids = Enum.map(rows, & &1.uid)
+    drop = if assigns.drop? and assigns.drop, do: assigns.drop.digest
 
+    Release.apply(
+      Enum.map(rows, & &1.uid),
+      [user: user.id, renames: Release.renames_digest(assigns.report), wait: false, drop: drop] ++
+        apply_options(rows, assigns)
+    )
+  end
+
+  # What the dialog's apply could drop, when its rows remove refs or vars
+  # blocks hold
+  defp drop_plan(assigns) do
+    {rows, _keep_here, _excluded} = scope(assigns)
+
+    if Enum.any?(rows, fn row -> Enum.any?(row.items, &match?(%{removes: %{blocks: blocks}} when blocks > 0, &1)) end) do
+      case Release.drops(Enum.map(rows, & &1.uid), [user: assigns.current_user.id] ++ apply_options(rows, assigns)) do
+        {:ok, drops} -> drops
+        {:error, _reason} -> nil
+      end
+    end
+  end
+
+  # The versions the operator chose for the rows' conflicts and never
+  # applied definitions
+  defp apply_options(rows, assigns) do
     replace =
       for row <- rows,
           assigns.choices[row.uid] == "release" or MapSet.member?(assigns.replace, row.uid),
@@ -604,29 +642,30 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           item.state == :changed_in_both,
           do: item.uid
 
-    Release.apply(uids,
-      user: user.id,
-      replace: replace,
-      discard: discard,
-      renames: Release.renames_digest(assigns.report),
-      wait: false
-    )
+    [replace: replace, discard: discard]
   end
 
   defp applied_text(nil, keep_here),
     do: ngettext("Kept 1 version here.", "Kept %{count} versions here.", length(keep_here))
 
   defp applied_text(%{result: result}, _keep_here) do
-    applied = ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes))
+    dropped = result.dropped |> Map.values() |> Enum.map(& &1.blocks) |> Enum.sum()
 
-    if Enum.any?(result.renamed, & &1.left?),
-      do:
-        applied <>
-          " " <>
-          gettext(
-            "Renamed refs and vars keep their values under the old names: the module’s row has the command that moves them."
-          ),
-      else: applied
+    [
+      ngettext("Applied 1 module change.", "Applied %{count} module changes.", length(result.changes)),
+      Enum.any?(result.renamed, & &1.left?) &&
+        gettext(
+          "Renamed refs and vars keep their values under the old names: the module’s row has the command that moves them."
+        ),
+      dropped > 0 &&
+        ngettext(
+          "Dropped what 1 block held in the removed refs and vars.",
+          "Dropped what %{count} blocks held in the removed refs and vars.",
+          dropped
+        )
+    ]
+    |> Enum.filter(& &1)
+    |> Enum.join(" ")
   end
 
   defp reverted_text(%{reverted: reverted, conflicts: conflicts, irreversible: irreversible} = result) do
@@ -653,8 +692,45 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
           blocks
         )
     ]
+    |> Enum.concat(dropped_text(result[:dropped]))
     |> Enum.filter(& &1)
     |> Enum.join(" ")
+  end
+
+  # What became of the values the apply dropped: put back, not put back and
+  # why, and those of modules the revert left
+  defp dropped_text(nil), do: []
+
+  defp dropped_text(%{"values" => values, "blocks" => blocks, "skipped" => skipped, "left" => left}) do
+    reasons =
+      for {reason, count} <- Enum.sort(skipped) do
+        case reason do
+          "block_gone" -> ngettext("1 block is gone", "%{count} blocks are gone", count)
+          "other_module" -> ngettext("1 block is now another module’s", "%{count} blocks are now another module’s", count)
+          "filled" -> ngettext("1 was filled in since", "%{count} were filled in since", count)
+          _ -> ngettext("1 could not be written", "%{count} could not be written", count)
+        end
+      end
+
+    [
+      values > 0 &&
+        ngettext("Put back 1 dropped value.", "Put back %{count} dropped values in %{blocks} blocks.", values,
+          blocks: blocks
+        ),
+      reasons != [] &&
+        ngettext(
+          "1 dropped value did not go back: %{reasons}.",
+          "%{count} dropped values did not go back: %{reasons}.",
+          skipped |> Map.values() |> Enum.sum(),
+          reasons: Enum.join(reasons, ", ")
+        ),
+      left > 0 &&
+        ngettext(
+          "1 block keeps its dropped values with the apply’s record: its module was left as it is.",
+          "%{count} blocks keep their dropped values with the apply’s record: their modules were left as they are.",
+          left
+        )
+    ]
   end
 
   defp error_text(:forbidden), do: gettext("You do not have permission for this action.")
@@ -814,6 +890,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             changed_since={@batch_status.changed_since}
             irreversible={@batch_status.irreversible}
             leftovers={elem(split_leftovers(assigns), 0)}
+            dropped={@batch_dropped}
           />
           <RC.summary
             report={@report}
@@ -853,6 +930,8 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
             excluded={elem(scope(assigns), 2)}
             failures={open_failures(assigns, elem(scope(assigns), 0))}
             entries={confirm_entries(assigns)}
+            drop={@drop}
+            drop?={@drop?}
             error={@confirm_error}
           />
           <RC.block_diff :if={@diff} diff={@diff} />
