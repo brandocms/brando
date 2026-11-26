@@ -281,6 +281,8 @@ defmodule Brando.Users.TwoFactorTest do
         end)
 
       assert log =~ "cannot be decrypted"
+      # Names the command that resets it on the server
+      assert log =~ ~s|eval 'Brando.Release.reset_two_factor("<email>")'|
       refute Enum.any?(actions(user), &(&1 == :login_failed))
       # A recovery code still works
       assert {:ok, :recovery_code} = TwoFactor.verify(user, recovery)
@@ -310,6 +312,17 @@ defmodule Brando.Users.TwoFactorTest do
                Repo.all(from e in SecurityEvent, where: e.user_id == ^user.id and e.action == :two_factor_reset)
 
       assert actor_id == admin.id
+    end
+
+    test "by the system, for whoever runs the server, also for the only administrator" do
+      admin = user(role: :superuser)
+      enable(admin)
+
+      assert {:ok, _user} = TwoFactor.reset(admin.id, :system)
+      refute TwoFactor.enabled?(admin)
+
+      assert [%{actor_id: nil}] =
+               Repo.all(from e in SecurityEvent, where: e.user_id == ^admin.id and e.action == :two_factor_reset)
     end
 
     test "is for superusers, and not for your own account" do
