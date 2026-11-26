@@ -36,6 +36,10 @@ defmodule Brando.Content.Definition.Plan do
   or a definition applied already, leaves to a resolve, each with `ok?`:
   whether `resolve --map` would move them.
 
+  `unrevertible`, for a module update: why a revert of the apply couldn't
+  apply the definition here again over the files' version, the day it is
+  applied (the reverse needs a migration), or nil when it could.
+
   `kind` is `"module"`, `"table_template"`, `"palette"` or `"container"`.
   """
   alias Brando.Tenant
@@ -180,8 +184,12 @@ defmodule Brando.Content.Definition.Plan do
     Map.get(item, :remaps, []) ++ left
   end
 
-  # The removed keys blocks hold that no rename accounts for
-  defp dropped(item) do
+  @doc """
+  The keys an update removes that blocks hold and no rename the file
+  declares has as its source: what the plan's resolve line drops, and what
+  an apply drops when asked to (`Brando.Content.Definition.Drops`).
+  """
+  def dropped(item) do
     mapped = MapSet.new(remaps(item), &{&1.kind, &1.from})
     for held <- held(item), not MapSet.member?(mapped, held), do: held
   end

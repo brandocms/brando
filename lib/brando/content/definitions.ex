@@ -180,6 +180,11 @@ defmodule Brando.Content.Definitions do
   value of, whether the apply moved the values or left them for the resolve
   command (`left?`, over its limit: `Brando.Content.Definition.Renames`),
   with the line that says so (`Brando.Content.Definition.Plan.renamed_text/1`).
+
+  `drop:` the `digest` of `Brando.Content.Definition.Drops.plan/2` a review
+  saw: the apply also drops the values blocks hold in the refs and vars it
+  removes, and keeps them under `:batch_id` for a revert. The result's
+  `dropped` counts them by module uid.
   """
   def apply(plan, actor, opts \\ []), do: Brando.Content.Definition.Importer.apply(plan, actor, opts)
 

@@ -17,7 +17,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   import Ecto.Query, only: [from: 2]
 
-  alias Brando.Content.Definition.{Baselines, Importer, Model, Plan, References, Snapshot}
+  alias Brando.Content.Definition.{Baselines, Drops, Importer, Model, Plan, References, Snapshot}
   alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions, StaleBlocks}
   alias Brando.Content.Definitions.Release
   alias Brando.Repo
@@ -51,19 +51,24 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   @doc """
   Inserts the batch of an apply, in its transaction, and confirms the apply
-  before it that was still waiting (`confirmed_how: :next_apply`). `items`
-  are what it changed.
+  before it that was still waiting (`confirmed_how: :next_apply`), which
+  can't be reverted any more: the values it dropped go. `items` are what it
+  changed.
   """
   def insert!(attrs, user_id) do
     now = DateTime.utc_now()
 
     if attrs.source == :release do
-      Repo.update_all(
-        from(b in DefinitionBatch,
-          where: b.source == :release and is_nil(b.confirmed_at) and is_nil(b.reverted_at)
-        ),
-        set: [confirmed_at: now, confirmed_by_id: user_id, confirmed_how: :next_apply]
-      )
+      {_count, confirmed} =
+        Repo.update_all(
+          from(b in DefinitionBatch,
+            where: b.source == :release and is_nil(b.confirmed_at) and is_nil(b.reverted_at),
+            select: b.batch_id
+          ),
+          set: [confirmed_at: now, confirmed_by_id: user_id, confirmed_how: :next_apply]
+        )
+
+      Drops.discard!(confirmed)
     end
 
     %DefinitionBatch{}
@@ -72,18 +77,25 @@ defmodule Brando.Content.Definitions.Release.Batches do
   end
 
   @doc """
-  Keeps `batch`: it can't be reverted any more. Takes someone who may apply
-  release definitions (`Release.authorize/1`). Returns `{:ok, batch}` or
-  `{:error, reason}`.
+  Keeps `batch`: it can't be reverted any more, and the values it dropped
+  go with the settlement. Takes someone who may apply release definitions
+  (`Release.authorize/1`). Returns `{:ok, batch}` or `{:error, reason}`.
   """
   def keep(%DefinitionBatch{} = batch, user) do
     with :ok <- Release.authorize(user),
          :ok <- open(batch),
-         :ok <- settle(batch, confirmed_at: DateTime.utc_now(), confirmed_by_id: user_id(user), confirmed_how: :kept) do
+         {:ok, :ok} <- Repo.transaction(fn -> settle_kept!(batch, user) end) do
       batch = get(batch.batch_id)
       Brando.Activity.setting_changed(:updated, batch, title(batch), user, details: %{"kept" => true})
       broadcast()
       {:ok, batch}
+    end
+  end
+
+  defp settle_kept!(batch, user) do
+    case settle(batch, confirmed_at: DateTime.utc_now(), confirmed_by_id: user_id(user), confirmed_how: :kept) do
+      :ok -> Drops.discard!([batch.batch_id])
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
@@ -226,9 +238,12 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   @doc """
   Reverts `batch`: applies again the definitions it replaced, except those
-  edited here since, and records the revert as a batch of its own. Returns
-  `{:ok, %{batch: revert_batch, reverted: [item], conflicts: [item], created:
-  [uid], run: run_id}}` or `{:error, reason}`. The renders it queues are
+  edited here since, puts back the values it dropped in the blocks of the
+  modules it restores (`Drops.restore!/4`), and records the revert as a
+  batch of its own. Returns `{:ok, %{batch: revert_batch, reverted: [item],
+  conflicts: [item], created: [uid], dropped: nil | counts, run: run_id}}`
+  or `{:error, reason}`; `dropped` is what became of the dropped values,
+  with string keys as the revert's batch records it. The renders it queues are
   followed with `Brando.Content.Definitions.refresh_status/1`.
   """
   def revert(%DefinitionBatch{} = batch, user) do
@@ -272,6 +287,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
        irreversible: preview.irreversible,
        created: preview.created,
        leftovers: leftovers(batch, preview),
+       dropped: revert_batch.definitions["dropped"],
        run: run
      }}
   end
@@ -315,17 +331,27 @@ defmodule Brando.Content.Definitions.Release.Batches do
       {:error, reason} -> Repo.rollback(reason)
     end
 
+    # Settled first: a Keep that won has deleted the values, and this rolls back
+    restored = for %{kind: "module", uid: uid} <- changes, do: uid
+    dropped = Drops.restore!(batch.batch_id, restored, person(user), release: batch.release)
+    items = Enum.map(changes, &%{"uid" => &1.uid, "kind" => &1.kind, "action" => "reverted"})
+
     insert!(
       %{
         batch_id: revert_batch_id,
         source: :revert,
         release: batch.release,
         reverts_batch_id: batch.batch_id,
-        definitions: %{"items" => Enum.map(changes, &%{"uid" => &1.uid, "kind" => &1.kind, "action" => "reverted"})}
+        definitions: if(dropped?(dropped), do: %{"items" => items, "dropped" => dropped}, else: %{"items" => items})
       },
       user_id(user)
     )
   end
+
+  defp dropped?(%{values: values, skipped: skipped, left: left}), do: values + Enum.sum(Map.values(skipped)) + left > 0
+
+  defp person(id) when is_integer(id), do: Repo.get(Brando.Users.User, id)
+  defp person(user), do: user
 
   # The blocks of a reverted module keep the refs and vars the apply added
   # (a sync adds, never removes), so they stay on an older version until

@@ -246,6 +246,10 @@ defmodule Brando.Content.Definitions.Release do
   `renames:` is the `renames_digest/1` of the report the operator reviewed:
   the apply is refused when the renames the release declares changed since,
   as the values they move are part of what was reviewed.
+  `drop:` is the `digest` of `drops/2` the operator reviewed: the apply
+  also drops the values blocks hold in the refs and vars it removes, as
+  `Brando.Content.Definition.Drops` says, and is refused when that changed
+  since. Without it nothing is dropped.
   `:on_applied` is called with `%{report: report, result: result}` once the
   definitions are committed, before the wait.
 
@@ -263,7 +267,7 @@ defmodule Brando.Content.Definitions.Release do
          :ok <- reviewed(report, opts[:renames]),
          {:ok, actor, _plan_opts} <- actor(opts),
          {:ok, user} <- user(opts[:user]),
-         {{:ok, result}, run} <- track(report, actor, user) do
+         {{:ok, result}, run} <- track(report, actor, user, opts[:drop]) do
       wait? = Keyword.get(opts, :wait, true)
       if on_applied = opts[:on_applied], do: on_applied.(%{report: report, result: result})
 
@@ -280,6 +284,19 @@ defmodule Brando.Content.Definitions.Release do
     end
   end
 
+  @doc """
+  What an apply of `selection` (as for `apply/2`, with its `:replace` and
+  `:discard`) would drop if asked to: `Brando.Content.Definition.Drops.plan/2`
+  of the plan the apply makes. Takes `:user`. Returns `{:ok, drops}` or
+  `{:error, message}`.
+  """
+  def drops(selection, opts) do
+    with {:ok, uids} <- selection(selection),
+         {:ok, %{} = report} <- opts |> Keyword.merge(select: uids, adopt: false) |> plan() |> on(:off) do
+      {:ok, Brando.Content.Definition.Drops.plan(report.plan)}
+    end
+  end
+
   @doc "What a review of `report` saw of the renames the release declares (`apply/2`'s `renames:`)."
   def renames_digest(report), do: Value.digest(report.plan.bundle["renames"] || %{})
 
@@ -293,7 +310,7 @@ defmodule Brando.Content.Definitions.Release do
 
   # The apply, its rows and its batch in one transaction; the batch confirms
   # the apply before it, and Activity records it as the person's
-  defp track(report, actor, user) do
+  defp track(report, actor, user, drop) do
     batch_id = Ecto.UUID.generate()
 
     Definitions.track_refresh(fn ->
@@ -302,6 +319,7 @@ defmodule Brando.Content.Definitions.Release do
           source: :release,
           release: report.version,
           batch_id: batch_id,
+          drop: drop,
           in_transaction: fn plan, changes -> record_batch!(report, plan, changes, batch_id, user) end
         )
 
