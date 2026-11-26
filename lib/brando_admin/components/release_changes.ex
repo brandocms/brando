@@ -1435,7 +1435,11 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             <span>{gettext("Keeps the version here")}</span>
           </li>
         </ul>
-        <.drop_choice :if={@drop && (@drop.modules != [] or @drop.left != [])} drop={@drop} checked={@drop?} />
+        <.drop_choice
+          :if={@drop && (@drop.modules != [] or @drop.left != [] or @drop.slotted > 0)}
+          drop={@drop}
+          checked={@drop?}
+        />
         <p :if={@failures > 0} class="release-confirm-warning">
           <.icon name="triangle-alert" />
           <span>
@@ -1522,7 +1526,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
               )
           )}
         </li>
-        <li :if={@drop.slotted > 0}>
+        <li :if={@drop.slotted > 0} data-testid="release-drop-slotted">
           {ngettext(
             "1 block keeps a ref whose slot holds blocks or footnotes, for Resolve blocks.",
             "%{count} blocks keep a ref whose slot holds blocks or footnotes, for Resolve blocks.",

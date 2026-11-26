@@ -493,6 +493,42 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
       assert has_element?(view, ~s([data-testid=release-drop-keys][data-uid="#{c.case_module.uid}"] code), "wide")
     end
 
+    test "a removed ref whose slot holds footnotes says why it stays", %{conn: conn} = c do
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: c.case_module.id,
+          creator_id: c.user.id
+        })
+
+      Repo.insert!(%Brando.Content.Ref{
+        block_id: block.id,
+        name: "cover",
+        uid: Brando.Utils.generate_uid(),
+        data: %Brando.Villain.Blocks.PictureBlock{type: "picture", data: %Brando.Villain.Blocks.PictureBlock.Data{}}
+      })
+
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :slot,
+        slot_kind: :footnote,
+        slot_name: "cover",
+        parent_id: block.id
+      })
+
+      exs = Path.join(c.path, "content/case.exs")
+      source = File.read!(exs)
+      without = Regex.replace(~r/\n    ref "cover", "picture" do\n.*?\n    end\n/s, source, "\n")
+      assert without != source
+      File.write!(exs, without)
+
+      {:ok, view, _html} = live(conn, @path)
+      view |> element("[data-testid=release-apply]") |> render_click()
+      assert has_element?(view, "[data-testid=release-drop-slotted]")
+      refute has_element?(view, "[data-testid=release-drop]")
+    end
+
     test "over the limit, the box is disabled with the reason", %{conn: conn} = c do
       now = NaiveDateTime.utc_now(:second)
 
