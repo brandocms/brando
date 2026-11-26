@@ -18,6 +18,9 @@ defmodule Brando.Blueprint.UnloadableModuleTest do
   setup %{tmp_dir: tmp_dir, test: test} do
     # A fresh name per test: a module is warned about once per node
     broken = Module.concat(__MODULE__, "Broken#{System.unique_integer([:positive])}")
+    attempts = :counters.new(1, [])
+    :persistent_term.put(broken, attempts)
+    on_exit(fn -> :persistent_term.erase(broken) end)
     write_unloadable_module(broken, tmp_dir)
 
     :ok =
@@ -39,17 +42,30 @@ defmodule Brando.Blueprint.UnloadableModuleTest do
     Logger.configure(level: :warning)
     on_exit(fn -> Logger.configure(level: previous) end)
 
-    %{broken: broken, test: test}
+    %{broken: broken, attempts: attempts, test: test}
   end
 
   # A beam on the code path whose `-on_load` function refuses, so loading it
-  # fails each time it is tried
+  # fails each time it is tried. It counts the tries in the counter stored
+  # under the module's name.
   defp write_unloadable_module(module, dir) do
     forms = [
       {:attribute, 1, :module, module},
       {:attribute, 1, :export, []},
       {:attribute, 1, :on_load, {:refuse, 0}},
-      {:function, 1, :refuse, 0, [{:clause, 1, [], [], [{:atom, 1, :refused}]}]}
+      {:function, 1, :refuse, 0,
+       [
+         {:clause, 1, [], [],
+          [
+            {:call, 1, {:remote, 1, {:atom, 1, :counters}, {:atom, 1, :add}},
+             [
+               {:call, 1, {:remote, 1, {:atom, 1, :persistent_term}, {:atom, 1, :get}}, [{:atom, 1, module}]},
+               {:integer, 1, 1},
+               {:integer, 1, 1}
+             ]},
+            {:atom, 1, :refused}
+          ]}
+       ]}
     ]
 
     {:ok, ^module, binary} = :compile.forms(forms, [:binary])
@@ -75,6 +91,16 @@ defmodule Brando.Blueprint.UnloadableModuleTest do
       end)
 
     assert [_] = Regex.scan(~r/\[warning\].*#{inspect(broken)}/, log)
+  end
+
+  # A mailer's `@on_load` logs its own error on every try, and the scans run on
+  # every dashboard load and every minute
+  test "a scan tries to load it once", %{attempts: attempts} do
+    Brando.Blueprint.list_blueprints()
+    assert :counters.get(attempts, 1) == 1
+
+    Brando.Datasource.Registry.list_modules()
+    assert :counters.get(attempts, 1) == 2
   end
 
   test "the datasource scan skips it", %{broken: broken} do

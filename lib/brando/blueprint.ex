@@ -764,7 +764,7 @@ defmodule Brando.Blueprint do
     app_modules
     |> Enum.uniq()
     |> load_modules()
-    |> Enum.filter(&__MODULE__.blueprint?/1)
+    |> Enum.filter(&function_exported?(&1, :__blueprint__, 0))
   end
 
   @doc """
