@@ -53,7 +53,7 @@ defmodule Brando.Datasource.Registry do
     {:ok,
      modules
      |> Brando.Blueprint.load_modules()
-     |> Enum.filter(&datasource?/1)
+     |> Enum.filter(&function_exported?(&1, :__datasource__, 0))
      |> Enum.map(&to_string/1)}
   end
 
@@ -77,7 +77,7 @@ defmodule Brando.Datasource.Registry do
   """
   @spec datasource?(module() | {module(), atom(), atom()}) :: boolean()
   def datasource?({schema, _, _}), do: datasource?(schema)
-  def datasource?(schema), do: {:__datasource__, 0} in schema.__info__(:functions)
+  def datasource?(schema), do: Code.ensure_loaded?(schema) and function_exported?(schema, :__datasource__, 0)
 
   @doc """
   Returns datasource editor metadata for `type` and `query`.

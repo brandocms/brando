@@ -1392,6 +1392,8 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :excluded, :list, required: true
   attr :failures, :integer, required: true
   attr :entries, :map, required: true
+  attr :drop, :map, default: nil, doc: "what the apply could drop (`Release.drops/2`), or nil"
+  attr :drop?, :boolean, default: false
   attr :error, :string, default: nil
 
   def confirm(assigns) do
@@ -1408,6 +1410,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
       class="admin-dialog release-confirm"
       aria-labelledby="release-confirm-title"
       phx-hook="Brando.ReleaseDialog"
+      phx-mounted={JS.ignore_attributes(["open"])}
       data-open={to_string(@open?)}
       data-close="close_confirm"
     >
@@ -1418,7 +1421,7 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         <p>{scope_line(@updates, @new, @renders, @live)}</p>
         <ul>
           <li :for={row <- @rows}>
-            <span>{row_name(row)}{row.children != [] && " + #{length(row.children)}"}</span>
+            <span>{row_name(row)}{if row.children != [], do: " + #{length(row.children)}"}</span>
             <span>
               {cond do
                 row.status == :create -> gettext("New")
@@ -1432,6 +1435,11 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             <span>{gettext("Keeps the version here")}</span>
           </li>
         </ul>
+        <.drop_choice
+          :if={@drop && (@drop.modules != [] or @drop.left != [] or @drop.slotted > 0)}
+          drop={@drop}
+          checked={@drop?}
+        />
         <p :if={@failures > 0} class="release-confirm-warning">
           <.icon name="triangle-alert" />
           <span>
@@ -1466,6 +1474,70 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     """
   end
 
+  attr :drop, :map, required: true
+  attr :checked, :boolean, required: true
+
+  # Dropping, in the apply, what blocks hold in the refs and vars it removes,
+  # and where that doesn't reach
+  defp drop_choice(assigns) do
+    ~H"""
+    <div class="release-confirm-drop" data-testid="release-confirm-drop">
+      <label :if={@drop.modules != []}>
+        <input
+          type="checkbox"
+          checked={@checked}
+          disabled={!!@drop.over_limit}
+          phx-click="toggle_drop"
+          data-testid="release-drop"
+        />
+        <span>
+          {ngettext(
+            "Also drop the values 1 block holds in the removed refs and vars. Revert puts them back.",
+            "Also drop the values %{count} blocks hold in the removed refs and vars. Revert puts them back.",
+            @drop.blocks
+          )}
+        </span>
+      </label>
+      <ul :if={@drop.modules != [] and !@drop.over_limit} class="release-confirm-drop-keys">
+        <li :for={module <- @drop.modules} data-testid="release-drop-keys" data-uid={module.uid}>
+          <span>{module.name || module.uid}</span>
+          <span>
+            <%= for {{kind, key}, i} <- Enum.with_index(module.keys) do %>
+              <code>{key}</code> {kind}{if i < length(module.keys) - 1, do: ", "}
+            <% end %>
+          </span>
+        </li>
+      </ul>
+      <ul :if={@drop.over_limit || @drop.left != [] || @drop.slotted > 0} class="release-confirm-drop-notes">
+        <li :if={@drop.over_limit} data-testid="release-drop-limit">
+          {gettext(
+            "More than %{max_entries} entries or %{max_blocks} blocks: the apply drops none of them. Resolve the blocks after the apply.",
+            max_entries: Brando.Content.Definition.Renames.limit()[:entries],
+            max_blocks: Brando.Content.Definition.Renames.limit()[:blocks]
+          )}
+        </li>
+        <li :for={left <- @drop.left} data-testid="release-drop-left">
+          {gettext("%{module} keeps its values for Resolve blocks: Revert couldn’t undo this apply (%{reason}).",
+            module: left.name || left.uid,
+            reason:
+              if(left.blocker == left.uid,
+                do: left.reason,
+                else: "#{left.blocker_name || left.blocker}: #{left.reason}"
+              )
+          )}
+        </li>
+        <li :if={@drop.slotted > 0} data-testid="release-drop-slotted">
+          {ngettext(
+            "1 block keeps a ref whose slot holds blocks or footnotes, for Resolve blocks.",
+            "%{count} blocks keep a ref whose slot holds blocks or footnotes, for Resolve blocks.",
+            @drop.slotted
+          )}
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
   defp scope_line(updates, new, renders, live) do
     changes =
       case {updates, new} do
@@ -1493,12 +1565,18 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   attr :renders, :any, default: nil
   attr :changed_since, :list, default: []
   attr :irreversible, :list, default: []
+  attr :leftovers, :list, default: [], doc: "the applied modules with blocks that hold leftovers"
+  attr :dropped, :integer, default: 0, doc: "the blocks the apply dropped values from"
 
   def banner(assigns) do
     renders = assigns.renders || %{total: 0, pending: 0, failed: 0, rendered: 0, failures: []}
     items = assigns.batch.definitions["items"] || []
     names = Map.new(items, &{&1["uid"], &1["name"]})
-    assigns = assign(assigns, r: renders, items: items, names: names, rendering?: renders.pending > 0)
+    rendering? = renders.pending > 0
+    leftover_blocks = if rendering?, do: 0, else: Enum.sum_by(assigns.leftovers, & &1.count)
+
+    assigns =
+      assign(assigns, r: renders, items: items, names: names, rendering?: rendering?, leftover_blocks: leftover_blocks)
 
     ~H"""
     <section class={["release-banner", !@rendering? && "is-done"]} role="status" data-testid="release-banner">
@@ -1542,6 +1620,24 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
             "Revert restores the versions this apply replaced and re-renders their entries. It stays available until someone keeps the changes or applies the next release."
           )}
         </p>
+        <p :if={@dropped > 0} data-testid="release-banner-dropped">
+          {ngettext(
+            "The apply dropped what 1 block held in the refs and vars it removed. Revert puts it back.",
+            "The apply dropped what %{count} blocks held in the refs and vars it removed. Revert puts it back.",
+            @dropped
+          )}
+        </p>
+        <div :if={@leftover_blocks > 0} class="release-banner-leftovers" data-testid="release-banner-leftovers">
+          <.icon name="info" />
+          <span>
+            <strong>{ngettext(
+              "1 block still holds values the applied modules no longer define.",
+              "%{count} blocks still hold values the applied modules no longer define.",
+              @leftover_blocks
+            )}</strong>
+            {gettext("Resolve them to drop the values or move them onto refs and vars the modules define now.")}
+          </span>
+        </div>
         <div :for={item <- @irreversible} class="release-banner-conflict" data-testid="release-irreversible">
           <.icon name="triangle-alert" />
           <span>
@@ -1564,6 +1660,14 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         </div>
       </div>
       <div class="release-banner-actions">
+        <.link
+          :if={@leftover_blocks > 0}
+          navigate={resolve_blocks_path(@leftovers)}
+          class="btn"
+          data-testid="release-banner-resolve"
+        >
+          {gettext("Resolve blocks")}
+        </.link>
         <button
           class="btn"
           type="button"
@@ -1600,6 +1704,53 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
     </section>
     """
   end
+
+  ## Leftovers
+
+  attr :leftovers, :list, required: true, doc: "`[%{module: module, count: count}]`"
+
+  @doc "Blocks on this site that hold values their modules no longer define, with the way to resolve them."
+  def leftovers(assigns) do
+    assigns =
+      assign(assigns, blocks: Enum.sum_by(assigns.leftovers, & &1.count), modules: length(assigns.leftovers))
+
+    ~H"""
+    <div class="release-leftovers" data-testid="release-leftovers">
+      <.notice
+        icon="info"
+        headline={
+          if @modules == 1,
+            do:
+              ngettext(
+                "1 block holds values its module no longer defines",
+                "%{count} blocks in one module hold values it no longer defines",
+                @blocks
+              ),
+            else:
+              ngettext(
+                "1 block in %{modules} modules holds values its module no longer defines",
+                "%{count} blocks in %{modules} modules hold values their modules no longer define",
+                @blocks,
+                modules: @modules
+              )
+        }
+      >
+        {gettext(
+          "They keep printing wherever the template still names them. Drop them, or move them onto a ref or var the module defines now."
+        )}
+        <:actions>
+          <.link navigate={resolve_blocks_path(@leftovers)} class="btn btn--sm" data-testid="release-leftovers-resolve">
+            {gettext("Resolve blocks")}
+          </.link>
+        </:actions>
+      </.notice>
+    </div>
+    """
+  end
+
+  # One module's own resolve screen, or the list when several have leftovers
+  defp resolve_blocks_path([%{module: module}]), do: "/admin/config/content/modules/update/#{module.id}/stale-blocks"
+  defp resolve_blocks_path(_leftovers), do: "/admin/config/content/modules/stale-blocks"
 
   defp dependent_revert_note(%{prevents_revert: [_ | _] = uids}, names) do
     gettext("This also prevents reverting %{definitions}.", definitions: Enum.map_join(uids, ", ", &(names[&1] || &1)))
