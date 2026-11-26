@@ -527,7 +527,9 @@ It forgets only what does not decrypt, and prints what it did:
   removes it: a pasted token; the OAuth app (with the connection made with
   it); the OAuth connection; a connection being made. A readable group stays.
 
-Then it writes the marker with this secret and host. Something written
+Then it writes the marker with this secret. A marker from another host keeps
+that host, so a clean-up run before the copy's first start does not hide the
+move: that start still pauses and records it. Something written
 meanwhile (a user who sets two-factor authentication up again, a webhook
 given a new secret, a Figma connection that lands) stays. It is safe to run
 twice or to interrupt: a part that fails is logged, the marker stays as it

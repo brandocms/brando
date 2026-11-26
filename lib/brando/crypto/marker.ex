@@ -120,8 +120,13 @@ defmodule Brando.Crypto.Marker do
   ## Writing
 
   @doc """
-  Writes the marker with this secret and host, keeping a recorded move.
-  Inserts the row when there is none; two nodes doing it at once write one.
+  Writes the marker with this secret, after `Brando.Crypto.Audit.forget/2`.
+  A row there keeps its host, so a database from another host is still
+  paused and recorded as a move at the next serving start, and keeps a move
+  already recorded, except for the key it came with: what this secret
+  cannot read is forgotten, so another secret found later means this
+  installation's changed. Without a row, one is written with this host; two
+  nodes doing it at once write one.
   """
   @spec write() :: :ok
   def write do
@@ -135,7 +140,7 @@ defmodule Brando.Crypto.Marker do
         inserted_at: now,
         updated_at: now
       },
-      on_conflict: {:replace, [:value, :host, :updated_at]},
+      on_conflict: {:replace, [:value, :moved_key, :updated_at]},
       conflict_target: :id
     )
 

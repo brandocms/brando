@@ -315,6 +315,56 @@ defmodule Brando.Crypto.AuditTest do
       assert Audit.run() == @none
     end
 
+    test "before a serving start, keeps the other host, so that start still pauses and records the move" do
+      Repo.insert!(%Marker{
+        id: 1,
+        value: ForeignSecret.encrypt("brando", "brando.crypto_marker"),
+        host: "prod.example.com"
+      })
+
+      unreadable = ForeignSecret.webhook!(nil, false)
+      active = ForeignSecret.webhook!(nil, true)
+      email = ForeignSecret.route!(nil, :email, true)
+
+      assert {:ok, %{webhooks: 1, marker: :written}} = Audit.forget(:system)
+      assert %{key: :ours, host: :other} = Marker.state()
+      refute webhook(nil, unreadable.id).active
+
+      ExUnit.CaptureLog.capture_log(fn -> :ok = Marker.check_at_start() end)
+
+      refute webhook(nil, active.id).active
+      refute route(nil, email.id).active
+      assert %Marker{moved_from: "prod.example.com", moved_key: "ours"} = Repo.get!(Marker, 1)
+      assert %{key: :ours, host: :same} = Marker.state()
+    end
+
+    test "a marker written where there was none takes this host" do
+      assert {:ok, %{marker: :written}} = Audit.forget(:system)
+      assert %{key: :ours, host: :same} = Marker.state()
+    end
+
+    test "after it, another secret here reads as this installation's secret changing, not as the move" do
+      Repo.insert!(%Marker{
+        id: 1,
+        value: ForeignSecret.encrypt("brando", "brando.crypto_marker"),
+        host: Marker.host(),
+        moved_from: "prod.example.com",
+        moved_at: DateTime.utc_now(),
+        moved_key: "foreign",
+        paused: []
+      })
+
+      assert Brando.Doctor.Checks.EncryptedData.cause(Marker.state()) == {:moved, "prod.example.com"}
+      assert {:ok, %{marker: :written}} = Audit.forget(:system)
+
+      # The secret is mistyped later
+      put_test_env(Brando.Crypto, secret: String.duplicate("a mistyped secret ", 3))
+      assert %{key: :foreign} = Marker.state()
+      assert Brando.Doctor.Checks.EncryptedData.cause(Marker.state()) == :changed_here
+      # The notice of the move stays until it is dismissed
+      assert %{from: "prod.example.com"} = Marker.move_notice()
+    end
+
     test "a schema that fails leaves the marker as it was, and a second run finishes it" do
       prefix = "tenant_crypto-a_production"
       put_test_env(:tenancy_mode, :multi)
