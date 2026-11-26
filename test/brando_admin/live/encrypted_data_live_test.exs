@@ -179,6 +179,15 @@ defmodule BrandoAdmin.EncryptedDataLiveTest do
       refute has_element?(view, "[data-testid=encrypted-data-forget]")
     end
 
+    test "with a foreign marker and nothing unreadable, the dialog gives the cause alone", %{conn: conn} do
+      foreign_marker!(Marker.host())
+      {:ok, view, _html} = live(conn, "/admin/config/encrypted-data")
+
+      button = view |> element("[data-testid=encrypted-data-forget]") |> render()
+      [confirm] = button |> Floki.parse_fragment!() |> Floki.attribute("data-confirm")
+      assert confirm == Brando.Doctor.Checks.EncryptedData.fix(:changed_here)
+    end
+
     test "the superuser who runs it keeps their session", %{conn: conn, current_user: superuser} do
       ForeignSecret.two_factor!(superuser, false)
       {:ok, view, _html} = live(conn, "/admin/config/encrypted-data")

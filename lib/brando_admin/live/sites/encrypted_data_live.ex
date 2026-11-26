@@ -109,7 +109,10 @@ defmodule BrandoAdmin.Sites.EncryptedDataLive do
   defp status_heading(:skipped), do: gettext("Not checked")
   defp status_heading(_status), do: gettext("Everything can be read")
 
-  # The counts and the two causes, as the dialog's text
+  # The counts and the two causes, as the dialog's text: the cause alone
+  # with a foreign marker and nothing unreadable
+  defp confirm_text(%{items: []} = result), do: result.fix
+
   defp confirm_text(result) do
     {first, rest} = result.items |> Enum.join(", ") |> String.split_at(1)
     String.upcase(first) <> rest <> ". " <> result.fix
