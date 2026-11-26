@@ -296,7 +296,9 @@ defmodule Brando.Content.Definitions.Release do
          {:ok, %{} = report} <- opts |> Keyword.merge(select: uids, adopt: false) |> plan() |> on(:off) do
       drops = Brando.Content.Definition.Drops.plan(report.plan)
       names = names(report.plan.bundle)
-      {:ok, %{drops | left: Enum.map(drops.left, &Map.merge(&1, %{name: names[&1.uid], blocker_name: names[&1.blocker]}))}}
+
+      {:ok,
+       %{drops | left: Enum.map(drops.left, &Map.merge(&1, %{name: names[&1.uid], blocker_name: names[&1.blocker]}))}}
     end
   end
 

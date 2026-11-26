@@ -125,7 +125,8 @@ defmodule Brando.Content.DefinitionDropsTest do
     handler = "drops-queries-#{System.unique_integer([:positive])}"
     test = self()
     event = Brando.repo().config()[:telemetry_prefix] ++ [:query]
-    :telemetry.attach(handler, event, fn _event, _measures, meta, _ -> send(test, {:query, meta.query}) end, nil)
+    record = fn _event, _measures, meta, _ -> if self() == test, do: send(test, {:query, meta.query}) end
+    :telemetry.attach(handler, event, record, nil)
 
     try do
       fun.()
@@ -395,7 +396,14 @@ defmodule Brando.Content.DefinitionDropsTest do
           source: Page.Blocks
         })
 
-      Repo.insert!(%Var{block_id: held.id, key: "caption", type: :string, label: %{"en" => "Caption"}, value: "Cell words"})
+      Repo.insert!(%Var{
+        block_id: held.id,
+        key: "caption",
+        type: :string,
+        label: %{"en" => "Caption"},
+        value: "Cell words"
+      })
+
       %{row: row, cell: cell, held: held}
     end
 
@@ -458,7 +466,15 @@ defmodule Brando.Content.DefinitionDropsTest do
       Repo.insert_all(
         Var,
         for %{id: id} <- ids do
-          %{block_id: id, key: "tagline", type: :string, label: %{"en" => "Tagline"}, value: "Words", inserted_at: now, updated_at: now}
+          %{
+            block_id: id,
+            key: "tagline",
+            type: :string,
+            label: %{"en" => "Tagline"},
+            value: "Words",
+            inserted_at: now,
+            updated_at: now
+          }
         end
       )
 
@@ -543,11 +559,12 @@ defmodule Brando.Content.DefinitionDropsTest do
       [row] = stored(batch)
       Repo.insert_all(DefinitionDrop, for(_ <- 1..2000, do: row |> Map.from_struct() |> Map.drop([:__meta__, :id])))
 
-      queries = capture_queries(fn ->
-        {:ok, _} = Release.plan(opts(c))
-        Batches.status(Batches.pending(), c.user)
-        assert Drops.blocks(batch.batch_id) == 1
-      end)
+      queries =
+        capture_queries(fn ->
+          {:ok, _} = Release.plan(opts(c))
+          Batches.status(Batches.pending(), c.user)
+          assert Drops.blocks(batch.batch_id) == 1
+        end)
 
       assert [count] = Enum.filter(queries, &(&1 =~ "content_definition_drops"))
       assert count =~ "count(DISTINCT"

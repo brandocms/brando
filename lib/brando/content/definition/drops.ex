@@ -95,7 +95,11 @@ defmodule Brando.Content.Definition.Drops do
   end
 
   defp digest(modules),
-    do: modules |> Enum.flat_map(fn m -> for {kind, key} <- m.keys, do: [m.uid, to_string(kind), key] end) |> Enum.sort() |> Value.digest()
+    do:
+      modules
+      |> Enum.flat_map(fn m -> for {kind, key} <- m.keys, do: [m.uid, to_string(kind), key] end)
+      |> Enum.sort()
+      |> Value.digest()
 
   # The first module of the tree `uids` whose apply a revert couldn't undo,
   # with why: `%{blocker: uid, reason: reason}`, or nil
@@ -120,7 +124,9 @@ defmodule Brando.Content.Definition.Drops do
   # under the type the module defines it with, but for a ref whose slot
   # holds blocks or footnotes
   defp module_drops(uid, keys, opts) do
-    case Repo.one(from(m in Module, where: m.uid == ^uid and is_nil(m.deleted_at), preload: [:vars, refs: ^Ref.preloads()])) do
+    case Repo.one(
+           from(m in Module, where: m.uid == ^uid and is_nil(m.deleted_at), preload: [:vars, refs: ^Ref.preloads()])
+         ) do
       nil ->
         nil
 
@@ -246,9 +252,7 @@ defmodule Brando.Content.Definition.Drops do
     cond do
       drops.digest != digest ->
         Repo.rollback(
-          gettext(
-            "the refs and vars the apply drops values of changed since you reviewed it; review it again"
-          )
+          gettext("the refs and vars the apply drops values of changed since you reviewed it; review it again")
         )
 
       drops.over_limit ->
@@ -321,7 +325,8 @@ defmodule Brando.Content.Definition.Drops do
   end
 
   defp description(drops, release) do
-    dropped = Enum.map_join(drops.modules, "; ", &gettext("%{keys} in %{module}", keys: keys_text(&1.keys), module: &1.name))
+    dropped =
+      Enum.map_join(drops.modules, "; ", &gettext("%{keys} in %{module}", keys: keys_text(&1.keys), module: &1.name))
 
     if release,
       do: gettext("Before release %{release} dropped %{dropped}", release: release, dropped: dropped),
@@ -393,7 +398,10 @@ defmodule Brando.Content.Definition.Drops do
       )
 
     stored = Repo.all(from(d in DefinitionDrop, where: d.batch_id == ^batch_id and d.module_uid in ^uids, order_by: d.id))
-    modules = Repo.all(from(m in Module, where: m.uid in ^uids and is_nil(m.deleted_at), preload: [:vars, refs: ^Ref.preloads()]))
+
+    modules =
+      Repo.all(from(m in Module, where: m.uid in ^uids and is_nil(m.deleted_at), preload: [:vars, refs: ^Ref.preloads()]))
+
     modules = Map.new(modules, &{&1.uid, &1})
     verdicts = verdicts(stored, modules)
     restorable = for {row, :restore} <- verdicts, do: row

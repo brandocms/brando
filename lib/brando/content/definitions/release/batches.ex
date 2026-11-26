@@ -10,7 +10,9 @@ defmodule Brando.Content.Definitions.Release.Batches do
   plan and apply as a release apply, and re-renders the entries. A
   definition edited here after the apply is left as it is and reported as a
   conflict: the edit is newer than both versions. A definition the apply
-  created stays.
+  created stays. The values an apply dropped from blocks
+  (`Brando.Content.Definition.Drops`) go back with their module's
+  definition, and go for good when the apply is kept or confirmed.
   """
 
   use Gettext, backend: Brando.Gettext

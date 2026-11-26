@@ -176,6 +176,46 @@ test('a release that removes a var is applied, and the module links to Resolve b
   await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/(update\/\d+\/)?stale-blocks$/)
 })
 
+// brandocms/brando#3996: the apply dialog can drop what blocks hold in the
+// removed var, so nothing is left to resolve; Revert puts the value back,
+// and the page reads it again.
+test('a release apply drops the removed var’s values, and Revert puts them back', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/release-drop')).ok()).toBe(true)
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+  const bordered = async () => (await (await page.request.get('/release-drop')).text()).includes('data-border="true"')
+  expect(await bordered()).toBe(true)
+
+  await page.goto('/admin/config/content/modules/release')
+  await syncLV(page)
+
+  // Unticked when the dialog opens; ticked, the apply drops the value
+  const confirm = page.locator('#release-confirm')
+  await page.getByTestId('release-apply').click()
+  await expect(confirm).toHaveCSS('opacity', '1')
+  const drop = confirm.getByTestId('release-drop')
+  await expect(drop).not.toBeChecked()
+  await drop.check()
+  await expect(drop).toBeChecked()
+  await confirm.getByTestId('release-confirm-apply').click()
+  await expect(confirm).toBeHidden()
+
+  const banner = page.getByTestId('release-banner')
+  await expect(banner.getByTestId('release-banner-dropped')).toBeVisible()
+  await expect(banner.getByRole('button', { name: 'Behold' })).toBeEnabled({ timeout: 30000 })
+  // Nothing left to resolve in the applied module
+  const applied = page.getByTestId('release-applied-row').filter({ hasText: 'Enkelt bilde med bildetekst' })
+  await applied.click()
+  await syncLV(page)
+  await expect(page.getByTestId('release-resolve-blocks')).toHaveCount(0)
+  await expect.poll(bordered, { timeout: 30000 }).toBe(false)
+
+  // Revert puts the value back in the block, and the page reads it again
+  await banner.getByRole('button', { name: 'Tilbakestill …' }).click()
+  await page.locator('dialog.admin-dialog').getByRole('button', { name: 'Tilbakestill', exact: true }).click()
+  await expect(banner).toHaveCount(0)
+  await expect.poll(bordered, { timeout: 30000 }).toBe(true)
+})
+
 // brandocms/brando#3844: a release that renames a var a block holds a value
 // for lists the move, and the apply moves the value: nothing is left to
 // resolve, and the page renders the value under the new name.

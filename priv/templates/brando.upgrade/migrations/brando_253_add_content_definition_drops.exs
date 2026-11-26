@@ -22,7 +22,9 @@ defmodule Brando.Repo.Migrations.Brando253AddContentDefinitionDrops do
         add :inserted_at, :utc_datetime_usec, null: false
       end
 
-      create_if_not_exists index(:content_definition_drops, [:batch_id, :module_uid], prefix: prefix)
+      create_if_not_exists index(:content_definition_drops, [:batch_id, :module_uid],
+                             prefix: prefix
+                           )
     end
   end
 

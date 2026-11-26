@@ -489,7 +489,13 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
 
       blocks =
         for _ <- 1..1501,
-            do: %{uid: Brando.Utils.generate_uid(), type: :module, module_id: c.case_module.id, inserted_at: now, updated_at: now}
+            do: %{
+              uid: Brando.Utils.generate_uid(),
+              type: :module,
+              module_id: c.case_module.id,
+              inserted_at: now,
+              updated_at: now
+            }
 
       {_, ids} = Repo.insert_all(Brando.Content.Block, blocks, returning: [:id])
 
