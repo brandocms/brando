@@ -113,7 +113,9 @@ if Code.ensure_loaded?(Igniter) do
     """
     def plan(igniter, project, hosts, existing, tenancy_mode, fresh?) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
-      every_envrc? = Enum.all?(@envrc, fn {flavor, _path} -> created[flavor] || existing.envrc_encryption_secret[flavor] end)
+
+      every_envrc? =
+        Enum.all?(@envrc, fn {flavor, _path} -> created[flavor] || existing.envrc_encryption_secret[flavor] end)
 
       {igniter, encryption_variable?, secret_files} =
         EncryptionSecret.install(igniter, existing.encryption_secret, every_envrc?, fresh?)
