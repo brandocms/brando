@@ -133,6 +133,17 @@ defmodule BrandoAdmin.EncryptedDataLiveTest do
       refute_received :audit_read
     end
 
+    test "goes when its viewer stops being a superuser, without a reload", %{conn: conn, current_user: superuser} do
+      foreign_marker!(Marker.host())
+      ForeignSecret.two_factor!(user(:editor), false)
+      {:ok, view, _html} = live_isolated(conn, DashboardHost, session: %{"user_id" => superuser.id})
+      assert has_element?(view, "[data-testid=dashboard-encrypted-data]")
+
+      Repo.update_all(from(u in Brando.Users.User, where: u.id == ^superuser.id), set: [role: :admin])
+      Phoenix.LiveView.send_update(view.pid, Dashboard, id: "dashboard", current_user: %{superuser | role: :admin})
+      refute has_element?(view, "[data-testid=dashboard-encrypted-data]")
+    end
+
     test "is left out when the audit fails, and the dashboard renders", %{current_user: superuser} do
       ForeignSecret.two_factor!(user(:editor), false)
       # Without a marker the audit decrypts each secret, and an unusable secret raises

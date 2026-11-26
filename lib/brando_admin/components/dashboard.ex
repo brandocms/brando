@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Components.Dashboard do
      |> assign(:notifications_queue_missing?, Brando.Notifications.Routing.queue_warning?(assigns.current_user))
      |> assign(:release_changes, release_changes(assigns.current_user))
      |> assign_move(assigns.current_user)
-     |> assign_new(:encrypted_data, fn -> encrypted_data(assigns.current_user) end)}
+     |> assign_encrypted_data(assigns.current_user)}
   end
 
   # The webhooks and notification routes paused when the database turned out
@@ -38,15 +38,22 @@ defmodule BrandoAdmin.Components.Dashboard do
   end
 
   # What this installation's secret cannot read, for those who may forget it
-  # (`Brando.Crypto.Audit.forget/2`). It decrypts every stored value, so it
-  # runs once when the dashboard mounts, not on each update, and one that
-  # fails leaves the notice out
-  defp encrypted_data(user) do
+  # (`Brando.Crypto.Audit.forget/2`), checked on each update. The audit
+  # decrypts every stored value, so it runs at most once per mount, and one
+  # that fails leaves the notice out
+  defp assign_encrypted_data(socket, user) do
     if Brando.Authorization.Boundary.superuser?(user) do
-      case Brando.Doctor.Checks.EncryptedData.run(nil) do
-        %{status: :error} = result -> result
-        _ -> nil
-      end
+      socket = assign_new(socket, :encrypted_data_result, &encrypted_data/0)
+      assign(socket, :encrypted_data, socket.assigns.encrypted_data_result)
+    else
+      assign(socket, :encrypted_data, nil)
+    end
+  end
+
+  defp encrypted_data do
+    case Brando.Doctor.Checks.EncryptedData.run(nil) do
+      %{status: :error} = result -> result
+      _ -> nil
     end
   rescue
     error ->
