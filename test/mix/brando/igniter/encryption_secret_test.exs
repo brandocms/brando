@@ -54,14 +54,14 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
 
   # What the secrets task writes, in place of the markers.
   defp filled(igniter) do
-    Enum.reduce(@secret_files, igniter, fn path, igniter ->
-      if Igniter.exists?(igniter, path) do
-        Igniter.update_file(igniter, path, fn source ->
-          Rewrite.Source.update(source, :content, &String.replace(&1, ~r/__BRANDO_[A-Z_]+__/, "filled-in"))
-        end)
-      else
-        igniter
-      end
+    @secret_files
+    |> Enum.filter(&Igniter.exists?(igniter, &1))
+    |> Enum.reduce(igniter, &fill(&2, &1))
+  end
+
+  defp fill(igniter, path) do
+    Igniter.update_file(igniter, path, fn source ->
+      Rewrite.Source.update(source, :content, &String.replace(&1, ~r/__BRANDO_[A-Z_]+__/, "filled-in"))
     end)
   end
 
@@ -172,12 +172,7 @@ defmodule Mix.Brando.Igniter.EncryptionSecretTest do
       installed = project() |> install() |> IgniterCase.apply_and_reload()
 
       # The task stopped after .envrc.prod
-      partly =
-        Igniter.update_file(installed, ".envrc.prod", fn source ->
-          Rewrite.Source.update(source, :content, &String.replace(&1, ~r/__BRANDO_[A-Z_]+__/, "filled-in"))
-        end)
-
-      rerun = partly |> IgniterCase.apply_and_reload() |> install()
+      rerun = installed |> fill(".envrc.prod") |> IgniterCase.apply_and_reload() |> install()
 
       assert rerun.issues == []
       assert secrets_task(rerun) == [~w(.envrc.staging config/dev.secret.exs)]

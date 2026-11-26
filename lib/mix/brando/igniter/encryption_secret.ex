@@ -146,10 +146,12 @@ if Code.ensure_loaded?(Igniter) do
       """
 
       Igniter.create_or_update_file(igniter, @dev, "import Config\n\n" <> import, fn source ->
-        Source.update(source, :content, fn content ->
-          if content =~ "dev.secret.exs", do: content, else: String.trim_trailing(content) <> "\n\n" <> import
-        end)
+        Source.update(source, :content, &append_new(&1, import))
       end)
+    end
+
+    defp append_new(content, import) do
+      if content =~ "dev.secret.exs", do: content, else: String.trim_trailing(content) <> "\n\n" <> import
     end
 
     # A block of its own at the end of the file: Igniter's code insertion
