@@ -105,13 +105,13 @@ defmodule Brando.Content.Definition.Drops do
   # with why: `%{blocker: uid, reason: reason}`, or nil
   defp blocker(uids, items) do
     Enum.find_value(uids, fn uid ->
-      case items[uid] do
-        %{kind: "module", unrevertible: reason} when is_binary(reason) -> %{blocker: uid, reason: reason}
-        %{kind: "module"} = item -> if moves?(item), do: %{blocker: uid, reason: moves_reason(item)}
-        _ -> nil
-      end
+      if reason = revert_blocker(items[uid]), do: %{blocker: uid, reason: reason}
     end)
   end
+
+  defp revert_blocker(%{kind: "module", unrevertible: reason}) when is_binary(reason), do: reason
+  defp revert_blocker(%{kind: "module"} = item), do: if(moves?(item), do: moves_reason(item))
+  defp revert_blocker(_item), do: nil
 
   # As the batch records the moves a revert can't undo (`Release`)
   defp moves?(%{moves: %{left?: false, renames: renames}}), do: Enum.any?(renames, &(&1.blocks > 0))
@@ -474,13 +474,7 @@ defmodule Brando.Content.Definition.Drops do
       BlockMoves.write!(entries, person, [before: before, details: details], fn ->
         columns = %{"var" => columns("content_vars"), "ref" => columns("content_refs")}
         restored = Enum.filter(rows, &insert(&1, columns))
-        restored_ids = MapSet.new(restored, & &1.id)
-
-        Enum.each(by_module, fn {uid, module_rows} ->
-          ids = for row <- module_rows, MapSet.member?(restored_ids, row.id), uniq: true, do: row.block_id
-          if ids != [], do: BlockMoves.sync!(modules[uid], ids)
-        end)
-
+        restored |> Enum.group_by(& &1.module_uid, & &1.block_id) |> Enum.each(&sync!(&1, modules))
         restored
       end)
 
@@ -491,6 +485,8 @@ defmodule Brando.Content.Definition.Drops do
 
     restored
   end
+
+  defp sync!({uid, block_ids}, modules), do: BlockMoves.sync!(modules[uid], Enum.uniq(block_ids))
 
   # The row back in its block, in a savepoint: a row that won't go back
   # leaves the rest of the revert as it is
