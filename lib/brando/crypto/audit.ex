@@ -157,7 +157,7 @@ defmodule Brando.Crypto.Audit do
         reduce_settings(empty_figma, fn setting, acc ->
           acc
           |> bump(:figma_token, Brando.MCP.forget_unreadable_figma_token(setting, actor))
-          |> count_groups(Brando.Figma.OAuth.forget_unreadable(setting, actor))
+          |> count_groups(forget_figma_groups(setting, actor))
         end)
       end)
 
@@ -167,6 +167,14 @@ defmodule Brando.Crypto.Audit do
     |> Map.merge(outbound)
     |> Map.merge(figma)
     |> Map.merge(%{failed: Enum.reverse(failed), marker: marker})
+  end
+
+  # A row that stays locked (a Figma callback holding it) fails the part
+  defp forget_figma_groups(setting, actor) do
+    case Brando.Figma.OAuth.forget_unreadable(setting, actor) do
+      groups when is_list(groups) -> groups
+      {:error, reason} -> raise "the MCP settings row ##{setting.id} could not be locked: #{inspect(reason)}"
+    end
   end
 
   defp forget_user(user_id, ciphertext, count, actor, keep_id) do

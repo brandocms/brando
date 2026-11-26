@@ -19,6 +19,7 @@ defmodule Brando.Crypto.AuditTest do
   alias Brando.Users.UserConfig
   alias Brando.Webhooks
   alias Brando.Webhooks.Webhook
+  alias Ecto.Adapters.SQL.Sandbox
 
   @none %{
     users: 0,
@@ -282,6 +283,47 @@ defmodule Brando.Crypto.AuditTest do
 
       assert token == setting.figma_token
       assert {:ok, "value"} = Brando.MCP.figma_token(Brando.MCP.tenant(nil, nil))
+    end
+
+    test "a Figma row that stays locked is a part that failed: the marker waits for a second run" do
+      put_test_env(Brando.Figma, Keyword.put(Brando.config(Brando.Figma) || [], :lock_timeout, 50))
+
+      # A Figma callback holds the row's lock on a connection of its own. The
+      # row is committed, and nothing here writes it, so it can go at the end
+      setting =
+        Sandbox.unboxed_run(Repo, fn ->
+          ForeignSecret.figma_setting!(%{app: false, connection: false})
+        end)
+
+      on_exit(fn -> Sandbox.unboxed_run(Repo, fn -> Repo.delete_all(from(s in Setting, where: s.id == ^setting.id)) end) end)
+      parent = self()
+
+      holder =
+        Task.async(fn ->
+          Sandbox.unboxed_run(Repo, fn ->
+            Repo.transaction(fn ->
+              Repo.one!(from(s in Setting, where: s.id == ^setting.id, lock: "FOR UPDATE"))
+              send(parent, :locked)
+
+              receive do
+                :release -> :ok
+              end
+            end)
+          end)
+        end)
+
+      assert_receive :locked, 5_000
+
+      {result, log} = ExUnit.CaptureLog.with_log(fn -> Audit.forget(:system) end)
+
+      send(holder.pid, :release)
+      Task.await(holder)
+
+      assert {:ok, %{failed: [:figma], marker: :kept, figma_app: 0}} = result
+      assert log =~ "Could not clean up figma"
+      assert Marker.state().key == :none
+      # Left for a second run, which the Doctor still counts
+      assert %{figma_app: 1, figma_connection: 1} = Audit.run()
     end
 
     test "an unreadable pasted token goes; a readable app and connection stay" do

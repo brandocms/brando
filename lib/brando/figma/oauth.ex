@@ -273,24 +273,22 @@ defmodule Brando.Figma.OAuth do
   connection as `disconnect/2`, a connection being made as its callback
   does. Under the row's lock, read again: a value saved meanwhile, or a
   callback that landed, decrypts and stays. The pasted token is
-  `Brando.MCP`'s. Returns the groups forgotten.
+  `Brando.MCP`'s. Returns the groups forgotten, or `{:error, :busy}` when
+  the row stays locked past `lock_timeout`.
   """
-  @spec forget_unreadable(Setting.t(), User.t() | :system) :: [:app | :connection | :pending]
+  @spec forget_unreadable(Setting.t(), User.t() | :system) :: [:app | :connection | :pending] | {:error, term()}
   def forget_unreadable(%Setting{} = setting, actor) do
     tenant = tenant_of(setting)
 
-    result =
-      locked(tenant, fn
-        nil ->
-          []
+    locked(tenant, fn
+      nil ->
+        []
 
-        current ->
-          groups = unreadable_groups(%{current | site: setting.site, environment: setting.environment})
-          forget_groups(current, groups, tenant, actor)
-          groups
-      end)
-
-    if is_list(result), do: result, else: []
+      current ->
+        groups = unreadable_groups(%{current | site: setting.site, environment: setting.environment})
+        forget_groups(current, groups, tenant, actor)
+        groups
+    end)
   end
 
   defp forget_groups(_setting, [], _tenant, _actor), do: :ok
