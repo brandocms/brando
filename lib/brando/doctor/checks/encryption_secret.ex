@@ -28,11 +28,14 @@ defmodule Brando.Doctor.Checks.EncryptionSecret do
   @impl true
   def run(_context), do: evaluate(Brando.config(Brando.Crypto)[:secret], secret_key_base())
 
-  @doc "The result for the configured `secret` (nil when none is) and the endpoint's `secret_key_base`."
+  @doc """
+  The result for the configured `secret` and the endpoint's `secret_key_base`.
+  Like `Brando.Crypto`, `nil` and `false` stand for none.
+  """
   @spec evaluate(term(), term()) :: Brando.Doctor.Result.t()
   def evaluate(secret, secret_key_base) do
     cond do
-      is_nil(secret) and usable?(secret_key_base) ->
+      secret in [nil, false] and usable?(secret_key_base) ->
         warning(dgettext("doctor", "none of its own: encrypted values use the endpoint's secret_key_base"),
           fix:
             dgettext(

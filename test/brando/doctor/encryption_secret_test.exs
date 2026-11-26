@@ -16,6 +16,9 @@ defmodule Brando.Doctor.EncryptionSecretTest do
     assert summary =~ "secret_key_base"
     assert fix =~ "BRANDO_ENCRYPTION_SECRET"
     assert fix =~ "config/dev.secret.exs"
+
+    # Brando.Crypto falls back for false too
+    assert %Result{status: :warning} = EncryptionSecret.evaluate(false, @secret_key_base)
   end
 
   test "a secret two-factor sign-in cannot use is an error" do
