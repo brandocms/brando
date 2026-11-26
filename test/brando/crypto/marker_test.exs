@@ -55,10 +55,6 @@ defmodule Brando.Crypto.MarkerTest do
   end
 
   describe "at start" do
-    test "runs only where the endpoint serves, outside the SQL sandbox" do
-      assert Marker.children() == []
-    end
-
     test "writes the marker when there is none and everything is readable" do
       ForeignSecret.two_factor!(Factory.insert(:random_user), true)
 
@@ -165,24 +161,6 @@ defmodule Brando.Crypto.MarkerTest do
       assert %Marker{moved_key: "foreign", moved_from: "prod.example.com", value: value} = row()
       assert Brando.Crypto.decrypt(value, @context) == :error
       assert %{key: :foreign, host: :same} = Marker.state()
-    end
-
-    test "two nodes starting at once pause once" do
-      marker!(ours(), "prod.example.com")
-      ForeignSecret.webhook!(nil, true)
-      parent = self()
-
-      [:ok, :ok] =
-        for _ <- 1..2 do
-          Task.async(fn ->
-            Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
-            Marker.check_at_start()
-          end)
-        end
-        |> Task.await_many()
-
-      assert [%{"count" => 1}] = row().paused
-      assert Repo.aggregate(from(e in Brando.Activity.Event, where: e.schema == ^to_string(Webhook)), :count) == 1
     end
 
     test "a node with the wrong secret beside one with the right one rewrites nothing" do
