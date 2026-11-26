@@ -440,18 +440,22 @@ defmodule Brando.Users.TwoFactor do
           from(s in Security, where: s.user_id == ^user_id and s.totp_secret == ^ciphertext)
           |> Repo.update_all(set: [totp_secret: nil, totp_enabled_at: nil, totp_last_step: nil])
 
-        if count == 1 do
-          delete_recovery_codes(%{id: user_id})
-
-          case fetch_user(user_id) do
-            {:ok, user} -> end_access(user, actor, opts[:keep_id])
-            {:error, :not_found} -> :forgotten
-          end
-        end
+        if count == 1, do: forget_access(user_id, actor, opts[:keep_id])
       end)
 
     if match?(%{id: _}, result), do: Users.notify_security(result, :two_factor_reset)
     not is_nil(result)
+  end
+
+  # The recovery codes go, and for a user who is still there, what else
+  # reset/3 ends: the user, or :forgotten
+  defp forget_access(user_id, actor, keep_id) do
+    delete_recovery_codes(%{id: user_id})
+
+    case fetch_user(user_id) do
+      {:ok, user} -> end_access(user, actor, keep_id)
+      {:error, :not_found} -> :forgotten
+    end
   end
 
   defp end_access(%{id: user_id} = user, actor, keep_id) do

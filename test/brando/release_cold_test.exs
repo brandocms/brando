@@ -79,7 +79,7 @@ defmodule Brando.ReleaseColdTest do
   end
 
   # A site environment with its own webhooks
-  defp site!() do
+  defp site! do
     put_test_env(:tenancy_mode, :multi)
 
     {:ok, site} =

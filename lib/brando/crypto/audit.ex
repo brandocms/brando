@@ -155,16 +155,7 @@ defmodule Brando.Crypto.Audit do
 
     empty_figma = %{figma_token: 0, figma_app: 0, figma_connection: 0, figma_pending: 0}
 
-    # The pasted tokens, then the OAuth groups: each change commits on its own
-    {figma, failed} =
-      attempt(:figma, empty_figma, failed, fn ->
-        with {:ok, acc} <-
-               reduce_settings(empty_figma, fn setting, acc ->
-                 bump(acc, :figma_token, Brando.MCP.forget_unreadable_figma_token(setting, actor))
-               end) do
-          reduce_settings(acc, &count_groups(&2, forget_figma_groups(&1, actor)))
-        end
-      end)
+    {figma, failed} = attempt(:figma, empty_figma, failed, fn -> forget_figma(empty_figma, actor) end)
 
     marker = if failed == [], do: write_marker(), else: :kept
 
@@ -172,6 +163,14 @@ defmodule Brando.Crypto.Audit do
     |> Map.merge(outbound)
     |> Map.merge(figma)
     |> Map.merge(%{failed: Enum.reverse(failed), marker: marker})
+  end
+
+  # The pasted tokens, then the OAuth groups: each change commits on its own
+  defp forget_figma(empty, actor) do
+    with {:ok, acc} <-
+           reduce_settings(empty, &bump(&2, :figma_token, Brando.MCP.forget_unreadable_figma_token(&1, actor))) do
+      reduce_settings(acc, &count_groups(&2, forget_figma_groups(&1, actor)))
+    end
   end
 
   # A row that stays locked (a Figma callback holding it) fails the part
@@ -223,7 +222,7 @@ defmodule Brando.Crypto.Audit do
   ## Reading in batches
 
   # Each reducer returns `{:ok, acc}`, or `{:error, acc, exception}` when a
-  # step or a read raised, with what the steps before it made of `acc`
+  # row's work or a read raised, with what the rows before it made of `acc`
 
   # Users with a two-factor secret that does not decrypt, by user id
   defp reduce_users(acc, fun), do: reduce_users(0, acc, fun)
