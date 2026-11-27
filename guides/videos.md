@@ -417,6 +417,23 @@ library looks it up. `Brando.Videos.Playback` resolves the source for both
 templates and blocks. Saving a video, or looking it up, renders the entries
 whose blocks show it again, so their stored HTML follows.
 
+The wrapper (`[data-smart-video]`) of a Bunny or Mux video says what the
+server chose and what else there is, for a site script that picks another MP4
+for the size the video ends up at:
+
+| Attribute | Holds | Absent |
+|-----------|-------|--------|
+| `data-quality` | The quality the video resolved to, after the editor's choice and the template's: `auto`, `hls` or `mp4_720` and the like | Never, on a Bunny or Mux video |
+| `data-mp4-resolutions` | The MP4 resolutions the video has, lowest first: `360,480,720,1080` | When the video has no MP4s |
+| `data-mp4-src-template` | The MP4 URL with `{resolution}` where the number goes: `https://vz-abc123.b-cdn.net/{video_guid}/play_{resolution}p.mp4`, `https://stream.mux.com/{playback_id}/{resolution}p.mp4` | When the video has no MP4s |
+
+Replace `{resolution}` with one of `data-mp4-resolutions` to get that MP4's
+URL; any other number may not exist. Upgrade only a video whose
+`data-quality` is `auto`: any other value is a choice an editor or the
+template made, and the source in `data-src` already follows it. Other video
+types carry none of the three. Stored block HTML carries them once it is
+rendered again, as above or with `mix brando.entries.resave`.
+
 #### Playback URLs
 
 Bunny videos stream over HLS, as below, unless their quality picks an MP4:
