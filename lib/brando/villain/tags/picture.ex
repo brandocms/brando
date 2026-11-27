@@ -25,6 +25,8 @@ defmodule Brando.Villain.Tags.Picture do
   def parse, do: TagGrammar.parse(:picture)
 
   @impl true
+  def render([source: source], context), do: render([source: source, args: []], context)
+
   def render([source: source, args: args], context) do
     evaled_source = TemplateView.eval(source, context)
 
