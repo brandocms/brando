@@ -62,6 +62,7 @@
 @import "./components/Form/Input/Image.css";
 @import "./components/Form/Input/StringList.css";
 @import "./components/Form/Input/Video.css";
+@import "./components/Form/Input/PlaybackFlag.css";
 @import "./components/Form/Input/Radios.css";
 @import "./components/Form/Input/Select.css";
 @import "./components/Form/Input/Override.css";

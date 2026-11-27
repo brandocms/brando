@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.PlaybackFlag
   alias BrandoAdmin.Components.Form.Input.VideoQuality
   alias Phoenix.LiveView.JS
 
@@ -320,12 +321,12 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 )}
               </p>
             </div>
-            <div class="video-detail-flags">
-              <.flag_choice field={video_form[:autoplay]} label={gettext("Autoplay")} />
-              <.flag_choice field={video_form[:muted]} label={gettext("Muted")} />
-              <.flag_choice field={video_form[:controls]} label={gettext("Show controls")} />
-              <.flag_choice field={video_form[:loop]} label={gettext("Loop")} />
-              <.flag_choice field={video_form[:preload]} label={gettext("Lazy load")} />
+            <div class="playback-flags">
+              <PlaybackFlag.choice field={video_form[:autoplay]} label={gettext("Autoplay")} />
+              <PlaybackFlag.choice field={video_form[:muted]} label={gettext("Muted")} />
+              <PlaybackFlag.choice field={video_form[:controls]} label={gettext("Show controls")} />
+              <PlaybackFlag.choice field={video_form[:loop]} label={gettext("Loop")} />
+              <PlaybackFlag.choice field={video_form[:preload]} label={gettext("Lazy load")} />
             </div>
             <VideoQuality.select
               field={video_form[:quality]}
@@ -427,34 +428,6 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
     </button>
     """
   end
-
-  attr :field, Phoenix.HTML.FormField, required: true
-  attr :label, :string, required: true
-
-  # A playback flag has three states, not two: unset leaves it to whatever
-  # shows the video (`Brando.HTML.Video` and the template's opts), which a
-  # switch can only show as off — and saving the drawer then stored that off
-  # as an explicit false, which beats the template. A blank radio casts back
-  # to nil.
-  defp flag_choice(assigns) do
-    assigns = assign(assigns, :current, flag_value(assigns.field.value))
-
-    ~H"""
-    <fieldset class="video-detail-flag">
-      <legend>{@label}</legend>
-      <div class="video-detail-flag-options">
-        <label :for={{value, text} <- [{"", gettext("Default")}, {"true", gettext("On")}, {"false", gettext("Off")}]}>
-          <input type="radio" name={@field.name} value={value} checked={@current == value} />
-          <span>{text}</span>
-        </label>
-      </div>
-    </fieldset>
-    """
-  end
-
-  defp flag_value(value) when value in [true, "true"], do: "true"
-  defp flag_value(value) when value in [false, "false"], do: "false"
-  defp flag_value(_), do: ""
 
   # What the presets compare against: "16:9" and " 16 / 9 " select 16/9, and a
   # blank value selects Original.
