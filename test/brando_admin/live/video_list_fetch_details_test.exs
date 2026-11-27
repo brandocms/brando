@@ -84,6 +84,22 @@ defmodule BrandoAdmin.VideoListFetchDetailsTest do
     end)
   end
 
+  # Oban runs inline here, so the run before is started by hand to be waiting
+  test "Fetch details while the lookups before it still wait starts no second run", %{conn: conn} do
+    video = bunny_video("waiting")
+    Req.Test.stub(Bunny, fn _conn -> flunk("Bunny was asked") end)
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos")
+    user = :sys.get_state(view.pid).socket.assigns.current_user
+    BrandoAdmin.Work.start(user, "video-metadata-selected", "Looking up 1 video", total: 1)
+    BrandoAdmin.Work.Registry.sync()
+
+    render_click(view, "fetch_selected_metadata", %{"ids" => Jason.encode!([video.id])})
+    BrandoAdmin.Work.Registry.sync()
+
+    assert %BrandoAdmin.Work{status: :running, total: 1} = BrandoAdmin.Work.get(user, "video-metadata-selected")
+  end
+
   test "Fetch details is refused to a legacy user demoted since the list opened" do
     editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
     video = bunny_video("refused")

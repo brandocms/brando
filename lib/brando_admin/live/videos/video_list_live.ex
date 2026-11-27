@@ -379,7 +379,18 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     end
   end
 
+  # One run at a time: a video still waiting from the run before counts once,
+  # so a second run over it would wait for a step that never comes
   defp look_up_selected(socket, user, ids) do
+    if Work.running?(Work.get(user, @selected_work_key)) do
+      send(self(), {:toast, gettext("The videos are already being looked up")})
+      {:noreply, socket}
+    else
+      start_selected_lookups(socket, user, ids)
+    end
+  end
+
+  defp start_selected_lookups(socket, user, ids) do
     send_update(Content.List, id: AssetListHelpers.listing_id(socket.assigns.schema), action: :clear_selection)
 
     case Videos.list_video_ids_to_look_up(ids) do
