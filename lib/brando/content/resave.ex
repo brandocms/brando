@@ -237,10 +237,18 @@ defmodule Brando.Content.Resave do
   def start_mode(false, false), do: :eval
   def start_mode(true, false), do: :not_started
 
-  # `{:ok, started_here?}` (see "Started by `eval`" in `run/1`)
-  defp start(nil), do: {:ok, false}
+  @doc """
+  Makes sure `app` runs before a task changes data through it: on a running
+  node (`rpc`) it is left as it is, under `eval` it is started as "Started by
+  `eval`" in `run/1` describes, and on a distributed node where it is not
+  started it is left alone with `{:error, message}`. Returns
+  `{:ok, started_here?}`. `Brando.Release.refresh_bunny_videos/0` starts with
+  it too.
+  """
+  @spec start(atom() | nil) :: {:ok, boolean()} | {:error, String.t()}
+  def start(nil), do: {:ok, false}
 
-  defp start(app) do
+  def start(app) do
     case start_mode(Node.alive?(), List.keymember?(Application.started_applications(), app, 0)) do
       :running ->
         {:ok, false}

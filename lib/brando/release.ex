@@ -9,13 +9,23 @@ defmodule Brando.Release do
 
       mix run -e "Brando.Release.forget_unreadable()"
 
-  `eval` runs in a new VM with nothing started. Each function starts the
-  repo and the PubSub server it needs, and not the endpoint or Oban: the
+  `eval` runs in a new VM with nothing started. `forget_unreadable/0` and
+  `reset_two_factor/1` start the repo and the PubSub server they need, and
+  not the endpoint or Oban: the
   encryption secret is read from the configuration, also when it is the
   endpoint's `secret_key_base`. Without the endpoint, the security emails
   are not sent and other nodes' open admin tabs are not told; the sessions
   end all the same. Each prints what it did. See "Copying a database between
   environments" in the deployment guide.
+
+  `refresh_bunny_videos/0` runs best on the serving node, which then tells
+  the open admin tabs and empties its caches:
+
+      bin/my_app rpc "Brando.Release.refresh_bunny_videos()"
+
+  With `eval` it starts the application in its VM as
+  `Brando.Content.Resave.run/1` does, without the web server or Oban's
+  queues: the entries showing a changed video render on the server's queues.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -23,6 +33,8 @@ defmodule Brando.Release do
   alias Brando.Crypto.Audit
   alias Brando.Users.TwoFactor
   alias Brando.Users.User
+  alias Brando.Videos.Uploaders.Bunny
+  alias Brando.Videos.Video
 
   @doc """
   Forgets what this installation's encryption secret cannot read
@@ -62,6 +74,99 @@ defmodule Brando.Release do
           error
       end
     end)
+  end
+
+  @doc """
+  Runs **Fetch details** (`Brando.Videos.Uploaders.Bunny.refresh_renditions/3`),
+  the video library's action for the selected videos, for every ready Bunny
+  video, deleted ones excepted, one request at a time: each gets its
+  renditions and the name of its thumbnail, which changes when a custom
+  thumbnail is set in Bunny. Each video is read just before its request, so
+  a webhook's write meanwhile is kept. With tenancy, in `public` and every
+  environment of every site. A video Bunny does not answer for (an error, a
+  rate limit, a timeout) is counted and the rest go on; nothing is retried,
+  so run it again for those. Only a video that changed is written, as
+  **Fetch details** writes it: the entries showing it render again, and open
+  admin forms showing it are told.
+
+  Returns `%{refreshed: n, unchanged: n, failed: [{schema, id}]}`, the schema
+  `"public"` or an environment's prefix; `{:error, :not_configured}` without
+  Bunny credentials, or `{:error, message}` when the application cannot be
+  started (see `Brando.Content.Resave.run/1`).
+  """
+  @spec refresh_bunny_videos() :: map() | {:error, :not_configured | String.t()}
+  def refresh_bunny_videos do
+    with true <- Bunny.configured?() || {:error, :not_configured},
+         {:ok, _started_here?} <- Brando.Content.Resave.start(Brando.otp_app()) do
+      result =
+        Enum.reduce(Audit.prefixes(), %{refreshed: 0, unchanged: 0, failed: []}, &refresh_bunny_videos_in/2)
+
+      result = %{result | failed: Enum.reverse(result.failed)}
+      IO.puts(describe_bunny(result))
+      result
+    else
+      {:error, :not_configured} = error ->
+        IO.puts("Bunny is not configured: no video was refreshed.")
+        error
+
+      {:error, message} = error ->
+        IO.puts("Nothing was done: " <> message)
+        error
+    end
+  end
+
+  defp refresh_bunny_videos_in(prefix, acc) do
+    in_schema(prefix, fn -> Enum.reduce(bunny_video_ids(), acc, &refresh_bunny_video(&1, &2, prefix)) end)
+  end
+
+  defp in_schema(nil, fun), do: Brando.Tenant.with_public(fun)
+  defp in_schema(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
+
+  defp bunny_video_ids do
+    Brando.Repo.all(from(v in ready_bunny_videos(), select: v.id, order_by: v.id))
+  end
+
+  # A video still encoding has nothing to refresh, and its webhook writes
+  # its details
+  defp ready_bunny_videos do
+    from(v in Video,
+      where: v.type == :bunny and v.status == :ready and is_nil(v.deleted_at),
+      where: not is_nil(fragment("?->'bunny'->>'video_guid'", v.meta))
+    )
+  end
+
+  # Loaded just before its request, so a webhook's write while earlier
+  # videos were looked up is kept
+  defp refresh_bunny_video(id, acc, prefix) do
+    case Brando.Repo.one(from(v in ready_bunny_videos(), where: v.id == ^id)) do
+      nil -> acc
+      video -> count_bunny_refresh(video, Bunny.refresh_renditions(video, :system, retry: false), acc, prefix)
+    end
+  end
+
+  defp count_bunny_refresh(video, {:ok, %Video{meta: meta}}, acc, _prefix) when meta == video.meta,
+    do: %{acc | unchanged: acc.unchanged + 1}
+
+  defp count_bunny_refresh(_video, {:ok, _refreshed}, acc, _prefix), do: %{acc | refreshed: acc.refreshed + 1}
+
+  defp count_bunny_refresh(video, {:error, _reason}, acc, prefix),
+    do: %{acc | failed: [{prefix || "public", video.id} | acc.failed]}
+
+  defp describe_bunny(%{refreshed: refreshed, unchanged: unchanged, failed: failed}) do
+    failed_line =
+      case failed do
+        [] ->
+          []
+
+        failed ->
+          ids = Enum.map_join(failed, ", ", fn {schema, id} -> "##{id} in #{schema}" end)
+          ["  #{length(failed)} failed (see the log): #{ids}. Run it again for them."]
+      end
+
+    Enum.join(
+      ["Refreshed the Bunny videos:", "  #{refreshed} refreshed", "  #{unchanged} unchanged" | failed_line],
+      "\n"
+    )
   end
 
   @descriptions [

@@ -412,8 +412,9 @@ config :brando, Brando.Videos, default_mp4_resolution: 720
 Brando learns whether a video has MP4s from Bunny when it finishes encoding
 or is added from the Bunny library, and keeps it in `meta.bunny`; a Mux
 video's renditions are in `meta.mux`. A video
-stored before Brando kept it streams until **Fetch details** in the video
-library looks it up. `Brando.Videos.Playback` resolves the source for both
+stored before Brando kept it streams until **Fetch thumbnails and titles**
+in the video library, or **Fetch details** for the selected videos, looks it
+up. `Brando.Videos.Playback` resolves the source for both
 templates and blocks. Saving a video, or looking it up, renders the entries
 whose blocks show it again, so their stored HTML follows.
 
@@ -433,6 +434,30 @@ URL; any other number may not exist. Upgrade only a video whose
 template made, and the source in `data-src` already follows it. Other video
 types carry none of the three. Stored block HTML carries them once it is
 rendered again, as above or with `mix brando.entries.resave`.
+
+A Bunny video's poster and its thumbnail in the admin are the thumbnail Bunny
+names in `meta.bunny.thumbnail_url` (`thumbnail.jpg` until a custom thumbnail
+is set). A thumbnail changed in Bunny's dashboard after encoding sends no
+webhook: select the videos in the video library and choose **Fetch details**
+under the selection's actions to pick up its new name. (The header's
+**Fetch thumbnails and titles** button looks up only videos that lack
+something, which a ready Bunny video does not.) To do that for every ready
+Bunny video at once, in every environment with tenancy, run on the server:
+
+```sh
+bin/my_app rpc "Brando.Release.refresh_bunny_videos()"
+```
+
+It asks Bunny once for each video, writes only the ones that changed, and
+prints how many it refreshed, how many were unchanged and which failed. Run it
+again for those.
+
+An entry shows the new name once it renders again: a changed video renders
+the entries showing it, but an entry rendered before Brando used the stored
+name keeps `thumbnail.jpg` in its stored HTML while its video's record was
+already right. `mix brando.entries.resave` (on a server,
+`bin/my_app rpc "Brando.Content.Resave.run()"`) renders every entry again;
+the 0.55 upgrade runs it in [Repair derived data](migrating_from_053.md#4-repair-derived-data).
 
 #### Playback URLs
 
