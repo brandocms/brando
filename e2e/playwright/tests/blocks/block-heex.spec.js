@@ -28,8 +28,9 @@ test.describe('HEEx blocks', () => {
     await expect(editorPreview.locator('.heex-entry-title')).toHaveText('HEEx Test Page')
     await expect(editorPreview.locator('.heex-ref-type')).toHaveText('text')
     await expect(editorPreview.locator('.heex-translation')).toHaveText('Translated')
+    // Lazy by default: the source is for the site's script to set
     await expect(editorPreview.locator('video[data-video]')).toHaveAttribute(
-      'src',
+      'data-src',
       'https://cdn.example/video.mp4'
     )
 
