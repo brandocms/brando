@@ -154,6 +154,43 @@ defmodule Brando.Assets.AssetTopicTest do
       assert subscribers(@staging, id) == []
     end
 
+    # The manager is sticky: it keeps the environment of the page load, which
+    # the page names in its `brando_context` meta and the browser sends along
+    # when it joins a page it navigated to
+    test "a live navigation into another environment loads the page, so the manager follows it", %{
+      conn: conn,
+      current_user: user
+    } do
+      %Page{} = page = Factory.build(:page, creator: nil, creator_id: user.id)
+      page = Tenant.with_prefix(@production, fn -> Brando.Repo.insert!(page) end)
+      path = "/admin/pages/update/#{page.id}"
+
+      conn =
+        conn
+        |> Plug.Conn.put_session("brando_site_key", "assettopic")
+        |> Plug.Conn.put_session("brando_environment_key", "production")
+
+      # The page load names the environment its sticky views run in
+      html = conn |> get("/admin/pages") |> html_response(200)
+
+      assert ["assettopic/production"] =
+               html |> Floki.parse_document!() |> Floki.attribute(~s(meta[name="brando_context"]), "content")
+
+      # A link to a page in production from a page opened in staging, against the session
+      from_staging = navigated_from(conn, "/admin/pages?brando_environment_key=staging", "assettopic/staging")
+      assert {:error, {:redirect, %{to: ^path}}} = live(from_staging, path)
+
+      from_production = navigated_from(conn, "/admin/pages", "assettopic/production")
+      assert {:ok, _form, _html} = live(from_production, path)
+
+      # A link that names staging in its query, as the shared library's do
+      staging_listing = "/admin/pages?brando_environment_key=staging"
+      assert {:error, {:redirect, %{to: ^staging_listing}}} = live(from_production, staging_listing)
+
+      # The first join after a page load is not a navigation
+      assert {:ok, _form, _html} = live(put_connect_params(conn, %{"brando_context" => "assettopic/staging"}), path)
+    end
+
     test "a file's CDN upload is reported in its own environment only" do
       put_test_env(Brando.Files, cdn: %{cdn() | keep_local_copy: true})
       stub_s3()
@@ -195,6 +232,9 @@ defmodule Brando.Assets.AssetTopicTest do
     [ref] = manager |> items() |> Map.keys()
     ref
   end
+
+  defp navigated_from(conn, path, context),
+    do: put_connect_params(conn, %{"_live_referer" => "http://localhost#{path}", "brando_context" => context})
 
   defp deliver_topic(form) do
     {:ok, components} = Phoenix.LiveView.Debug.live_components(form.pid)
