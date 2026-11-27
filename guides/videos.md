@@ -812,9 +812,11 @@ source as the wrapper comes within 300 px of the viewport, and gives every
 wrapper `data-revealed` as it loads: the installed CSS hides
 `[data-smart-video]` until then. It plays an autoplay video only while the
 video is in view. A click on the play button plays or pauses the video, and so
-does a click on a video without controls. The installed CSS lets a click
-through the cover to the video, keeps the play button above the cover, and
-hides both while the video plays.
+does a click on a video without controls. A Bunny or Mux video served as HLS
+plays natively where the browser can; elsewhere `SmartVideo` loads `hls.js`
+for it, so a page without such a video loads none of it. The installed CSS
+lets a click through the cover to the video, keeps the play button above the
+cover, and hides both while the video plays.
 
 `lazy: false` puts the source in the `<video>`'s `src`, so the browser starts
 loading it as it parses the page, before any script runs. Use it for a video
