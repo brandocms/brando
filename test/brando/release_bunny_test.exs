@@ -38,6 +38,9 @@ defmodule Brando.ReleaseBunnyTest do
         [_, _, _, "failing"] ->
           conn |> Conn.put_status(503) |> ReqTest.json(%{"Message" => "Down"})
 
+        [_, _, _, "html"] ->
+          Conn.send_resp(conn, 200, "<html>Proxy</html>")
+
         [_, _, _, guid] ->
           ReqTest.json(conn, %{
             "guid" => guid,
@@ -85,6 +88,22 @@ defmodule Brando.ReleaseBunnyTest do
     capture_io(fn ->
       assert %{refreshed: 0, unchanged: 2, failed: [{"public", ^failing_id}]} = Brando.Release.refresh_bunny_videos()
     end)
+  end
+
+  test "refresh_bunny_videos/0 counts an answer that is not a JSON object as failed and goes on", %{user: user} do
+    html = video("html", user)
+    renamed = video("renamed", user)
+    stub_bunny()
+
+    html_id = html.id
+
+    output =
+      capture_io(fn ->
+        assert %{refreshed: 1, unchanged: 0, failed: [{"public", ^html_id}]} = Brando.Release.refresh_bunny_videos()
+      end)
+
+    assert output =~ "##{html_id} in public"
+    assert Brando.Repo.reload!(renamed).meta["bunny"]["thumbnail_url"] == "thumbnail_2bbb8a75.jpg"
   end
 
   test "refresh_bunny_videos/0 asks Bunny once for a video, without retrying", %{user: user} do

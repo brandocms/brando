@@ -225,6 +225,23 @@ defmodule Brando.Videos.Uploaders.BunnyTest do
       refute_received {%Brando.Videos.Video{}, [:video, :updated]}
     end
 
+    test "Fetch details answers an error for a body that is not a JSON object" do
+      user = Factory.insert(:user)
+
+      video =
+        Factory.insert(:video,
+          creator: user,
+          type: :bunny,
+          status: :ready,
+          meta: %{"bunny" => %{"video_guid" => Ecto.UUID.generate(), "thumbnail_url" => "thumbnail.jpg"}}
+        )
+
+      Req.Test.expect(Bunny, &Plug.Conn.send_resp(&1, 200, "<html>Proxy</html>"))
+
+      assert Brando.Videos.fetch_metadata(video, user) == {:error, :invalid_response}
+      assert Brando.Repo.reload!(video).meta == video.meta
+    end
+
     test "Fetch details leaves Bunny videos alone without Bunny credentials" do
       put_test_env(Bunny, library_id: "133")
       user = Factory.insert(:user)

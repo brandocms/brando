@@ -379,7 +379,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
 
   def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, _user, opts) do
     case fetch_video_details(video, Keyword.take(opts, [:retry])) do
-      {:ok, bunny_video} ->
+      {:ok, bunny_video} when is_map(bunny_video) ->
         put_renditions(
           video,
           %{
@@ -388,6 +388,10 @@ defmodule Brando.Videos.Uploaders.Bunny do
           }
           |> put_thumbnail_name(bunny_video["thumbnailFileName"])
         )
+
+      # A page from a proxy in front of Bunny, say
+      {:ok, _body} ->
+        {:error, :invalid_response}
 
       {:error, %{"Message" => "Not Found"}} ->
         put_renditions(video, %{"has_mp4_fallback" => false})
