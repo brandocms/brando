@@ -1,6 +1,7 @@
 defmodule Brando.HTML.Video do
   use Phoenix.Component
   alias Brando.Captions
+  alias Brando.Videos.Playback
   alias Brando.Videos.Video
   alias Brando.Villain.InertLiquid
 
@@ -375,12 +376,12 @@ defmodule Brando.HTML.Video do
   # script choosing another MP4: the resolved quality, and the MP4s there are
   # and how to build their URLs, left off when there are none
   defp playback_attributes(video, opts) do
-    resolutions = Brando.Videos.Playback.mp4_resolutions(video)
+    resolutions = Playback.mp4_resolutions(video)
 
     [
-      "data-quality": Brando.Videos.Playback.quality(video, Keyword.get(opts, :quality)),
+      "data-quality": Playback.quality(video, Keyword.get(opts, :quality)),
       "data-mp4-resolutions": resolutions != [] && Enum.join(resolutions, ","),
-      "data-mp4-src-template": Brando.Videos.Playback.mp4_src_template(video)
+      "data-mp4-src-template": Playback.mp4_src_template(video)
     ]
   end
 
