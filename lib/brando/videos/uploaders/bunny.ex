@@ -38,6 +38,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.ProviderHoldings
   alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
 
@@ -109,16 +110,19 @@ defmodule Brando.Videos.Uploaders.Bunny do
     configured_library_id = get_config(:library_id)
 
     with true <- to_string(library_id) == to_string(configured_library_id),
-         {:ok, video} <- find_video_by_guid(video_guid) do
-      process_status_update(video, status)
+         {:ok, [_ | _] = holders} <- ProviderHoldings.live_records("bunny.video_guid", video_guid) do
+      ProviderUpdate.in_each(holders, status_update(status, video_guid))
     else
       false ->
         Logger.warning("Bunny webhook library_id mismatch: #{library_id}")
         {:error, :library_mismatch}
 
-      {:error, :not_found} ->
+      {:ok, []} ->
         Logger.debug("Bunny webhook for unknown video: #{video_guid}")
         :ignore
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -269,6 +273,25 @@ defmodule Brando.Videos.Uploaders.Bunny do
     Videos.create_video(params)
   end
 
+  # Bunny's details of a finished video are read once, and every environment
+  # holding it stores the same playback data
+  defp status_update(@status_finished, video_guid) do
+    details =
+      with {:error, reason} = error <- fetch_video_details(video_guid) do
+        Logger.error("Failed to fetch Bunny video details: #{inspect(reason)}")
+        error
+      end
+
+    &finish(&1, details)
+  end
+
+  defp status_update(status, _video_guid), do: &process_status_update(&1, status)
+
+  defp finish(%Videos.Video{status: :errored} = video, _details), do: {:ok, video}
+  defp finish(video, {:ok, bunny_video}), do: update_video_with_details(video, bunny_video)
+  # Still marked ready without the details
+  defp finish(video, {:error, _reason}), do: update_video_status(video, :ready)
+
   defp process_status_update(%Videos.Video{status: :errored} = video, _status), do: {:ok, video}
 
   defp process_status_update(video, status) when status in [@status_queued, @status_processing, @status_encoding] do
@@ -276,19 +299,6 @@ defmodule Brando.Videos.Uploaders.Bunny do
       {:ok, video}
     else
       update_video_status(video, :processing)
-    end
-  end
-
-  defp process_status_update(video, @status_finished) do
-    # Fetch full video details from Bunny API
-    case fetch_video_details(video) do
-      {:ok, bunny_video} ->
-        update_video_with_details(video, bunny_video)
-
-      {:error, reason} ->
-        Logger.error("Failed to fetch Bunny video details: #{inspect(reason)}")
-        # Still mark as ready even if we can't get details
-        update_video_status(video, :ready)
     end
   end
 
@@ -318,7 +328,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
     {:ok, video}
   end
 
-  defp fetch_video_details(%Videos.Video{meta: %{"bunny" => %{"video_guid" => video_guid}}}, req_options \\ []) do
+  defp fetch_video_details(video_guid, req_options \\ []) do
     library_id = get_config(:library_id)
     api_request(:get, "/library/#{library_id}/videos/#{video_guid}", nil, req_options)
   end
@@ -379,8 +389,8 @@ defmodule Brando.Videos.Uploaders.Bunny do
           {:ok, Videos.Video.t()} | {:error, term()}
   def refresh_renditions(video, user, opts \\ [])
 
-  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, _user, opts) do
-    case fetch_video_details(video, Keyword.take(opts, [:retry])) do
+  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => video_guid}}} = video, _user, opts) do
+    case fetch_video_details(video_guid, Keyword.take(opts, [:retry])) do
       {:ok, bunny_video} when is_map(bunny_video) ->
         put_renditions(
           video,
@@ -428,13 +438,6 @@ defmodule Brando.Videos.Uploaders.Bunny do
   end
 
   defp update_video_status(video, status), do: ProviderUpdate.update_video(video, %{status: status})
-
-  defp find_video_by_guid(video_guid) do
-    case Videos.get_video_by_meta("bunny.video_guid", video_guid) do
-      nil -> {:error, :not_found}
-      video -> {:ok, video}
-    end
-  end
 
   @impl true
   def library_meta_path, do: "bunny.video_guid"

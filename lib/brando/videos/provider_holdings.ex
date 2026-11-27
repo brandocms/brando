@@ -81,6 +81,44 @@ defmodule Brando.Videos.ProviderHoldings do
   end
 
   @doc """
+  The live record of the remote video, the provider's id `remote_id` at the
+  `meta` path `path`, in each environment holding it, as `{prefix, video}`
+  with the environment's schema prefix: nil without tenancy. For a
+  provider's webhook, which names the remote video and not where Brando
+  holds it.
+
+  The environments are those of every active site, or in single-site mode
+  of the configured site (`:site_key`), read as `environments_holding/3`
+  reads them. An environment whose every record of the video is
+  soft-deleted is left out. An error reading the holdings is returned as it
+  is, not as an empty list.
+  """
+  @spec live_records(String.t(), String.t()) :: {:ok, [{String.t() | nil, Video.t()}]} | {:error, term()}
+  def live_records(path, remote_id) do
+    if Tenant.enabled?() do
+      with {:ok, holders} <- environments_holding(path, [remote_id], webhook_sites()) do
+        records =
+          for {_site_id, prefix, false} <- holders |> Map.get(remote_id, []) |> Enum.sort(),
+              video = Tenant.with_prefix(prefix, fn -> recorded_here(path, remote_id) end),
+              do: {prefix, video}
+
+        {:ok, records}
+      end
+    else
+      {:ok, for(video <- [recorded_here(path, remote_id)], video, do: {nil, video})}
+    end
+  end
+
+  defp webhook_sites do
+    active = Enum.filter(Registry.list_sites(), &(&1.status == :active))
+
+    case Tenant.mode() do
+      :single -> Enum.filter(active, &(&1.key == Brando.config(:site_key)))
+      :multi -> active
+    end
+  end
+
+  @doc """
   Whether the current environment has a live record of the remote video,
   the provider's id `remote_id` at the `meta` path `path`, other than the
   record with the id `except_id`.

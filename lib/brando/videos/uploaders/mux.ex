@@ -55,6 +55,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   alias Brando.Repo
   alias Brando.Videos
   alias Brando.Videos.Playback
+  alias Brando.Videos.ProviderHoldings
   alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
 
@@ -132,8 +133,8 @@ defmodule Brando.Videos.Uploaders.Mux do
   end
 
   # A webhook names an upload or an asset, not where Brando holds it: each
-  # environment of each active site holding it is updated, as the backfill
-  # does (`Brando.Tenant.Job.each_active_environment/2`).
+  # environment holding it is updated
+  # (`Brando.Videos.ProviderHoldings.live_records/2`).
   @impl true
   def handle_webhook(%{"type" => "video.upload.asset_created", "data" => data})
       when is_map(data) do
@@ -166,15 +167,15 @@ defmodule Brando.Videos.Uploaders.Mux do
   def handle_webhook(%{"type" => "video.asset.static_rendition." <> event} = payload)
       when event in ["ready", "skipped", "errored", "deleted"] do
     with asset_id when is_binary(asset_id) <- rendition_asset_id(payload),
-         [_ | _] = holders <- holders("mux.asset_id", asset_id),
+         {:ok, [_ | _] = holders} <- ProviderHoldings.live_records("mux.asset_id", asset_id),
          {:ok, asset} <- get_asset(asset_id) do
-      in_each(holders, &store_static_renditions(&1, asset))
+      ProviderUpdate.in_each(holders, &store_static_renditions(&1, asset))
     else
       nil ->
         Logger.warning("Missing asset id in video.asset.static_rendition.#{event} webhook")
         {:error, :invalid_webhook_data}
 
-      [] ->
+      {:ok, []} ->
         :ignore
 
       {:error, %{"error" => %{"type" => "not_found"}}} ->
@@ -675,43 +676,19 @@ defmodule Brando.Videos.Uploaders.Mux do
 
   defp update_video_status(video, status), do: ProviderUpdate.update_video(video, %{status: status})
 
-  # `{prefix, video}` for each environment holding a video with `value` at
-  # `meta_path`; the prefix is nil without tenancy
-  defp holders(meta_path, value) do
-    :all
-    |> Brando.Tenant.Job.each_active_environment(fn ->
-      case Videos.get_video_by_meta(meta_path, value) do
-        nil -> []
-        video -> [{Brando.Tenant.current_prefix(), video}]
-      end
-    end)
-    |> List.flatten()
-  end
-
   defp in_each_holder(meta_path, value, fun) do
-    case holders(meta_path, value) do
-      [] ->
+    case ProviderHoldings.live_records(meta_path, value) do
+      {:ok, []} ->
         Logger.warning("Could not find video for #{meta_path} in webhook")
         {:error, :not_found}
 
-      holders ->
-        in_each(holders, fun)
+      {:ok, holders} ->
+        ProviderUpdate.in_each(holders, fun)
+
+      {:error, _reason} = error ->
+        error
     end
   end
-
-  # Runs `fun` on each video in its environment: the last one updated, or
-  # the first error
-  defp in_each(holders, fun) do
-    holders
-    |> Enum.map(fn {prefix, video} -> in_environment(prefix, fn -> fun.(video) end) end)
-    |> Enum.reduce(fn
-      _result, {:error, _} = error -> error
-      result, _previous -> result
-    end)
-  end
-
-  defp in_environment(nil, fun), do: fun.()
-  defp in_environment(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
 
   defp parse_timeout(timeout) when is_integer(timeout) do
     DateTime.utc_now()

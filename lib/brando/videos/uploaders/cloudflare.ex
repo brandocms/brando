@@ -20,6 +20,7 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   @behaviour Brando.Videos.Uploader
 
   alias Brando.Videos
+  alias Brando.Videos.ProviderHoldings
   alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.ReqOptions
   alias Brando.Videos.Video
@@ -55,19 +56,16 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
 
   @impl true
   def handle_webhook(%{"uid" => uid} = payload) when is_binary(uid) do
-    case find_video(uid) do
-      {:ok, %Video{status: :errored} = video} ->
-        {:ok, video}
-
-      {:ok, %Video{status: :ready} = video} ->
-        if ready_payload?(payload), do: update_video_from_payload(video, payload), else: {:ok, video}
-
-      {:ok, video} ->
-        update_video_from_payload(video, payload)
-
-      {:error, :not_found} ->
+    case ProviderHoldings.live_records("cloudflare.uid", uid) do
+      {:ok, []} ->
         Logger.debug("Cloudflare webhook for unknown video: #{uid}")
         :ignore
+
+      {:ok, holders} ->
+        ProviderUpdate.in_each(holders, &apply_report(&1, payload))
+
+      {:error, _reason} = error ->
+        error
     end
   end
 
@@ -271,6 +269,14 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
     Videos.create_video(params)
   end
 
+  defp apply_report(%Video{status: :errored} = video, _payload), do: {:ok, video}
+
+  defp apply_report(%Video{status: :ready} = video, payload) do
+    if ready_payload?(payload), do: update_video_from_payload(video, payload), else: {:ok, video}
+  end
+
+  defp apply_report(video, payload), do: update_video_from_payload(video, payload)
+
   defp update_video_from_payload(video, payload) do
     signed? = payload["requireSignedURLs"] == true
 
@@ -323,13 +329,6 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   end
 
   defp error_payload?(payload), do: get_in(payload, ["status", "state"]) == "error"
-
-  defp find_video(uid) do
-    case Videos.get_video_by_meta("cloudflare.uid", uid) do
-      nil -> {:error, :not_found}
-      video -> {:ok, video}
-    end
-  end
 
   defp cloudflare_setting(opts, key, default) do
     config_meta =

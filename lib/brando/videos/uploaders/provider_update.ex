@@ -9,6 +9,8 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
 
   alias Brando.Videos
 
+  require Logger
+
   @doc """
   Updates `video` with `params` as the system (the provider's report is not the
   creator's action, and their role may have changed since the upload, or they
@@ -21,6 +23,37 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
     with {:ok, updated_video} <- Videos.update_video(video, params, :system) do
       {:ok, updated(video, updated_video)}
     end
+  end
+
+  @doc """
+  Runs `fun` on each video in `holders`, `{prefix, video}` as
+  `Brando.Videos.ProviderHoldings.live_records/2` finds them, under the
+  video's own prefix, so its broadcasts reach that environment's editors. A
+  video whose update fails or raises doesn't keep the others from theirs.
+  Returns the result for the last video, or the first error.
+  """
+  def in_each(holders, fun) do
+    holders
+    |> Enum.map(fn {prefix, video} -> in_environment(prefix, fn -> apply_report(video, fun) end) end)
+    |> Enum.reduce(fn
+      _result, {:error, _} = error -> error
+      result, _previous -> result
+    end)
+  end
+
+  defp in_environment(nil, fun), do: fun.()
+  defp in_environment(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
+
+  defp apply_report(video, fun) do
+    fun.(video)
+  rescue
+    exception ->
+      Logger.error(
+        "Could not apply a provider's report to video #{video.id} in #{inspect(Brando.Tenant.current_prefix())}: " <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
+      {:error, :update_failed}
   end
 
   @doc """
