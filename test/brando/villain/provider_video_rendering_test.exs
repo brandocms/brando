@@ -373,6 +373,96 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
     end
   end
 
+  describe "the wrapper's quality and MP4 attributes" do
+    @mp4s %{"has_mp4_fallback" => true, "available_resolutions" => "360p,480p,720p"}
+
+    defp attribute(html, name) do
+      {:ok, document} = Floki.parse_fragment(html)
+      document |> Floki.attribute("[data-smart-video]", name) |> List.first()
+    end
+
+    defp playback_attributes(html),
+      do: Map.new(~w(data-quality data-mp4-resolutions data-mp4-src-template), &{&1, attribute(html, &1)})
+
+    defp bunny_with_mp4s(attrs \\ %{}),
+      do: bunny(Map.put(attrs, :meta, %{"bunny" => Map.put(@mp4s, "video_guid", @guid)}))
+
+    test "a Bunny video with MP4s carries the resolved quality, its resolutions and their URL" do
+      assert playback_attributes(html_video(bunny_with_mp4s(%{autoplay: true}), [])) == %{
+               "data-quality" => "auto",
+               "data-mp4-resolutions" => "360,480,720",
+               "data-mp4-src-template" => "https://vz-1.b-cdn.net/#{@guid}/play_{resolution}p.mp4"
+             }
+    end
+
+    test "a Bunny video without MP4 Fallback carries the quality only" do
+      video = bunny(%{meta: %{"bunny" => %{"video_guid" => @guid, "has_mp4_fallback" => false}}})
+
+      assert playback_attributes(html_video(video, quality: :hls)) == %{
+               "data-quality" => "hls",
+               "data-mp4-resolutions" => nil,
+               "data-mp4-src-template" => nil
+             }
+    end
+
+    test "a Mux video carries its ready static renditions, or the quality only without them" do
+      renditions = [
+        %{"id" => "r-1", "resolution" => "720p", "status" => "ready", "name" => "720p.mp4"},
+        %{"id" => "r-2", "resolution" => "1080p", "status" => "ready", "name" => "1080p.mp4"},
+        %{"id" => "r-3", "resolution" => "highest", "status" => "ready", "name" => "highest.mp4"}
+      ]
+
+      video = mux(%{meta: %{"mux" => %{"playback_id" => "abc123", "static_renditions" => renditions}}})
+
+      assert playback_attributes(html_video(video, [])) == %{
+               "data-quality" => "auto",
+               "data-mp4-resolutions" => "720,1080",
+               "data-mp4-src-template" => "https://stream.mux.com/abc123/{resolution}p.mp4"
+             }
+
+      assert playback_attributes(html_video(mux(%{quality: :mp4_1080}), [])) == %{
+               "data-quality" => "mp4_1080",
+               "data-mp4-resolutions" => nil,
+               "data-mp4-src-template" => nil
+             }
+    end
+
+    test "an upload and a string source carry none of them" do
+      upload = %Video{type: :upload, remote_id: "videos/clip.mp4", width: 640, height: 360}
+      none = %{"data-quality" => nil, "data-mp4-resolutions" => nil, "data-mp4-src-template" => nil}
+
+      assert playback_attributes(html_video(upload, [])) == none
+      assert playback_attributes(html_video("https://example.com/clip.mp4", quality: :mp4_720)) == none
+    end
+
+    test "an editor's MP4 720 and automatic render the same video but for data-quality" do
+      explicit = html_video(bunny_with_mp4s(%{autoplay: true, quality: :mp4_720}), [])
+      auto = html_video(bunny_with_mp4s(%{autoplay: true}), [])
+
+      assert attribute(explicit, "data-quality") == "mp4_720"
+      assert attribute(auto, "data-quality") == "auto"
+      assert attribute(explicit, "data-src") == "https://vz-1.b-cdn.net/#{@guid}/play_720p.mp4"
+      assert String.replace(explicit, ~s(data-quality="mp4_720"), ~s(data-quality="auto")) == auto
+    end
+
+    test "the template's quality shows where the editor left it empty" do
+      assert attribute(html_video(bunny_with_mp4s(), quality: :mp4_360), "data-quality") == "mp4_360"
+      assert attribute(html_video(bunny_with_mp4s(%{quality: :hls}), quality: :mp4_360), "data-quality") == "hls"
+    end
+
+    test "a video block renders them, with the block's quality" do
+      video = insert_bunny(quality: :mp4_480, meta: %{"bunny" => Map.put(@mp4s, "video_guid", @guid)})
+
+      assert playback_attributes(render_video_ref(video, %{quality: :hls})) == %{
+               "data-quality" => "hls",
+               "data-mp4-resolutions" => "360,480,720",
+               "data-mp4-src-template" => "https://vz-1.b-cdn.net/#{@guid}/play_{resolution}p.mp4"
+             }
+
+      assert attribute(Parser.video(bunny_with_mp4s(), []), "data-quality") == "auto"
+    end
+  end
+
   # Revision snapshots from before the field existed
   test "an old video struct without cover_image renders" do
     old = Map.delete(bunny(), :cover_image)
