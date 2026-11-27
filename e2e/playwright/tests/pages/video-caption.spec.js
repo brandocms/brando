@@ -26,3 +26,14 @@ test('the cover and play button sit on the video once the player starts, the cap
   expect(button.y + button.height / 2).toBeCloseTo(player.y + player.height / 2, 0)
   expect(caption.y).toBeGreaterThanOrEqual(player.y + player.height)
 })
+
+// The app's play button lets clicks through to the video, which plays it
+test('a click on the video plays it and hides the cover', async ({ page }) => {
+  const wrapper = page.locator('.captioned-video [data-smart-video]')
+  const cover = wrapper.locator('[data-cover]')
+  await expect(cover).toBeVisible()
+
+  await wrapper.locator('video').click()
+  await expect(wrapper).toHaveAttribute('data-playing')
+  await expect(cover).toBeHidden()
+})

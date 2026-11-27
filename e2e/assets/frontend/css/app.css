@@ -274,6 +274,10 @@ p {
   }
 
   &[data-playing] {
+    [data-cover] {
+      visibility: hidden;
+    }
+
     .video-play-button-wrapper {
       opacity: 0;
     }
