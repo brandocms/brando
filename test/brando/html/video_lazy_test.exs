@@ -20,7 +20,7 @@ defmodule Brando.HTML.VideoLazyTest do
     Brando.Villain.parse_and_render("{% video video #{args} %}", Liquex.Context.new(%{"video" => video}))
   end
 
-  # The main `<video>`, not the `<noscript>` one, which always has its `src`
+  # The main `<video>`, not the `<noscript>` one
   defp main_video(html), do: html |> Floki.parse_fragment!() |> Floki.find("[data-video]")
 
   defp lazy?(html) do
@@ -107,6 +107,13 @@ defmodule Brando.HTML.VideoLazyTest do
       assert Floki.attribute(noscript, "controls") != []
       assert Floki.attribute(noscript, "autoplay") != []
       assert html_attr(noscript, "src") == @src
+    end
+
+    # An eager video's own `<video>` has the source: a fallback beside it
+    # would be a second player
+    test "an eager video has no noscript video" do
+      html = render(record(), lazy: false, controls: true, autoplay: true)
+      assert html |> Floki.parse_fragment!() |> Floki.find("noscript") == []
     end
 
     test "the noscript video leaves them off when they are off" do

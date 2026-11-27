@@ -761,7 +761,8 @@ source goes in `data-src` on the `[data-smart-video]` wrapper and on the
 browser downloads nothing until the site's video script sets the source, so a
 page with many videos does not start them all while it loads. A visitor
 without JavaScript gets the `<noscript>` video inside the wrapper, which has
-its `src`, and `controls` and `autoplay` when the video has them.
+its `src`, and `controls` and `autoplay` when the video has them. A video
+that is not lazy has no `<noscript>` video: its own `<video>` has the source.
 
 `lazy: false` puts the source in the `<video>`'s `src`, so the browser starts
 loading it as it parses the page, before any script runs. Use it for a video

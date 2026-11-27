@@ -25,7 +25,7 @@ defmodule Brando.HTML.Video do
       and the `<video>`, for the frontend's script to set, so the browser
       downloads nothing until it does. `lazy: false` puts it in the `<video>`'s
       `src`, so the download starts as the page is parsed. A visitor without
-      JavaScript gets the `<noscript>` video either way. `preload` is the
+      JavaScript gets the `<noscript>` video of a lazy one. `preload` is the
       older name and still works (`preload: true` is lazy); with both, `lazy`
       wins
     - `aspect_ratio`
@@ -345,7 +345,7 @@ defmodule Brando.HTML.Video do
         src={!@preload && @src}
       >{"\n  "}</video>
 
-      <noscript>
+      <noscript :if={@preload}>
         <video
           width={@width}
           height={@height}

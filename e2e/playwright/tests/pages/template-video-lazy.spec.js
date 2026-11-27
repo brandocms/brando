@@ -23,4 +23,6 @@ test('a lazy template video loads on the public page', async ({ page }) => {
   await expect.poll(() => video.evaluate(el => el.currentSrc), { timeout: 15000 }).toContain(
     '/media/videos/e2e-template-video.mp4'
   )
+  // `currentSrc` is set before the file is fetched: metadata read means it loaded
+  await expect.poll(() => video.evaluate(el => el.readyState), { timeout: 15000 }).toBeGreaterThanOrEqual(1)
 })
