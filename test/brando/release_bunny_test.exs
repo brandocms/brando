@@ -106,6 +106,45 @@ defmodule Brando.ReleaseBunnyTest do
     assert Brando.Repo.reload!(renamed).meta["bunny"]["thumbnail_url"] == "thumbnail_2bbb8a75.jpg"
   end
 
+  test "refresh_bunny_videos/0 loads each video just before asking, and skips videos still processing", %{user: user} do
+    first = video("first", user)
+    second = video("second", user)
+
+    processing =
+      Factory.insert(:video,
+        creator: user,
+        type: :bunny,
+        status: :processing,
+        meta: %{"bunny" => %{"video_guid" => "processing"}}
+      )
+
+    ReqTest.stub(Bunny, fn conn ->
+      case conn.path_info do
+        [_, _, _, "processing"] ->
+          flunk("a video still processing was asked for")
+
+        [_, _, _, "first"] ->
+          # The second video's webhook lands while the first is looked up
+          Brando.Repo.reload!(second)
+          |> Ecto.Changeset.change(meta: put_in(second.meta, ["bunny", "width"], 1080), width: 1080)
+          |> Brando.Repo.update!()
+
+          ReqTest.json(conn, %{"availableResolutions" => "360p", "hasMP4Fallback" => true, "thumbnailFileName" => "a.jpg"})
+
+        [_, _, _, _] ->
+          ReqTest.json(conn, %{"availableResolutions" => "360p", "hasMP4Fallback" => true, "thumbnailFileName" => "b.jpg"})
+      end
+    end)
+
+    capture_io(fn -> assert %{refreshed: 2, failed: []} = Brando.Release.refresh_bunny_videos() end)
+
+    assert Brando.Repo.reload!(first).meta["bunny"]["thumbnail_url"] == "a.jpg"
+    second = Brando.Repo.reload!(second)
+    assert second.meta["bunny"]["thumbnail_url"] == "b.jpg"
+    assert second.meta["bunny"]["width"] == 1080
+    assert Brando.Repo.reload!(processing).meta == processing.meta
+  end
+
   test "refresh_bunny_videos/0 asks Bunny once for a video, without retrying", %{user: user} do
     failing = video("failing", user)
     test = self()

@@ -78,9 +78,9 @@ defmodule Brando.Release do
 
   @doc """
   Runs **Fetch details** (`Brando.Videos.Uploaders.Bunny.refresh_renditions/2`)
-  for every Bunny video, deleted ones excepted, one request at a time: each
-  gets its renditions and the name of its thumbnail, which changes when a
-  custom thumbnail is set in Bunny. With tenancy, in `public` and every
+  for every ready Bunny video, deleted ones excepted, one request at a time:
+  each gets its renditions and the name of its thumbnail, which changes when
+  a custom thumbnail is set in Bunny. With tenancy, in `public` and every
   environment of every site. A video Bunny does not answer for (an error, a
   rate limit, a timeout) is counted and the rest go on; nothing is retried,
   so run it again for those. Only a video that changed is written, as
@@ -114,29 +114,41 @@ defmodule Brando.Release do
   end
 
   defp refresh_bunny_videos_in(prefix, acc) do
-    in_schema(prefix, fn -> Enum.reduce(bunny_videos(), acc, &refresh_bunny_video(&1, &2, prefix)) end)
+    in_schema(prefix, fn -> Enum.reduce(bunny_video_ids(), acc, &refresh_bunny_video(&1, &2, prefix)) end)
   end
 
   defp in_schema(nil, fun), do: Brando.Tenant.with_public(fun)
   defp in_schema(prefix, fun), do: Brando.Tenant.with_prefix(prefix, fun)
 
-  defp bunny_videos do
-    Brando.Repo.all(
-      from(v in Video,
-        where: v.type == :bunny and is_nil(v.deleted_at),
-        where: not is_nil(fragment("?->'bunny'->>'video_guid'", v.meta)),
-        order_by: v.id
-      )
+  defp bunny_video_ids do
+    Brando.Repo.all(from(v in ready_bunny_videos(), select: v.id, order_by: v.id))
+  end
+
+  # A video still encoding has nothing to refresh, and its webhook writes
+  # its details
+  defp ready_bunny_videos do
+    from(v in Video,
+      where: v.type == :bunny and v.status == :ready and is_nil(v.deleted_at),
+      where: not is_nil(fragment("?->'bunny'->>'video_guid'", v.meta))
     )
   end
 
-  defp refresh_bunny_video(video, acc, prefix) do
-    case Bunny.refresh_renditions(video, :system, retry: false) do
-      {:ok, %Video{meta: meta}} when meta == video.meta -> %{acc | unchanged: acc.unchanged + 1}
-      {:ok, _refreshed} -> %{acc | refreshed: acc.refreshed + 1}
-      {:error, _reason} -> %{acc | failed: [{prefix || "public", video.id} | acc.failed]}
+  # Loaded just before its request, so a webhook's write while earlier
+  # videos were looked up is kept
+  defp refresh_bunny_video(id, acc, prefix) do
+    case Brando.Repo.one(from(v in ready_bunny_videos(), where: v.id == ^id)) do
+      nil -> acc
+      video -> count_bunny_refresh(video, Bunny.refresh_renditions(video, :system, retry: false), acc, prefix)
     end
   end
+
+  defp count_bunny_refresh(video, {:ok, %Video{meta: meta}}, acc, _prefix) when meta == video.meta,
+    do: %{acc | unchanged: acc.unchanged + 1}
+
+  defp count_bunny_refresh(_video, {:ok, _refreshed}, acc, _prefix), do: %{acc | refreshed: acc.refreshed + 1}
+
+  defp count_bunny_refresh(video, {:error, _reason}, acc, prefix),
+    do: %{acc | failed: [{prefix || "public", video.id} | acc.failed]}
 
   defp describe_bunny(%{refreshed: refreshed, unchanged: unchanged, failed: failed}) do
     failed_line =
