@@ -318,9 +318,9 @@ defmodule Brando.Videos.Uploaders.Bunny do
     {:ok, video}
   end
 
-  defp fetch_video_details(%Videos.Video{meta: %{"bunny" => %{"video_guid" => video_guid}}}) do
+  defp fetch_video_details(%Videos.Video{meta: %{"bunny" => %{"video_guid" => video_guid}}}, req_options \\ []) do
     library_id = get_config(:library_id)
-    api_request(:get, "/library/#{library_id}/videos/#{video_guid}")
+    api_request(:get, "/library/#{library_id}/videos/#{video_guid}", nil, req_options)
   end
 
   defp update_video_with_details(video, bunny_video) do
@@ -361,16 +361,24 @@ defmodule Brando.Videos.Uploaders.Bunny do
   end
 
   @doc """
-  Looks up which renditions Bunny has for a ready video, `availableResolutions`
-  and `hasMP4Fallback`, and stores them in `meta.bunny`
-  (`Brando.Videos.Playback`). Videos stored before Brando kept
-  `hasMP4Fallback` stream until this runs; **Fetch details** in the video
-  library runs it for them. A video Bunny no longer has gets no MP4s, so it
-  isn't looked up again. Nothing else on the video changes.
+  Looks up what Bunny has for a ready video and stores it in `meta.bunny`:
+  its renditions, `availableResolutions` and `hasMP4Fallback`
+  (`Brando.Videos.Playback`), and the name of its thumbnail,
+  `thumbnailFileName`, which changes when a custom thumbnail is set in Bunny.
+  Videos stored before Brando kept `hasMP4Fallback` stream until this runs;
+  **Fetch details** in the video library runs it for them. A video Bunny no
+  longer has gets no MP4s, so it isn't looked up again. Nothing else on the
+  video changes, and nothing is written when nothing did.
+
+  `retry: false` asks Bunny once, without Req's retries on a timeout, a rate
+  limit or an error (`Brando.Release.refresh_bunny_videos/0`).
   """
-  @spec refresh_renditions(Videos.Video.t(), map() | integer()) :: {:ok, Videos.Video.t()} | {:error, term()}
-  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, _user) do
-    case fetch_video_details(video) do
+  @spec refresh_renditions(Videos.Video.t(), map() | integer() | :system, keyword()) ::
+          {:ok, Videos.Video.t()} | {:error, term()}
+  def refresh_renditions(video, user, opts \\ [])
+
+  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, _user, opts) do
+    case fetch_video_details(video, Keyword.take(opts, [:retry])) do
       {:ok, bunny_video} ->
         put_renditions(
           video,
@@ -378,6 +386,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
             "available_resolutions" => bunny_video["availableResolutions"],
             "has_mp4_fallback" => bunny_video["hasMP4Fallback"]
           }
+          |> put_thumbnail_name(bunny_video["thumbnailFileName"])
         )
 
       {:error, %{"Message" => "Not Found"}} ->
@@ -388,16 +397,27 @@ defmodule Brando.Videos.Uploaders.Bunny do
     end
   end
 
-  def refresh_renditions(_video, _user), do: {:error, :missing_video_guid}
+  def refresh_renditions(_video, _user, _opts), do: {:error, :missing_video_guid}
 
-  # Open forms showing the video get its new choices. Written as the system:
+  # An answer without a name keeps the stored one
+  defp put_thumbnail_name(renditions, name) when is_binary(name) and name != "",
+    do: Map.put(renditions, "thumbnail_url", name)
+
+  defp put_thumbnail_name(renditions, _name), do: renditions
+
+  # Open forms showing the video get its new choices, and entries showing it
+  # render again (`Brando.Videos`' update mutation). Written as the system:
   # the renditions are Bunny's report, not the user's action.
   defp put_renditions(video, renditions) do
     meta = Map.update!(video.meta, "bunny", &Map.merge(&1, renditions))
 
-    with {:ok, updated} <- Videos.update_video(video, %{meta: meta}, :system) do
-      ProviderUpdate.broadcast(updated)
-      {:ok, updated}
+    if meta == video.meta do
+      {:ok, video}
+    else
+      with {:ok, updated} <- Videos.update_video(video, %{meta: meta}, :system) do
+        ProviderUpdate.broadcast(updated)
+        {:ok, updated}
+      end
     end
   end
 
@@ -589,7 +609,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   # site being told its config is wrong.
   defp present?(value), do: is_binary(value) and value != ""
 
-  defp request(method, path, body) do
+  defp request(method, path, body, req_options \\ []) do
     url = @base_url <> path
 
     # Missing credentials are a deploy-time configuration error, not a runtime
@@ -651,7 +671,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
           [method: :delete, url: url, headers: headers, redirect: false]
       end
 
-    request_opts = ReqOptions.merge(__MODULE__, request_opts)
+    request_opts = ReqOptions.merge(__MODULE__, request_opts ++ req_options)
 
     case Req.request(request_opts) do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
@@ -670,8 +690,8 @@ defmodule Brando.Videos.Uploaders.Bunny do
   # The error body alone, as the calls other than the delete take it; the
   # delete keeps the status, which tells an outage from a refusal
   # (`Brando.Videos.Uploader.transient_error?/1`).
-  defp api_request(method, path, body \\ nil) do
-    case request(method, path, body) do
+  defp api_request(method, path, body \\ nil, req_options \\ []) do
+    case request(method, path, body, req_options) do
       {:error, {:http_error, _status, error_body}} -> {:error, error_body}
       result -> result
     end

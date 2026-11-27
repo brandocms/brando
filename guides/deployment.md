@@ -991,6 +991,7 @@ server. These have a release form:
 | `mix brando.doctor` | Configuration → Utilities, the System check card |
 | `mix run -e "Brando.Release.forget_unreadable()"` | `bin/my_app eval "Brando.Release.forget_unreadable()"` ([Copying a database between environments](#copying-a-database-between-environments)) |
 | `mix run -e 'Brando.Release.reset_two_factor("…")'` | `bin/my_app eval 'Brando.Release.reset_two_factor("…")'` |
+| `mix run -e "Brando.Release.refresh_bunny_videos()"` | `bin/my_app rpc "Brando.Release.refresh_bunny_videos()"` ([Playback quality](videos.md#playback-quality)) |
 | `mix brando.seeds.remove_defaults` (`--yes`) | `bin/my_app rpc "Brando.Setup.Seeds.remove_defaults()"` (`remove_defaults(yes: true)`; [Removing the demo](installation.md#removing-the-demo)) |
 
 `Brando.Content.Resave.run/1` re-renders and stores every entry's blocks, as

@@ -115,10 +115,7 @@ defmodule Brando.HTML.Video do
     """
   end
 
-  def video(%{video: %Video{type: :bunny, meta: meta, status: :ready} = video, opts: opts} = assigns) do
-    video_guid = get_in(meta, ["bunny", "video_guid"])
-    cdn_hostname = get_bunny_cdn_hostname()
-
+  def video(%{video: %Video{type: :bunny, status: :ready} = video, opts: opts} = assigns) do
     {_format, src} =
       Brando.Videos.Playback.source(video,
         quality: Keyword.get(opts, :quality),
@@ -129,7 +126,7 @@ defmodule Brando.HTML.Video do
     render_video(assigns, video, opts,
       class: "video-bunny",
       src: src,
-      poster: "https://#{cdn_hostname}/#{video_guid}/thumbnail.jpg",
+      poster: Brando.Videos.Helpers.bunny_thumbnail_url(video),
       aspect_ratio: "16/9"
     )
   end
@@ -641,11 +638,5 @@ defmodule Brando.HTML.Video do
     else
       _ -> build_aspect_ratio_style_string(nil, width, height)
     end
-  end
-
-  defp get_bunny_cdn_hostname do
-    :brando
-    |> Application.get_env(Brando.Videos.Uploaders.Bunny, [])
-    |> Keyword.get(:cdn_hostname, "")
   end
 end

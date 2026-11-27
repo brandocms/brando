@@ -237,10 +237,12 @@ defmodule Brando.Content.Resave do
   def start_mode(false, false), do: :eval
   def start_mode(true, false), do: :not_started
 
-  # `{:ok, started_here?}` (see "Started by `eval`" in `run/1`)
-  defp start(nil), do: {:ok, false}
+  @doc false
+  # `{:ok, started_here?}` (see "Started by `eval`" in `run/1`). Also what
+  # `Brando.Release.refresh_bunny_videos/0` starts with.
+  def start(nil), do: {:ok, false}
 
-  defp start(app) do
+  def start(app) do
     case start_mode(Node.alive?(), List.keymember?(Application.started_applications(), app, 0)) do
       :running ->
         {:ok, false}

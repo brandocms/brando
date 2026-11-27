@@ -417,6 +417,20 @@ library looks it up. `Brando.Videos.Playback` resolves the source for both
 templates and blocks. Saving a video, or looking it up, renders the entries
 whose blocks show it again, so their stored HTML follows.
 
+A Bunny video's poster and its thumbnail in the admin are the thumbnail Bunny
+names in `meta.bunny.thumbnail_url` (`thumbnail.jpg` until a custom thumbnail
+is set). A thumbnail changed in Bunny's dashboard after encoding sends no
+webhook: **Fetch details** picks up its new name. To do that for every Bunny
+video at once, in every environment with tenancy, run on the server:
+
+```sh
+bin/my_app rpc "Brando.Release.refresh_bunny_videos()"
+```
+
+It asks Bunny once for each video, writes only the ones that changed, and
+prints how many it refreshed, how many were unchanged and which failed. Run it
+again for those.
+
 #### Playback URLs
 
 Bunny videos stream over HLS, as below, unless their quality picks an MP4:

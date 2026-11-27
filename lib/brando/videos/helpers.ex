@@ -131,15 +131,9 @@ defmodule Brando.Videos.Helpers do
     "https://image.mux.com/#{playback_id}/thumbnail.jpg"
   end
 
-  def thumbnail_url(%Video{type: :bunny, meta: %{"bunny" => %{"video_guid" => guid}}})
+  def thumbnail_url(%Video{type: :bunny, meta: %{"bunny" => %{"video_guid" => guid}}} = video)
       when is_binary(guid) do
-    cdn_hostname = get_bunny_cdn_hostname()
-
-    if cdn_hostname != "" do
-      "https://#{cdn_hostname}/#{guid}/thumbnail.jpg"
-    else
-      nil
-    end
+    if get_bunny_cdn_hostname() != "", do: bunny_thumbnail_url(video)
   end
 
   def thumbnail_url(%Video{type: :cloudflare, meta: %{"cloudflare" => %{"require_signed_urls" => true}}}),
@@ -154,6 +148,29 @@ defmodule Brando.Videos.Helpers do
       do: url
 
   def thumbnail_url(%Video{}), do: nil
+
+  @doc """
+  The URL of a Bunny video's thumbnail on the library's CDN. Bunny names the
+  file `thumbnail.jpg`, and renames it when a custom thumbnail is set; the name
+  is kept in `meta.bunny.thumbnail_url`. A video stored before Brando kept it,
+  or a name that is not a plain file name, gets `thumbnail.jpg`.
+
+      iex> bunny_thumbnail_url(%Video{meta: %{"bunny" => %{"video_guid" => "abc", "thumbnail_url" => "thumbnail_2bbb8a75.jpg"}}})
+      "https://vz-123.b-cdn.net/abc/thumbnail_2bbb8a75.jpg"
+  """
+  @spec bunny_thumbnail_url(Video.t()) :: String.t()
+  def bunny_thumbnail_url(%Video{meta: meta}) do
+    guid = get_in(meta, ["bunny", "video_guid"])
+    "https://#{get_bunny_cdn_hostname()}/#{guid}/#{bunny_thumbnail_file(get_in(meta, ["bunny", "thumbnail_url"]))}"
+  end
+
+  defp bunny_thumbnail_file(name) when is_binary(name) do
+    if name =~ ~r/\A[A-Za-z0-9_-][A-Za-z0-9._-]*\z/ and not String.contains?(name, ".."),
+      do: name,
+      else: "thumbnail.jpg"
+  end
+
+  defp bunny_thumbnail_file(_name), do: "thumbnail.jpg"
 
   @doc """
   Formats a provider duration in seconds as an `HH:MM:SS` string.

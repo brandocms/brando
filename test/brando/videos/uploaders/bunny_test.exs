@@ -145,6 +145,86 @@ defmodule Brando.Videos.Uploaders.BunnyTest do
       refute video.id in Brando.Videos.list_video_ids_missing_metadata()
     end
 
+    test "Fetch details stores a thumbnail name changed in Bunny, and tells open forms" do
+      user = Factory.insert(:user)
+      guid = Ecto.UUID.generate()
+
+      video =
+        Factory.insert(:video,
+          creator: user,
+          type: :bunny,
+          status: :ready,
+          meta: %{
+            "bunny" => %{
+              "video_guid" => guid,
+              "available_resolutions" => "360p,720p",
+              "has_mp4_fallback" => true,
+              "thumbnail_url" => "thumbnail.jpg"
+            }
+          }
+        )
+
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}")
+
+      Req.Test.expect(Bunny, fn conn ->
+        Req.Test.json(
+          conn,
+          bunny_details(guid, %{"availableResolutions" => "360p,720p", "thumbnailFileName" => "thumbnail_2bbb8a75.jpg"})
+        )
+      end)
+
+      assert {:ok, refreshed} = Brando.Videos.fetch_metadata(video, user)
+      assert refreshed.meta["bunny"]["thumbnail_url"] == "thumbnail_2bbb8a75.jpg"
+      assert Brando.Repo.reload!(video).meta["bunny"]["thumbnail_url"] == "thumbnail_2bbb8a75.jpg"
+      assert_receive {%Brando.Videos.Video{id: id}, [:video, :updated]} when id == video.id
+    end
+
+    test "Fetch details keeps the stored thumbnail name when Bunny sends none" do
+      user = Factory.insert(:user)
+      guid = Ecto.UUID.generate()
+
+      video =
+        Factory.insert(:video,
+          creator: user,
+          type: :bunny,
+          status: :ready,
+          meta: %{"bunny" => %{"video_guid" => guid, "thumbnail_url" => "thumbnail_2bbb8a75.jpg"}}
+        )
+
+      for name <- [nil, ""] do
+        Req.Test.expect(Bunny, &Req.Test.json(&1, bunny_details(guid, %{"thumbnailFileName" => name})))
+        assert {:ok, refreshed} = Brando.Videos.fetch_metadata(video, user)
+        assert refreshed.meta["bunny"]["thumbnail_url"] == "thumbnail_2bbb8a75.jpg"
+      end
+    end
+
+    test "Fetch details writes nothing when nothing changed" do
+      user = Factory.insert(:user)
+      guid = Ecto.UUID.generate()
+
+      video =
+        Factory.insert(:video,
+          creator: user,
+          type: :bunny,
+          status: :ready,
+          meta: %{
+            "bunny" => %{
+              "video_guid" => guid,
+              "available_resolutions" => "360p,480p,720p,1080p",
+              "has_mp4_fallback" => true,
+              "thumbnail_url" => "thumbnail_2bbb8a75.jpg"
+            }
+          }
+        )
+
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}")
+      Req.Test.expect(Bunny, &Req.Test.json(&1, bunny_details(guid, %{"thumbnailFileName" => "thumbnail_2bbb8a75.jpg"})))
+
+      assert {:ok, ^video} = Brando.Videos.fetch_metadata(video, user)
+      assert Brando.Repo.reload!(video).updated_at == video.updated_at
+      refute_received {%Brando.Videos.Video{}, [:video, :updated]}
+    end
+
     test "Fetch details leaves Bunny videos alone without Bunny credentials" do
       put_test_env(Bunny, library_id: "133")
       user = Factory.insert(:user)
