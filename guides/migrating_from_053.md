@@ -317,9 +317,9 @@ sender first, before the first compile.
     site whose script expects `src` on the `<video>`, or a video that must
     start before any script runs, passes `lazy: false` to `<.video>` or
     `{% video %}` (see [Lazy loading](videos.md#lazy-loading)).
-    `brando_254` clears the Lazy load Offs stored on videos (see Lazy
-    videos below). Pages show the new markup once the resave in section 4
-    has rendered them.
+    `brando_254` clears the Lazy load Offs stored on videos, and `brando_255`
+    those on modules' and blocks' video refs (see Lazy videos below). Pages
+    show the new markup once the resave in section 4 has rendered them.
 11. **`list_*` calls with no `order:`.** The migrations rewrite rows, and a
     query without `ORDER BY` returns them in storage order, so a page may
     change order (the first category of a menu, articles with equal
@@ -806,6 +806,18 @@ sender first, before the first compile.
   `down` changes nothing, and an Off set after rolling it back is cleared
   again by a second `up`. Run `mix brando.gen.migrations` for it, then
   `mix brando.migrate`.
+- **Lazy video refs.** `brando_255` clears every `preload = false` stored on
+  video refs and on media refs' video templates, in modules and in blocks, in
+  `public` and every environment. The module editor stored it on every save
+  of a module with such a ref, and blocks made from the module copied it;
+  nothing tells those apart from a chosen Off, so all go, and the ref's blocks
+  leave Lazy load to the video. Set Lazy load to Off again on a ref that
+  should stay eager. Autoplay, Loop, Muted and Controls keep what is stored.
+  A module from release definitions whose file sets `preload: false` is lazy
+  until the next release that changes the module applies the file's Off
+  again; planning reads the cleared value as unchanged, so that release is an
+  update, not a conflict. Run it once, as `brando_254`. Run
+  `mix brando.gen.migrations` for it, then `mix brando.migrate`.
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

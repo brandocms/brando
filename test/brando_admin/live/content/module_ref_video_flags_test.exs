@@ -127,7 +127,10 @@ defmodule BrandoAdmin.Live.Content.ModuleRefVideoFlagsTest do
             %{
               name: "media",
               uid: Brando.Utils.generate_uid(),
-              data: %{type: "media", data: %{available_blocks: ["picture"], template_video: %{preload: false, loop: true}}}
+              data: %{
+                type: "media",
+                data: %{available_blocks: ["picture"], template_video: %{preload: false, loop: true}}
+              }
             }
           ],
           vars: []

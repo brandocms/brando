@@ -820,7 +820,10 @@ expects `src` on the `<video>`:
 ```
 
 The editor's setting is **Lazy load**, stored in the record's `preload`
-column, and a video block's or gallery object's Lazy load overrides it. The
+column, and a video block's or gallery object's Lazy load overrides it. A
+module's video ref, or its media ref's video template, gives the blocks made
+from the module their Lazy load, Autoplay, Loop, Muted and Controls: Default
+leaves the setting to the video, On and Off set it. The
 option's older name, `preload`, still works: `preload: true` is lazy and
 `preload: false` eager. When a call passes both, `lazy` wins. YouTube and
 Vimeo embeds, and a Vimeo account video without a file link, render an
