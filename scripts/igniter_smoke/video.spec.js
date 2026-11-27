@@ -18,6 +18,7 @@ test('a video block on a public page is revealed, gets its source and plays', as
   // SmartVideo sets the source and reveals it.
   await expect(wrapper).toHaveAttribute('data-preload', src)
   await expect(wrapper).toBeVisible()
+  await expect(wrapper).toHaveCSS('opacity', '1')
   await expect(video).toHaveJSProperty('currentSrc', src)
   await expect.poll(() => video.evaluate(el => !el.paused && el.currentTime > 0)).toBe(true)
   expect(errors).toEqual([])
