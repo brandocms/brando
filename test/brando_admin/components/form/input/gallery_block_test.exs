@@ -228,7 +228,12 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
     test "a setting stored with its use_default flag on shows Default", ctx do
       posted =
         ctx
-        |> render_video_override(%{autoplay: false, use_default_autoplay: true, controls: true, use_default_controls: true})
+        |> render_video_override(%{
+          autoplay: false,
+          use_default_autoplay: true,
+          controls: true,
+          use_default_controls: true
+        })
         |> posted_playback()
 
       assert %{"autoplay" => "", "controls" => ""} = posted

@@ -1340,7 +1340,10 @@ defmodule Brando.Villain.RefRenderingTest do
         |> Map.merge(playback)
 
       %Brando.Villain.Blocks.GalleryBlock.Data{}
-      |> Brando.Villain.Blocks.GalleryBlock.Data.changeset(%{"type" => "gallery", "gallery_object_overrides" => [override]})
+      |> Brando.Villain.Blocks.GalleryBlock.Data.changeset(%{
+        "type" => "gallery",
+        "gallery_object_overrides" => [override]
+      })
       |> Ecto.Changeset.apply_changes()
     end
 
@@ -1437,10 +1440,19 @@ defmodule Brando.Villain.RefRenderingTest do
     test "playback posted without the marker follows the video", %{user: user} do
       video = Factory.insert(:upload_video, creator: user, autoplay: true, controls: true)
       gallery = gallery_with([{:video, video}])
-      old_switches = %{"autoplay" => "false", "loop" => "true", "muted" => "false", "controls" => "false", "preload" => "false"}
+
+      old_switches = %{
+        "autoplay" => "false",
+        "loop" => "true",
+        "muted" => "false",
+        "controls" => "false",
+        "preload" => "false"
+      }
 
       data = posted_playback(video, old_switches, %{})
-      assert [%{autoplay: nil, use_default_autoplay: true, loop: nil, use_default_loop: true}] = data.gallery_object_overrides
+
+      assert [%{autoplay: nil, use_default_autoplay: true, loop: nil, use_default_loop: true}] =
+               data.gallery_object_overrides
 
       element = user |> render_gallery_ref(gallery, data) |> video_element()
       assert attribute?(element, "autoplay")
