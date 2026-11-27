@@ -325,7 +325,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
               <.flag_choice field={video_form[:muted]} label={gettext("Muted")} />
               <.flag_choice field={video_form[:controls]} label={gettext("Show controls")} />
               <.flag_choice field={video_form[:loop]} label={gettext("Loop")} />
-              <.flag_choice field={video_form[:preload]} label={gettext("Preload")} />
+              <.flag_choice field={video_form[:preload]} label={gettext("Lazy load")} />
             </div>
             <VideoQuality.select
               field={video_form[:quality]}

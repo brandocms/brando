@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
           <Input.toggle tiny field={@form[:loop]} label={gettext("Loop")} />
           <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
           <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
-          <Input.toggle tiny field={@form[:preload]} label={gettext("Preload")} />
+          <Input.toggle tiny field={@form[:preload]} label={gettext("Lazy load")} />
           <VideoQuality.select
             field={@form[:quality]}
             choices={Map.get(@override_info, :quality_choices, [])}
@@ -137,7 +137,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
         <Input.toggle tiny field={@form[:loop]} label={gettext("Loop")} />
         <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
         <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
-        <Input.toggle tiny field={@form[:preload]} label={gettext("Preload")} />
+        <Input.toggle tiny field={@form[:preload]} label={gettext("Lazy load")} />
         <VideoQuality.select
           field={@form[:quality]}
           choices={Map.get(@override_info, :quality_choices, [])}

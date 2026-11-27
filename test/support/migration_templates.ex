@@ -67,11 +67,13 @@ defmodule Brando.MigrationTemplates do
 
   @doc """
   Runs a template's `up/0` as a migration with a fresh version, and returns
-  the version for `down/2`.
+  the version for `down/2`. `opts` go to `Ecto.Migrator.up/4`: `prefix:`
+  runs it in one environment, as `Brando.Environments.ArchiveUpgrade` does.
   """
-  def up(file) do
+  def up(file, opts \\ []) do
     version = System.unique_integer([:positive])
-    with_module(file, &(:ok = Ecto.Migrator.up(Repo, version, &1, log: false, migration_lock: false)))
+    opts = Keyword.merge([log: false, migration_lock: false], opts)
+    with_module(file, &(:ok = Ecto.Migrator.up(Repo, version, &1, opts)))
     version
   end
 

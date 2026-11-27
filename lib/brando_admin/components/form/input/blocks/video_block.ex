@@ -329,7 +329,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   label={gettext("Video playback")}
                   fields={[
                     {block_data[:autoplay], gettext("Autoplay"), @video && @video.autoplay},
-                    {block_data[:preload], gettext("Preload"), @video && @video.preload},
+                    {block_data[:preload], gettext("Lazy load"), @video && @video.preload != false},
                     {block_data[:controls], gettext("Controls"), @video && @video.controls},
                     {block_data[:loop], gettext("Loop"), @video && @video.loop},
                     {block_data[:muted], gettext("Muted"), @video && Map.get(@video, :muted, false)}
