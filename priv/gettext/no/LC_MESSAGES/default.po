@@ -22412,6 +22412,7 @@ msgid "The video was uploaded, but could not be added here."
 msgstr "Videoen ble lastet opp, men kunne ikke legges til her."
 
 #: lib/brando/workers/video_metadata_sweep.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "The videos are already being looked up"
 msgstr "Videoene blir allerede slått opp"
