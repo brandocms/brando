@@ -23,6 +23,10 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   alias BrandoAdmin.LiveView.AssetListHelpers
   alias BrandoAdmin.Work
 
+  # The lookups of the selected videos (**Fetch details**), reported apart
+  # from the sweep's
+  @selected_work_key "video-metadata-selected"
+
   @impl true
   def mount(_params, _session, socket) do
     {:ok, default_cfg} = Videos.get_config_for(%{config_target: "default"})
@@ -363,6 +367,40 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     end
   end
 
+  # The selected videos are looked up whether or not they lack anything: a
+  # ready Bunny video gets a thumbnail changed in Bunny. One job each, as the
+  # sweep queues them; a video the lookup does nothing for is left out.
+  def handle_event("fetch_selected_metadata", %{"ids" => ids}, socket) do
+    user = socket.assigns.current_user
+
+    case Brando.Authorization.Boundary.run(user, :update, Video, fn _ -> {:ok, :allowed} end) do
+      {:ok, :allowed} -> look_up_selected(socket, user, AssetListHelpers.parse_selected_ids(ids))
+      _ -> {:noreply, put_flash(socket, :error, gettext("You do not have permission for this action."))}
+    end
+  end
+
+  defp look_up_selected(socket, user, ids) do
+    send_update(Content.List, id: AssetListHelpers.listing_id(socket.assigns.schema), action: :clear_selection)
+
+    case Videos.list_video_ids_to_look_up(ids) do
+      [] ->
+        send(self(), {:toast, gettext("None of the selected videos can be looked up")})
+        {:noreply, socket}
+
+      video_ids ->
+        count = length(video_ids)
+
+        Work.start(user, @selected_work_key, ngettext("Looking up %{count} video", "Looking up %{count} videos", count),
+          total: count,
+          done: gettext("Details fetched"),
+          failed: gettext("Some videos could not be looked up")
+        )
+
+        {:ok, _count} = Videos.enqueue_metadata(video_ids, user, work: @selected_work_key)
+        {:noreply, socket}
+    end
+  end
+
   defp start_lookups(socket, user) do
     count = socket.assigns.missing_metadata_count
 
@@ -665,7 +703,10 @@ defmodule BrandoAdmin.Videos.VideoListLive do
           empty_description={gettext("Choose a folder or adjust your search.")}
           extra_selection_actions={
             if BrandoAdmin.Authorization.allowed?(:update, @schema),
-              do: [%{event: "assets_cut_selected", label: gettext("Cut selected")}],
+              do: [
+                %{event: "assets_cut_selected", label: gettext("Cut selected")},
+                %{event: "fetch_selected_metadata", label: gettext("Fetch details")}
+              ],
               else: []
           }
         />
@@ -677,7 +718,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   # The lookups are in: the thumbnails and titles they found, and what is
   # still missing. Called by `on_mount BrandoAdmin.Work`.
   def handle_work(%Work{key: key, status: status}, socket) when status != :running do
-    if key == VideoMetadataSweep.work_key() do
+    if key in [VideoMetadataSweep.work_key(), @selected_work_key] do
       socket
       |> assign(:missing_metadata_count, length(Videos.list_video_ids_missing_metadata()))
       |> refresh()

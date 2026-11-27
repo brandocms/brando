@@ -7427,6 +7427,11 @@ msgstr "Frakoblet"
 msgid "Details"
 msgstr "Detaljer"
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Details fetched"
+msgstr "Detaljer hentet"
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "Differs from this release"
@@ -9134,6 +9139,11 @@ msgstr "Feiler"
 #, elixir-autogen, elixir-format
 msgid "Fails to render with this release."
 msgstr "Kan ikke gjengis med denne releasen."
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fetch details"
+msgstr "Hent detaljer"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -13994,6 +14004,11 @@ msgstr "Ingen av filene i denne mappen brukes av en oppføring, så det er ingen
 #, elixir-autogen, elixir-format
 msgid "None of the images in this folder are used by an entry, so there is nothing to sort."
 msgstr "Ingen av bildene i denne mappen brukes av en oppføring, så det er ingenting å sortere."
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "None of the selected videos can be looked up"
+msgstr "Ingen av de valgte videoene kan slås opp"
 
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
@@ -20123,6 +20138,7 @@ msgid "Some users"
 msgstr "Noen brukere"
 
 #: lib/brando/workers/video_metadata_sweep.ex
+#: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some videos could not be looked up"
 msgstr "Noen videoer kunne ikke slås opp"

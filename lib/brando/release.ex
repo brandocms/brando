@@ -77,10 +77,12 @@ defmodule Brando.Release do
   end
 
   @doc """
-  Runs **Fetch details** (`Brando.Videos.Uploaders.Bunny.refresh_renditions/2`)
-  for every ready Bunny video, deleted ones excepted, one request at a time:
-  each gets its renditions and the name of its thumbnail, which changes when
-  a custom thumbnail is set in Bunny. With tenancy, in `public` and every
+  Runs **Fetch details** (`Brando.Videos.Uploaders.Bunny.refresh_renditions/3`),
+  the video library's action for the selected videos, for every ready Bunny
+  video, deleted ones excepted, one request at a time: each gets its
+  renditions and the name of its thumbnail, which changes when a custom
+  thumbnail is set in Bunny. Each video is read just before its request, so
+  a webhook's write meanwhile is kept. With tenancy, in `public` and every
   environment of every site. A video Bunny does not answer for (an error, a
   rate limit, a timeout) is counted and the rest go on; nothing is retried,
   so run it again for those. Only a video that changed is written, as

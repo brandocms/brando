@@ -366,7 +366,9 @@ defmodule Brando.Videos.Uploaders.Bunny do
   (`Brando.Videos.Playback`), and the name of its thumbnail,
   `thumbnailFileName`, which changes when a custom thumbnail is set in Bunny.
   Videos stored before Brando kept `hasMP4Fallback` stream until this runs;
-  **Fetch details** in the video library runs it for them. A video Bunny no
+  the video library's **Fetch thumbnails and titles** runs it for them. Its
+  **Fetch details**, for the selected videos, runs it for any ready video,
+  as `Brando.Release.refresh_bunny_videos/0` does for all. A video Bunny no
   longer has gets no MP4s, so it isn't looked up again. Nothing else on the
   video changes, and nothing is written when nothing did.
 

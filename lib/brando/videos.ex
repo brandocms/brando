@@ -219,25 +219,39 @@ defmodule Brando.Videos do
   """
   @spec list_video_ids_missing_metadata() :: [integer()]
   def list_video_ids_missing_metadata do
-    types =
-      if Bunny.configured?(), do: [:bunny, :external_file, :vimeo, :youtube], else: [:external_file, :vimeo, :youtube]
-
-    from(v in Video,
-      where: is_nil(v.deleted_at) and v.type in ^types,
-      select: v
-    )
+    lookup_query()
     |> Brando.Repo.all()
     |> Enum.filter(&missing_metadata?/1)
     |> Enum.map(& &1.id)
   end
 
+  @doc """
+  Of `ids`, the videos `fetch_metadata/2` can look up, whether or not they
+  lack anything: a video from a source with details, or a ready Bunny
+  video. The rest, deleted ones too, are left out.
+  """
+  @spec list_video_ids_to_look_up([integer()]) :: [integer()]
+  def list_video_ids_to_look_up(ids) do
+    from(v in lookup_query(), where: v.id in ^ids, order_by: v.id)
+    |> Brando.Repo.all()
+    |> Enum.filter(&(&1.type != :bunny or bunny_lookup?(&1)))
+    |> Enum.map(& &1.id)
+  end
+
+  defp lookup_query do
+    types =
+      if Bunny.configured?(), do: [:bunny, :external_file, :vimeo, :youtube], else: [:external_file, :vimeo, :youtube]
+
+    from(v in Video, where: is_nil(v.deleted_at) and v.type in ^types, select: v)
+  end
+
+  defp bunny_lookup?(%Video{status: :ready, meta: %{"bunny" => %{"video_guid" => guid}}}), do: is_binary(guid)
+  defp bunny_lookup?(_video), do: false
+
   # A ready Bunny video stored before Brando kept `hasMP4Fallback` doesn't
   # know whether it has MP4s, and streams until it is looked up
-  defp missing_metadata?(%Video{type: :bunny, status: :ready, meta: %{"bunny" => %{"video_guid" => guid} = bunny}})
-       when is_binary(guid),
-       do: not Map.has_key?(bunny, "has_mp4_fallback")
-
-  defp missing_metadata?(%Video{type: :bunny}), do: false
+  defp missing_metadata?(%Video{type: :bunny} = video),
+    do: bunny_lookup?(video) and not Map.has_key?(video.meta["bunny"], "has_mp4_fallback")
 
   defp missing_metadata?(video),
     do: is_nil(video.thumbnail_id) or (placeholder_title?(video) and Brando.Videos.Metadata.gives_title?(video))
