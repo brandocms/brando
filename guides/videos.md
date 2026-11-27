@@ -841,6 +841,8 @@ column, and a video block's or gallery object's Lazy load overrides it. In the
 module editor, a video ref sets Lazy load and Autoplay for the blocks made from
 the module, and a media ref's video template sets Lazy load, Autoplay, Loop,
 Muted and Controls: Default leaves the setting to the video, On and Off set it.
+A gallery block's settings dialog for one of its videos sets the same five for
+that placement, in the same way.
 
 The built-in defaults:
 
