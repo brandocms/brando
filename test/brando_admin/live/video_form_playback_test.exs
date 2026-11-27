@@ -8,8 +8,6 @@ defmodule BrandoAdmin.VideoFormPlaybackTest do
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.Form
 
-  @settings ~w(autoplay preload loop controls muted)
-
   defp open(conn, video) do
     tab = %{"brando_tab" => "video", "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
     {view, _} = conn |> put_connect_params(tab) |> live_form("/admin/assets/videos/update/#{video.id}", "video_form")
@@ -44,15 +42,14 @@ defmodule BrandoAdmin.VideoFormPlaybackTest do
     end
   end
 
-  test "saving a video whose playback settings are empty leaves them empty", %{conn: conn} do
-    video = Factory.insert(:video, title: "Tour")
+  test "saving a video leaves its playback settings as they were", %{conn: conn} do
+    video = Factory.insert(:video, title: "Tour", loop: true, muted: false)
     view = open(conn, video)
 
     save(view, %{"title" => "Saved"})
 
     assert saved(video, :title, "Saved") == "Saved"
-    reloaded = Repo.reload!(video)
-    for setting <- @settings, do: assert(Map.fetch!(reloaded, String.to_atom(setting)) == nil, setting)
+    assert %Video{autoplay: nil, preload: nil, controls: nil, loop: true, muted: false} = Repo.reload!(video)
   end
 
   test "On and Off store true and false, and Default clears them", %{conn: conn} do

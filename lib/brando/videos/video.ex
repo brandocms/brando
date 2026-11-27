@@ -119,11 +119,12 @@ defmodule Brando.Videos.Video do
   end
 
   # A playback setting's choices, as in the video drawer: Default leaves it
-  # empty, for the page's or Brando's default
+  # empty, for the page's or Brando's default. Strings, since a boolean
+  # attribute value renders as a bare `value`.
   @flag_options [
     %{label: t("Default"), value: ""},
-    %{label: t("On"), value: true},
-    %{label: t("Off"), value: false}
+    %{label: t("On"), value: "true"},
+    %{label: t("Off"), value: "false"}
   ]
 
   forms do
