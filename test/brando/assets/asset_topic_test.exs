@@ -154,6 +154,52 @@ defmodule Brando.Assets.AssetTopicTest do
       assert subscribers(@staging, id) == []
     end
 
+    # With group authorization the manager stores and subscribes in the scope
+    # the page signed into the upload, and unsubscribes in its own: the same
+    test "with group authorization an upload in staging leaves no subscription behind", %{
+      conn: conn,
+      current_user: user
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      %Page{} = page = Factory.build(:page, creator: nil, creator_id: user.id)
+      page = Tenant.with_prefix(@staging, fn -> Brando.Repo.insert!(page) end)
+
+      conn =
+        conn
+        |> Plug.Conn.put_session("brando_site_key", "assettopic")
+        |> Plug.Conn.put_session("brando_environment_key", "staging")
+
+      {form, html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      manager = find_live_child(form, "brando-upload-manager-lv")
+
+      [scope_token] =
+        html |> Floki.parse_document!() |> Floki.attribute("main[data-authorization-upload]", "data-authorization-upload")
+
+      assert {:ok, %{prefix: @staging}} =
+               Phoenix.Token.verify(BrandoIntegrationWeb.Endpoint, "brando-authorized-upload-scope", scope_token)
+
+      :sys.replace_state(manager.pid, &tap(&1, fn _state -> Process.put(:oban_testing, :manual) end))
+      Process.put(:oban_testing, :manual)
+
+      body = File.read!(@fixture)
+      ref = intake(manager, form, "photo.jpg", byte_size(body), %{"scope_token" => scope_token})
+      transfer(manager, ref, "photo.jpg", body)
+
+      assert %{status: :processing, asset_id: id} = items(manager)[ref]
+      assert %Image{} = Tenant.with_prefix(@staging, fn -> Brando.Repo.get(Image, id) end)
+      assert manager.pid in subscribers(@staging, id)
+
+      [job] = all_enqueued(worker: ImageProcessor)
+      assert job.args["tenant_prefix"] == @staging
+      assert {:ok, _} = perform_job(ImageProcessor, job.args)
+      render(manager)
+      render(form)
+
+      assert %{status: :done} = items(manager)[ref]
+      assert subscribers(@staging, id) == []
+    end
+
     # The manager is sticky: it keeps the environment of the page load, which
     # the page names in its `brando_context` meta and the browser sends along
     # when it joins a page it navigated to
@@ -217,16 +263,20 @@ defmodule Brando.Assets.AssetTopicTest do
     end
   end
 
-  defp intake(manager, form, filename, size) do
+  defp intake(manager, form, filename, size, target \\ %{}) do
     render_hook(manager, "intake", %{
       "files" => [%{"index" => 0, "name" => filename, "size" => size, "type" => "image/jpeg"}],
-      "target" => %{
-        "kind" => "entry_field",
-        "field" => "meta_image",
-        "asset_type" => "image",
-        "config_target" => "default",
-        "deliver_topic" => deliver_topic(form)
-      }
+      "target" =>
+        Map.merge(
+          %{
+            "kind" => "entry_field",
+            "field" => "meta_image",
+            "asset_type" => "image",
+            "config_target" => "default",
+            "deliver_topic" => deliver_topic(form)
+          },
+          target
+        )
     })
 
     [ref] = manager |> items() |> Map.keys()
