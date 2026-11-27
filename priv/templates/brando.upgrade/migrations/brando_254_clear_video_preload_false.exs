@@ -26,7 +26,9 @@ defmodule Brando.Repo.Migrations.Brando254ClearVideoPreloadFalse do
   def down, do: :ok
 
   defp table?(prefix, table) do
-    %{rows: [[name]]} = repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}"."#{table}")])
+    %{rows: [[name]]} =
+      repo().query!("SELECT to_regclass($1)::text", [~s("#{prefix}"."#{table}")])
+
     not is_nil(name)
   end
 
