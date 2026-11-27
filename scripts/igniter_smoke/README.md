@@ -71,7 +71,11 @@ layout, published pages, draft protection, 404s, robots and frontend
 errors. After checking installer idempotence, a fixture adds application-owned
 navigation to the minimal CMS layout. A third browser test exercises frontend
 initialization and the installed mobile-menu animations, including reopening,
-resize and interrupted transitions. No email or telemetry
+resize and interrupted transitions. A fourth puts a video block on the
+published about page (`seed_video.exs`): Brando renders it lazy and the
+installed CSS hides it, so the test checks that the frontend reveals it, sets
+its source and plays it. The browser answers the video's URL with
+`clip.webm`, so no server or network serves it. No email or telemetry
 is sent. A failure retains logs and browser traces in the printed temporary
 directory; the consumer server stops on exit.
 

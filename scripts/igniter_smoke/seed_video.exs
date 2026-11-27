@@ -9,7 +9,6 @@ alias Brando.Tenant.Job
 
 user = Brando.Repo.get_by!(Brando.Users.User, email: "installer@example.test")
 src = "https://media.smoke.test/clip.webm"
-ref = fn name, data, extra -> Map.merge(%{"uid" => Brando.Utils.generate_uid(), "name" => name, "data" => data}, extra) end
 
 Job.each_active_environment(:live, fn ->
   {:ok, video} =
@@ -41,7 +40,14 @@ Job.each_active_environment(:live, fn ->
         "module_id" => module.id,
         "creator_id" => user.id,
         "source" => to_string(Page.Blocks),
-        "refs" => [ref.("clip", %{"type" => "video", "data" => %{"autoplay" => true}}, %{"video_id" => video.id})]
+        "refs" => [
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "name" => "clip",
+            "video_id" => video.id,
+            "data" => %{"type" => "video", "data" => %{"autoplay" => true}}
+          }
+        ]
       },
       user
     )
