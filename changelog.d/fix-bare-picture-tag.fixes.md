@@ -1,0 +1,1 @@
+- A `{% picture entry.cover %}` tag without an options block renders the picture; it raised an error before.
