@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
 
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.HtmlParams
+  alias BrandoAdmin.Components.Form.Input.PlaybackFlag
   alias BrandoAdmin.Components.Form.ModuleProps
   alias BrandoAdmin.Components.Form.Primitives
   alias Phoenix.LiveView.JS
@@ -354,8 +355,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       <Input.text field={block_data[:poster]} label={gettext("Poster")} />
       <Input.text field={block_data[:cover]} label={gettext("Cover")} />
       <Input.number field={block_data[:opacity]} label={gettext("Opacity")} />
-      <Input.toggle field={block_data[:autoplay]} label={gettext("Autoplay")} />
-      <Input.toggle field={block_data[:preload]} label={gettext("Lazy load")} />
+      <div class="playback-flags">
+        <PlaybackFlag.choice field={block_data[:autoplay]} label={gettext("Autoplay")} />
+        <PlaybackFlag.choice field={block_data[:preload]} label={gettext("Lazy load")} />
+      </div>
       <Input.toggle field={block_data[:play_button]} label={gettext("Play button")} />
       <Input.toggle field={block_data[:progress]} label={gettext("Progress bar")} />
       <Input.text
@@ -505,13 +508,15 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     <h2>{gettext("Video block template")}</h2>
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.number field={tpl_data[:opacity]} label={gettext("Opacity")} />
-      <Input.toggle field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
-      <Input.toggle field={tpl_data[:preload]} label={gettext("Lazy load")} />
+      <div class="playback-flags">
+        <PlaybackFlag.choice field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
+        <PlaybackFlag.choice field={tpl_data[:preload]} label={gettext("Lazy load")} />
+        <PlaybackFlag.choice field={tpl_data[:controls]} label={gettext("Show native player controls")} />
+        <PlaybackFlag.choice field={tpl_data[:loop]} label={gettext("Loop")} />
+        <PlaybackFlag.choice field={tpl_data[:muted]} label={gettext("Muted")} />
+      </div>
       <Input.toggle field={tpl_data[:play_button]} label={gettext("Play button")} />
       <Input.toggle field={tpl_data[:progress]} label={gettext("Progress bar")} />
-      <Input.toggle field={tpl_data[:controls]} label={gettext("Show native player controls")} />
-      <Input.toggle field={tpl_data[:loop]} label={gettext("Loop")} />
-      <Input.toggle field={tpl_data[:muted]} label={gettext("Muted")} />
       <Input.text
         field={tpl_data[:config_target]}
         label={gettext("Config target")}

@@ -819,12 +819,16 @@ expects `src` on the `<video>`:
 {% video entry.video { lazy: false } %}
 ```
 
-The editor's setting is **Lazy load**, stored in the record's `preload`
-column, and a video block's or gallery object's Lazy load overrides it. The
-option's older name, `preload`, still works: `preload: true` is lazy and
-`preload: false` eager. When a call passes both, `lazy` wins. YouTube and
-Vimeo embeds, and a Vimeo account video without a file link, render an
+The `lazy` option's older name, `preload`, still works: `preload: true` is
+lazy and `preload: false` eager. When a call passes both, `lazy` wins. YouTube
+and Vimeo embeds, and a Vimeo account video without a file link, render an
 iframe, so `lazy` does not apply to them.
+
+The editor's setting is **Lazy load**, stored in the record's `preload`
+column, and a video block's or gallery object's Lazy load overrides it. In the
+module editor, a video ref sets Lazy load and Autoplay for the blocks made from
+the module, and a media ref's video template sets Lazy load, Autoplay, Loop,
+Muted and Controls: Default leaves the setting to the video, On and Off set it.
 
 The built-in defaults:
 

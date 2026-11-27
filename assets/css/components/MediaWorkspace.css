@@ -194,17 +194,6 @@
   .video-detail-thumbnail-empty { flex: 0 0 120px; width: 120px; aspect-ratio: 16 / 9; display: grid; place-items: center; border: 1px dashed var(--brando-line-strong); border-radius: 5px; color: var(--brando-faint); }
   .video-detail-thumbnail-empty > [data-icon] { width: 22px; height: 22px; }
   .video-detail-thumbnail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .video-detail-flags { display: flex; flex-direction: column; }
-  .video-detail-flag { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 48px; margin: 0; padding: 6px 0; border: 0; border-bottom: 1px solid var(--brando-line-soft); }
-  .video-detail-flag:last-child { border-bottom: 0; }
-  .video-detail-flag legend { float: left; padding: 0; color: var(--workspace-ink); font: var(--brando-text-lg)/20px var(--brando-font-sans); }
-  .video-detail-flag-options { display: inline-grid; grid-template-columns: repeat(3, 72px); gap: 2px; margin-left: auto; padding: 2px; border-radius: 7px; background: var(--brando-badge-bg); }
-  .video-detail-flag-options label { position: relative; margin: 0; cursor: pointer; }
-  .video-detail-flag-options input { position: absolute; opacity: 0; pointer-events: none; }
-  .video-detail-flag-options span { display: block; padding: 4px 8px; border-radius: 5px; color: var(--workspace-muted); font: var(--brando-text-sm)/20px var(--brando-font-sans); text-align: center; }
-  .video-detail-flag-options label:hover span { color: var(--workspace-ink); }
-  .video-detail-flag-options input:checked + span { background: var(--brando-surface); color: var(--brando-accent); box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 12%, transparent), 0 0 0 1px color-mix(in srgb, var(--brando-ink) 5%, transparent); font-weight: 500; }
-  .video-detail-flag-options input:focus-visible + span { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   .video-detail-ratios { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
   .video-detail-ratio { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; padding: 10px 4px 8px; border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); color: var(--workspace-ink); font: var(--brando-text-sm)/16px var(--brando-font-sans); cursor: pointer; }
   .video-detail-ratio:hover { border-color: var(--brando-line-strong); background: var(--brando-surface-hover); }

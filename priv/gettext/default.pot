@@ -6817,6 +6817,7 @@ msgid "Declare the reference at the top level with headless_ref and read it insi
 msgstr ""
 
 #: lib/brando_admin/components/content/list/saved_views.ex
+#: lib/brando_admin/components/form/input/playback_flag.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Default"
@@ -14762,7 +14763,7 @@ msgstr ""
 
 #: lib/brando/users/user.ex
 #: lib/brando_admin/components/form/input.ex
-#: lib/brando_admin/components/form/video_drawer.ex
+#: lib/brando_admin/components/form/input/playback_flag.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -14793,7 +14794,7 @@ msgstr ""
 
 #: lib/brando/users/user.ex
 #: lib/brando_admin/components/form/input.ex
-#: lib/brando_admin/components/form/video_drawer.ex
+#: lib/brando_admin/components/form/input/playback_flag.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
