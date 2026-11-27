@@ -815,8 +815,10 @@ video is in view. A click on the play button plays or pauses the video, and so
 does a click on a video without controls. A Bunny or Mux video served as HLS
 plays natively where the browser can; elsewhere `SmartVideo` loads `hls.js`
 for it, so a page without such a video loads none of it. The installed CSS
+places the cover and the play button on the video and its caption below it,
 lets a click through the cover to the video, keeps the play button above the
-cover, and hides both while the video plays.
+cover, and hides both while the video plays. A video with controls shows no
+cover, which would hide the controls.
 
 `lazy: false` puts the source in the `<video>`'s `src`, so the browser starts
 loading it as it parses the page, before any script runs. Use it for a video
