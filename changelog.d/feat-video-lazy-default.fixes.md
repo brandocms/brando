@@ -1,0 +1,1 @@
+- `{% video entry.video %}` with no options renders the video; it raised `FunctionClauseError`.

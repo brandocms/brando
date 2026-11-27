@@ -310,9 +310,16 @@ sender first, before the first compile.
    add `{:phoenix_html_helpers, "~> 1.0"}` to `mix.exs`. Replace any other
    `use Phoenix.HTML` it lists with `import Phoenix.HTML`.
 10. **Video scripts.** A file video's `data-src` is on its
-    `[data-smart-video]` wrapper, and the `<video>` carries `src` unless it
-    preloads. In each listed script under `assets/`, read
-    `el.closest('[data-smart-video]').dataset.src`, or fall back to it.
+    `[data-smart-video]` wrapper, and `<.video>` and `{% video %}` render it
+    lazy by default, as video blocks do: the `<video>` has no `src` until
+    the site's script sets it. In each listed script under `assets/`, read
+    `el.closest('[data-smart-video]').dataset.src`, or fall back to it. A
+    site whose script expects `src` on the `<video>`, or a video that must
+    start before any script runs, passes `lazy: false` to `<.video>` or
+    `{% video %}` (see [Lazy loading](videos.md#lazy-loading)).
+    `brando_254` clears the Lazy load Offs stored on videos (see Lazy
+    videos below). Pages show the new markup once the resave in section 4
+    has rendered them.
 11. **`list_*` calls with no `order:`.** The migrations rewrite rows, and a
     query without `ORDER BY` returns them in storage order, so a page may
     change order (the first category of a menu, articles with equal
@@ -790,6 +797,15 @@ sender first, before the first compile.
   dashboard. See
   [Copying a database between environments](deployment.md#copying-a-database-between-environments).
   Run `mix brando.gen.migrations` for it, then `mix brando.migrate`.
+- **Lazy videos.** `brando_254` clears every `preload = false` stored on
+  videos, in `public` and every environment, so they render lazy, the new
+  default (step 10). The old Edit video form stored it on every save, and
+  nothing tells those apart from an editor's Off, so all go; blocks and
+  gallery objects that leave Lazy load to the video turn lazy with it. Set
+  Lazy load to Off again on a video that should stay eager. Run it once:
+  `down` changes nothing, and an Off set after rolling it back is cleared
+  again by a second `up`. Run `mix brando.gen.migrations` for it, then
+  `mix brando.migrate`.
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

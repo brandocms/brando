@@ -743,13 +743,45 @@ answer wins:
 
 1. **A render-time override** — a video block's own settings, or arguments to the
    `{% video entry.video { loop: false } %}` tag.
-2. **The video record** — what the editor set in the video drawer.
+2. **The video record** — what the editor set in the video drawer or the Edit
+   video form, where each setting is Default, On or Off. Default stores
+   nothing, for the next layer.
 3. **A built-in default** in `Brando.HTML.Video`.
 
 Passing `false` counts as answering. `{% video entry.video { autoplay: false } %}`
 turns autoplay off on a record that has it on, and a block that sets `loop: false`
 beats a record with `loop: true`. Only `nil` means "I have no opinion, ask the
 next layer".
+
+#### Lazy loading
+
+A video rendered as `<video>` is lazy unless something says otherwise: its
+source goes in `data-src` on the `[data-smart-video]` wrapper and on the
+`<video>`, which has no `src`, and the wrapper carries `data-preload`. The
+browser downloads nothing until the site's video script sets the source, so a
+page with many videos does not start them all while it loads. A visitor
+without JavaScript gets the `<noscript>` video inside the wrapper, which has
+its `src`, and `controls` and `autoplay` when the video has them.
+
+`lazy: false` puts the source in the `<video>`'s `src`, so the browser starts
+loading it as it parses the page, before any script runs. Use it for a video
+that must start before the page's JavaScript, or on a site whose script
+expects `src` on the `<video>`:
+
+```heex
+<.video video={@project.cover_video} opts={[autoplay: true, lazy: false]} />
+```
+
+```liquid
+{% video entry.video { lazy: false } %}
+```
+
+The editor's setting is **Lazy load**, stored in the record's `preload`
+column, and a video block's or gallery object's Lazy load overrides it. The
+option's older name, `preload`, still works: `preload: true` is lazy and
+`preload: false` eager. When a call passes both, `lazy` wins. YouTube and
+Vimeo embeds, and a Vimeo account video without a file link, render an
+iframe, so `lazy` does not apply to them.
 
 The built-in defaults:
 
@@ -759,7 +791,7 @@ The built-in defaults:
 | `muted` | `false` — but the rendered attribute is `autoplay or muted`, since browsers block unmuted autoplay |
 | `controls` | `false` |
 | `loop` | **`true`** |
-| `preload` | `false` — video *blocks* pass `true` when the block leaves it unset |
+| `lazy` (the `preload` column) | **`true`** |
 | `aspect_ratio` | the provider's, where it has one |
 
 #### Field-level defaults
