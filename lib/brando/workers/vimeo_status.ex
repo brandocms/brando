@@ -26,6 +26,7 @@ defmodule Brando.Worker.VimeoStatus do
     unique: [keys: [:tenant_prefix, :video_id], states: :incomplete, period: :infinity]
 
   alias Brando.Tenant.Job, as: TenantJob
+  alias Brando.Videos.Uploaders.ProviderUpdate
   alias Brando.Videos.Uploaders.Vimeo
   alias Brando.Videos.Video
 
@@ -84,8 +85,7 @@ defmodule Brando.Worker.VimeoStatus do
     Logger.warning("Vimeo video #{video.id} marked errored: #{why}")
 
     with {:ok, updated} <- Brando.Videos.update_video(video, %{status: :errored}, :system) do
-      Brando.Assets.ProcessingStatus.broadcast(:video, updated, :done)
-      Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:video:#{updated.id}", {updated, [:video, :updated]})
+      ProviderUpdate.broadcast(updated)
     end
 
     {:cancel, :gave_up}

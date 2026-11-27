@@ -140,6 +140,61 @@ defmodule Brando.TransformerSaveTest.ReelRow do
   end
 end
 
+# A form whose transformer rows carry a video, the articles' items' `clip`
+# (VideoTopicEnvironmentsTest), on the `synctest_articles` table too.
+defmodule Brando.TransformerSaveTest.Showreel do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "TransformerSaveTest",
+    schema: "Showreel",
+    singular: "showreel",
+    plural: "showreels",
+    gettext_module: Brando.Gettext
+
+  table "synctest_articles"
+  authorization(key: "brando.transformer_save_test.showreel")
+
+  trait :timestamped
+
+  identifier "{{ entry.title }}"
+  persist_identifier false
+
+  attributes do
+    attribute :title, :string, required: true
+    attribute :slug, :string
+  end
+
+  relations do
+    relation :items, :has_many,
+      module: Brando.SyncTest.ArticleItem,
+      foreign_key: :article_id,
+      on_replace: :delete,
+      preload_order: [asc: :sequence],
+      cast: true,
+      sort_param: :sort_items_ids,
+      drop_param: :drop_items_ids
+  end
+
+  forms do
+    form do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+
+          inputs_for :items do
+            cardinality :many
+            style {:transformer, :clip}
+            listing &Brando.TransformerSaveTest.ReelRow.row/1
+
+            input :label, :text
+          end
+        end
+      end
+    end
+  end
+end
+
 defmodule Brando.TransformerSaveTest do
   @moduledoc false
   use BrandoAdmin, :context
@@ -149,6 +204,7 @@ defmodule Brando.TransformerSaveTest do
 
   alias Brando.TransformerSaveTest.Album
   alias Brando.TransformerSaveTest.Reel
+  alias Brando.TransformerSaveTest.Showreel
 
   query :single, Album, do: fn query -> from(q in query) end
 
@@ -174,4 +230,16 @@ defmodule Brando.TransformerSaveTest do
 
   mutation :create, Reel
   mutation :update, Reel
+
+  query :single, Showreel, do: fn query -> from(q in query) end
+
+  matches Showreel do
+    fn
+      {:id, id}, query -> from t in query, where: t.id == ^id
+    end
+  end
+
+  query :list, Showreel, do: fn query -> from(q in query) end
+
+  mutation :update, Showreel
 end

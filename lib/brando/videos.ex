@@ -405,6 +405,14 @@ defmodule Brando.Videos do
   def run_completed_callback_on_ready(%Video{}, %Video{}, _user), do: :ok
 
   @doc """
+  The topic that carries `video_id`'s provider updates to the admin forms that
+  started its upload (`{video, [:video, :updated]}`), scoped to the current
+  environment: video ids repeat across environments.
+  """
+  @spec video_topic(id) :: binary
+  def video_topic(video_id), do: Brando.Tenant.Topic.scoped("brando:video:#{video_id}")
+
+  @doc """
   Get video.
   Raises on failure
   """

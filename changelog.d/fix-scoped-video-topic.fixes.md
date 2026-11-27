@@ -1,0 +1,1 @@
+- In a site with several environments, a video in an open form no longer changes to another environment's video that has the same id when a provider reports on that video.
