@@ -147,7 +147,8 @@ dimensions and duration.
 
 ### Images after storage
 
-- The manager subscribes to `"brando:image:<id>"` and calls
+- The manager subscribes to `Brando.Images.image_topic/1` (scoped to the
+  environment, as image ids repeat across environments) and calls
   `Brando.Images.Processing.queue_processing/4`, passing the entry field path
   (`path ++ [field]`) so nested-field updates route back. `[:image, :updated]`
   flips the item to `:done`, `[:image, :error]` to `:error`; it unsubscribes either way.
@@ -338,7 +339,10 @@ idempotent. Metadata edits do not invoke it.
 | `BrandoAdmin.LiveView.Form.ProcessingWatch` | Cross-editor processing updates |
 
 The manager renders in `layouts/live.html.heex` and `layouts/frontend_edit.html.heex`
-as `live_render(@socket, BrandoAdmin.UploadManager, id: "brando-upload-manager-lv", sticky: true)`.
+as `live_render(@socket, BrandoAdmin.UploadManager, id: "brando-upload-manager-lv", sticky: true)`,
+with the editor's site and environment keys in its session: `Brando.Tenant.LiveView`
+gives it the editor's tenant prefix, under which it stores, queues processing and
+subscribes.
 Sticky survival needs one `live_session`: all admin routes share
 `:require_authenticated_user` in `lib/brando/router.ex`. Uploads survive
 `live_patch`/`live_navigate`, not a full reload; completed uploads are always kept.

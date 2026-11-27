@@ -194,15 +194,9 @@ defmodule Brando.Worker.ImageProcessor do
   end
 
   defp broadcast_status(image, path, status) do
-    Logger.info(
-      "==> Broadcasting image #{status}: id=#{image.id}, path=#{inspect(path)}, channel=brando:image:#{image.id}"
-    )
-
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:image:#{image.id}",
-      {image, [:image, status], path}
-    )
+    topic = Images.image_topic(image.id)
+    Logger.info("==> Broadcasting image #{status}: id=#{image.id}, path=#{inspect(path)}, channel=#{topic}")
+    Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {image, [:image, status], path})
 
     {:ok, image}
   end

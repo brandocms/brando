@@ -50,7 +50,7 @@ defmodule Brando.Worker.ImageProcessorTest do
   end
 
   test "an image whose path has no image type is cancelled, keeping its sizes", %{image: image, size: size} do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
     args = %{"image_id" => image.id, "config_target" => "default", "user_id" => nil, "field_full_path" => []}
 
     log =
@@ -68,7 +68,7 @@ defmodule Brando.Worker.ImageProcessorTest do
   # just after it starts, the path's field names have no atoms. The worker
   # only passes the path on; the form converts it.
   test "a field path naming no atom on this node is passed on as stored", %{image: image} do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
     field = "no_atom_has_this_name_#{System.unique_integer([:positive])}"
     path = ["items", 0, field]
     args = %{"image_id" => image.id, "config_target" => "default", "user_id" => nil, "field_full_path" => path}

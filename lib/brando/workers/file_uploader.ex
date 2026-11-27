@@ -44,11 +44,7 @@ defmodule Brando.Worker.FileUploader do
   def timeout(_job), do: :timer.seconds(180)
 
   defp broadcast_status(file, path, status) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:file:#{file.id}",
-      {file, [:file, status], path}
-    )
+    Phoenix.PubSub.broadcast(Brando.pubsub(), Files.file_topic(file.id), {file, [:file, status], path})
 
     {:ok, file}
   end

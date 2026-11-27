@@ -1,7 +1,14 @@
 <%!-- The frontend editor sidebar, framed by the published page: no admin
       navigation or presence bar, but the upload manager media fields need. --%>
 <%= if @current_user do %>
-  {live_render(@socket, BrandoAdmin.UploadManager, id: "brando-upload-manager-lv", sticky: true)}
+  {live_render(@socket, BrandoAdmin.UploadManager,
+    id: "brando-upload-manager-lv",
+    session: %{
+      "brando_site_key" => @current_site && @current_site.key,
+      "brando_environment_key" => @current_environment && @current_environment.key
+    },
+    sticky: true
+  )}
   <div id="admin" class="frontend-edit-admin" phx-hook="Brando.Admin">
     <main id="brando-main" data-authorization-upload={Brando.Authorization.Media.token(@current_user)}>
       {@inner_content}
