@@ -8,9 +8,11 @@ defmodule Brando.ReleaseBunnyTest do
 
   alias Brando.Factory
   alias Brando.Videos.Uploaders.Bunny
+  alias Plug.Conn
+  alias Req.Test, as: ReqTest
 
   setup do
-    put_test_env(Bunny, api_key: "key", library_id: "133", req_options: [plug: {Req.Test, Bunny}])
+    put_test_env(Bunny, api_key: "key", library_id: "133", req_options: [plug: {ReqTest, Bunny}])
     %{user: Factory.insert(:user)}
   end
 
@@ -31,13 +33,13 @@ defmodule Brando.ReleaseBunnyTest do
   end
 
   defp stub_bunny do
-    Req.Test.stub(Bunny, fn conn ->
+    ReqTest.stub(Bunny, fn conn ->
       case conn.path_info do
         [_, _, _, "failing"] ->
-          conn |> Plug.Conn.put_status(503) |> Req.Test.json(%{"Message" => "Down"})
+          conn |> Conn.put_status(503) |> ReqTest.json(%{"Message" => "Down"})
 
         [_, _, _, guid] ->
-          Req.Test.json(conn, %{
+          ReqTest.json(conn, %{
             "guid" => guid,
             "availableResolutions" => "360p",
             "hasMP4Fallback" => true,
@@ -89,9 +91,9 @@ defmodule Brando.ReleaseBunnyTest do
     failing = video("failing", user)
     test = self()
 
-    Req.Test.stub(Bunny, fn conn ->
+    ReqTest.stub(Bunny, fn conn ->
       send(test, :asked)
-      conn |> Plug.Conn.put_status(503) |> Req.Test.json(%{"Message" => "Down"})
+      conn |> Conn.put_status(503) |> ReqTest.json(%{"Message" => "Down"})
     end)
 
     failing_id = failing.id
@@ -107,7 +109,7 @@ defmodule Brando.ReleaseBunnyTest do
   test "refresh_bunny_videos/0 says so and does nothing without Bunny credentials", %{user: user} do
     video = video("renamed", user)
     put_test_env(Bunny, library_id: "133")
-    Req.Test.stub(Bunny, fn _conn -> flunk("Bunny was asked") end)
+    ReqTest.stub(Bunny, fn _conn -> flunk("Bunny was asked") end)
 
     output = capture_io(fn -> assert Brando.Release.refresh_bunny_videos() == {:error, :not_configured} end)
 

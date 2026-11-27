@@ -97,9 +97,7 @@ defmodule Brando.Release do
     with true <- Bunny.configured?() || {:error, :not_configured},
          {:ok, _started_here?} <- Brando.Content.Resave.start(Brando.otp_app()) do
       result =
-        Enum.reduce(Audit.prefixes(), %{refreshed: 0, unchanged: 0, failed: []}, fn prefix, acc ->
-          in_schema(prefix, fn -> Enum.reduce(bunny_videos(), acc, &refresh_bunny_video(&1, &2, prefix)) end)
-        end)
+        Enum.reduce(Audit.prefixes(), %{refreshed: 0, unchanged: 0, failed: []}, &refresh_bunny_videos_in/2)
 
       result = %{result | failed: Enum.reverse(result.failed)}
       IO.puts(describe_bunny(result))
@@ -113,6 +111,10 @@ defmodule Brando.Release do
         IO.puts("Nothing was done: " <> message)
         error
     end
+  end
+
+  defp refresh_bunny_videos_in(prefix, acc) do
+    in_schema(prefix, fn -> Enum.reduce(bunny_videos(), acc, &refresh_bunny_video(&1, &2, prefix)) end)
   end
 
   defp in_schema(nil, fun), do: Brando.Tenant.with_public(fun)
