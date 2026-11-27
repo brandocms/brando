@@ -175,18 +175,31 @@ defmodule Brando.Videos.Playback do
   def source(%Video{type: :bunny} = video, opts) do
     case mp4_resolution(video, opts) do
       nil -> {:hls, bunny_url(video, "playlist.m3u8")}
-      resolution -> {:mp4, bunny_url(video, "play_#{resolution}p.mp4")}
+      resolution -> {:mp4, mp4_url(video, resolution)}
     end
   end
 
   def source(%Video{type: :mux} = video, opts) do
-    playback_id = get_in(video.meta, ["mux", "playback_id"])
-
     case mp4_resolution(video, opts) do
-      nil -> {:hls, "https://stream.mux.com/#{playback_id}.m3u8"}
-      resolution -> {:mp4, "https://stream.mux.com/#{playback_id}/#{resolution}p.mp4"}
+      nil -> {:hls, "https://stream.mux.com/#{mux_playback_id(video)}.m3u8"}
+      resolution -> {:mp4, mp4_url(video, resolution)}
     end
   end
+
+  @doc """
+  The URL of `video`'s MP4s with the text `{resolution}` where the number
+  goes, so a site script can build the URL of each of `mp4_resolutions/1`.
+  nil for a video without MP4s.
+  """
+  @spec mp4_src_template(Video.t() | nil) :: String.t() | nil
+  def mp4_src_template(video) do
+    if mp4_resolutions(video) != [], do: mp4_url(video, "{resolution}")
+  end
+
+  defp mp4_url(%Video{type: :bunny} = video, resolution), do: bunny_url(video, "play_#{resolution}p.mp4")
+  defp mp4_url(%Video{type: :mux} = video, resolution), do: "https://stream.mux.com/#{mux_playback_id(video)}/#{resolution}p.mp4"
+
+  defp mux_playback_id(%Video{meta: meta}), do: get_in(meta, ["mux", "playback_id"])
 
   # The resolution to play, or nil for the stream
   defp mp4_resolution(video, opts) do

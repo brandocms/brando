@@ -164,6 +164,30 @@ defmodule Brando.Videos.PlaybackTest do
       assert Playback.source(mux([rendition("highest")]), []) == {:hls, "https://stream.mux.com/pb-1.m3u8"}
     end
 
+    test "the MP4 URL template makes the URL each listed resolution plays from, for Bunny and Mux" do
+      videos = [
+        bunny(%{"has_mp4_fallback" => true, "available_resolutions" => "240p,360p,480p,720p,1080p"}),
+        mux(Enum.map(Playback.mux_resolutions(), &rendition("#{&1}p")) ++ [rendition("highest")])
+      ]
+
+      for video <- videos do
+        template = Playback.mp4_src_template(video)
+        assert Playback.mp4_resolutions(video) != []
+
+        for resolution <- Playback.mp4_resolutions(video) do
+          assert Playback.source(%{video | quality: :"mp4_#{resolution}"}, []) ==
+                   {:mp4, String.replace(template, "{resolution}", Integer.to_string(resolution))}
+        end
+      end
+    end
+
+    test "a video without MP4s has no MP4 URL template" do
+      assert Playback.mp4_src_template(mux([rendition("highest"), rendition("720p", "preparing")])) == nil
+      assert Playback.mp4_src_template(bunny(%{"has_mp4_fallback" => false})) == nil
+      assert Playback.mp4_src_template(%Video{type: :upload}) == nil
+      assert Playback.mp4_src_template(nil) == nil
+    end
+
     test "each provider's resolutions are qualities" do
       for resolution <- Playback.bunny_resolutions() ++ Playback.mux_resolutions() do
         assert Playback.normalize("mp4_#{resolution}") == :"mp4_#{resolution}"

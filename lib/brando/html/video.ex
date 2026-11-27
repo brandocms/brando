@@ -130,7 +130,8 @@ defmodule Brando.HTML.Video do
       class: "video-bunny",
       src: src,
       poster: "https://#{cdn_hostname}/#{video_guid}/thumbnail.jpg",
-      aspect_ratio: "16/9"
+      aspect_ratio: "16/9",
+      playback: playback_attributes(video, opts)
     )
   end
 
@@ -154,7 +155,8 @@ defmodule Brando.HTML.Video do
       class: "video-mux",
       src: src,
       poster: "https://image.mux.com/#{playback_id}/thumbnail.jpg",
-      aspect_ratio: mux_meta_aspect_ratio(meta)
+      aspect_ratio: mux_meta_aspect_ratio(meta),
+      playback: playback_attributes(video, opts)
     )
   end
 
@@ -306,6 +308,7 @@ defmodule Brando.HTML.Video do
       |> assign(:video_cover, get_video_cover(cover, cover_size({width, height}, aspect_ratio), opacity))
       |> assign(:caption, caption(opts, video))
       |> assign_new(:cover, fn -> nil end)
+      |> assign(:playback, Keyword.get(provider, :playback, []))
 
     ~H"""
     <div
@@ -315,6 +318,7 @@ defmodule Brando.HTML.Video do
       data-progress={@progress}
       data-preload={@preload && @src}
       data-src={@src}
+      {@playback}
       data-autoplay={@autoplay}
       data-controls={@controls}
       style={@aspect_ratio}
@@ -365,6 +369,19 @@ defmodule Brando.HTML.Video do
       <.figcaption_tag :if={@caption} caption={@caption} />
     </div>
     """
+  end
+
+  # What a Bunny or Mux video's wrapper says of its renditions, for a site
+  # script choosing another MP4: the resolved quality, and the MP4s there are
+  # and how to build their URLs, left off when there are none
+  defp playback_attributes(video, opts) do
+    resolutions = Brando.Videos.Playback.mp4_resolutions(video)
+
+    [
+      "data-quality": Brando.Videos.Playback.quality(video, Keyword.get(opts, :quality)),
+      "data-mp4-resolutions": resolutions != [] && Enum.join(resolutions, ","),
+      "data-mp4-src-template": Brando.Videos.Playback.mp4_src_template(video)
+    ]
   end
 
   # Precedence: an explicit opt at the call site, then the editor's setting on
