@@ -68,7 +68,7 @@ Job.each_active_environment(:live, fn ->
   true = html =~ ~s(data-preload="#{cover_src}")
   true = html =~ "data-cover"
   true = html =~ "video-play-button"
-  true = html =~ "<figcaption>"
+  true = html =~ "<figcaption"
 end)
 
 IO.puts("Two video blocks on the about page in every live environment")
