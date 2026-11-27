@@ -187,7 +187,9 @@ a {
     visibility: visible;
   }
 
+  /* Over the video until it plays; a click goes through to the video */
   [data-cover] {
+    pointer-events: none;
     position: absolute;
     top: 0;
     left: 0;
@@ -214,7 +216,25 @@ a {
 
   video {
     width: 100%;
+  }
+
+  .video-play-button-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
     z-index: 3;
+    transform: translate(-50%, -50%);
+  }
+
+  &[data-playing] {
+    [data-cover] {
+      visibility: hidden;
+    }
+
+    .video-play-button-wrapper {
+      opacity: 0;
+      pointer-events: none;
+    }
   }
 }
 
