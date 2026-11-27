@@ -32,6 +32,22 @@ test('a video block on a public page is revealed, gets its source and plays', as
   expect(errors).toEqual([])
 })
 
+test('the cover and play button of a video block sit on the video, its caption below', async ({ page }) => {
+  await page.goto('/about')
+  const wrapper = page.locator('main [data-smart-video]').last()
+  await wrapper.scrollIntoViewIfNeeded()
+  await expect(wrapper).toHaveCSS('opacity', '1')
+
+  const video = await wrapper.locator('video').boundingBox()
+  const cover = await wrapper.locator('[data-cover]').boundingBox()
+  const button = await wrapper.locator('.video-play-button-wrapper').boundingBox()
+  const caption = await wrapper.locator('figcaption').boundingBox()
+
+  expect(cover).toEqual(video)
+  expect(button.y + button.height / 2).toBeCloseTo(video.y + video.height / 2, 0)
+  expect(caption.y).toBeGreaterThanOrEqual(video.y + video.height)
+})
+
 test('the play button of a video block with a cover plays it and hides the cover', async ({ page }) => {
   await page.goto('/about')
   const wrapper = page.locator('main [data-smart-video]').last()

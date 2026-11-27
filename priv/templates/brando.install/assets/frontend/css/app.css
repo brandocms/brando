@@ -178,6 +178,8 @@ a {
 /** Smart video **/
 [data-smart-video] {
   position: relative;
+  display: grid;
+  grid-template-columns: 100%;
   opacity: 0;
   visibility: hidden;
 
@@ -185,6 +187,19 @@ a {
   &[data-revealed] {
     opacity: 1;
     visibility: visible;
+  }
+
+  /* The video, its cover and play button share the first row, so the cover
+     and button sit on the video and a caption goes below it */
+  video,
+  noscript,
+  [data-cover],
+  .video-play-button-wrapper {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+
+  figcaption {
+    grid-row: 2;
   }
 
   /* Over the video until it plays; a click goes through to the video */
@@ -224,6 +239,11 @@ a {
     left: 50%;
     z-index: 3;
     transform: translate(-50%, -50%);
+  }
+
+  /* Native controls are the video's own play button, and a cover would hide them */
+  &[data-controls] [data-cover] {
+    display: none;
   }
 
   &[data-playing] {
