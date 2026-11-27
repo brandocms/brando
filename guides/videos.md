@@ -806,6 +806,14 @@ without JavaScript gets the `<noscript>` video inside the wrapper, which has
 its `src`, and `controls` and `autoplay` when the video has them. A video
 that is not lazy has no `<noscript>` video: its own `<video>` has the source.
 
+In a project made with `mix brando.install` that script is Jupiter's
+`SmartVideo`, started in `assets/frontend/js/index.js`. It sets a lazy video's
+source as the wrapper comes within 300 px of the viewport, and gives every
+wrapper `data-revealed` as it loads: the installed CSS hides
+`[data-smart-video]` until then. It plays an autoplay video only while the
+video is in view, and a click on the play button or the video plays or pauses
+one that has a play button.
+
 `lazy: false` puts the source in the `<video>`'s `src`, so the browser starts
 loading it as it parses the page, before any script runs. Use it for a video
 that must start before the page's JavaScript, or on a site whose script

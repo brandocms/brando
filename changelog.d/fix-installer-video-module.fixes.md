@@ -1,0 +1,1 @@
+- A project made with `mix brando.install` shows its video blocks: its frontend starts Jupiter's `SmartVideo`, which loads a lazy video as it nears the viewport, reveals the wrapper the installed CSS hides, and plays an autoplay video while it is in view.

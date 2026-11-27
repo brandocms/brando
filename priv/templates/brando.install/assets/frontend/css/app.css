@@ -181,6 +181,12 @@ a {
   opacity: 0;
   visibility: hidden;
 
+  /* SmartVideo sets it when it gives the video its source */
+  &[data-revealed] {
+    opacity: 1;
+    visibility: visible;
+  }
+
   [data-cover] {
     position: absolute;
     top: 0;

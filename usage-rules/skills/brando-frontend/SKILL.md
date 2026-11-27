@@ -98,7 +98,8 @@ attribute, a named walk, a run, or `MOONWALK.js`.
   before the page is revealed. Moonwalk, the header and anything that sets a
   first-paint state start here.
 - `Events.APPLICATION_READY` runs once the fonts have loaded, just before the
-  fade-in. Lazyload, links and other behaviour start here.
+  fade-in. Lazyload, SmartVideo (videos), links and other behaviour start
+  here.
 
 Give a Jupiter module its options from a `js/config/NAME.js` that exports a
 function of the app, as the existing ones do. The modules Jupiter exports are
