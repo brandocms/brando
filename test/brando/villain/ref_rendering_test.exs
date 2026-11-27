@@ -1328,6 +1328,126 @@ defmodule Brando.Villain.RefRenderingTest do
       end
     end
 
+    # What the override form posts for a video: each playback setting as
+    # Default ("") / On / Off, with the marker its controls post
+    defp posted_playback(video, playback, marker \\ %{"playback_flags" => "true"}) do
+      defaults = Map.new(~w(autoplay loop muted controls preload), &{&1, ""})
+
+      override =
+        %{"object_id" => to_string(video.id), "object_type" => "video"}
+        |> Map.merge(marker)
+        |> Map.merge(defaults)
+        |> Map.merge(playback)
+
+      %Brando.Villain.Blocks.GalleryBlock.Data{}
+      |> Brando.Villain.Blocks.GalleryBlock.Data.changeset(%{"type" => "gallery", "gallery_object_overrides" => [override]})
+      |> Ecto.Changeset.apply_changes()
+    end
+
+    defp video_element(html) do
+      [video | _] = html |> Floki.parse_fragment!() |> Floki.find("video")
+      video
+    end
+
+    defp attribute?(element, name), do: Floki.attribute(element, name) != []
+
+    test "a video's playback set On or Off in the override form applies, Default follows the video", %{user: user} do
+      video = Factory.insert(:upload_video, creator: user, autoplay: false, controls: true, loop: false, preload: true)
+      gallery = gallery_with([{:video, video}])
+
+      set =
+        render_gallery_ref(
+          user,
+          gallery,
+          posted_playback(video, %{"autoplay" => "true", "controls" => "false", "loop" => "true", "preload" => "false"})
+        )
+        |> video_element()
+
+      assert attribute?(set, "autoplay")
+      refute attribute?(set, "controls")
+      assert attribute?(set, "loop")
+      # Lazy load Off: the source is on the video, not left for the frontend
+      assert attribute?(set, "src")
+      refute attribute?(set, "data-src")
+
+      default = user |> render_gallery_ref(gallery, posted_playback(video, %{})) |> video_element()
+
+      refute attribute?(default, "autoplay")
+      assert attribute?(default, "controls")
+      refute attribute?(default, "loop")
+      assert attribute?(default, "data-src")
+      refute attribute?(default, "src")
+
+      # Off where the video has it on
+      on_video = Factory.insert(:upload_video, creator: user, autoplay: true, loop: true)
+      gallery = gallery_with([{:video, on_video}])
+
+      off =
+        render_gallery_ref(user, gallery, posted_playback(on_video, %{"autoplay" => "false", "loop" => "false"}))
+        |> video_element()
+
+      refute attribute?(off, "autoplay")
+      refute attribute?(off, "loop")
+    end
+
+    # The native player mutes an autoplaying video whatever Muted says:
+    # browsers block unmuted autoplay (`Brando.HTML.Video`)
+    test "Muted Off unmutes a video only while autoplay is off", %{user: user} do
+      video = Factory.insert(:upload_video, creator: user, autoplay: false, muted: true)
+      gallery = gallery_with([{:video, video}])
+      render = &(user |> render_gallery_ref(gallery, posted_playback(video, &1)) |> video_element())
+
+      assert attribute?(render.(%{}), "muted")
+      refute attribute?(render.(%{"muted" => "false"}), "muted")
+      refute attribute?(render.(%{"muted" => "false", "autoplay" => "false"}), "muted")
+      assert attribute?(render.(%{"muted" => "false", "autoplay" => "true"}), "muted")
+      assert attribute?(render.(%{"muted" => "true", "autoplay" => "false"}), "muted")
+    end
+
+    # Saved by the on/off switches the form had before: every setting stored,
+    # an untouched one as Off, with its flag left on. The site never showed
+    # them, and still does not.
+    test "a playback setting stored with its use_default flag on follows the video", %{user: user} do
+      video = Factory.insert(:upload_video, creator: user, autoplay: true, controls: true)
+      gallery = gallery_with([{:video, video}])
+
+      stored = %Brando.Villain.Blocks.GalleryObjectOverride{
+        object_id: to_string(video.id),
+        object_type: :video,
+        autoplay: false,
+        controls: false,
+        use_default_autoplay: true,
+        use_default_controls: true
+      }
+
+      element =
+        user
+        |> render_gallery_ref(gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+          type: :gallery,
+          gallery_object_overrides: [stored]
+        })
+        |> video_element()
+
+      assert attribute?(element, "autoplay")
+      assert attribute?(element, "controls")
+    end
+
+    # A form opened before the upgrade and recovered after it posts its old
+    # switches, an untouched one as Off, without the marker
+    test "playback posted without the marker follows the video", %{user: user} do
+      video = Factory.insert(:upload_video, creator: user, autoplay: true, controls: true)
+      gallery = gallery_with([{:video, video}])
+      old_switches = %{"autoplay" => "false", "loop" => "true", "muted" => "false", "controls" => "false", "preload" => "false"}
+
+      data = posted_playback(video, old_switches, %{})
+      assert [%{autoplay: nil, use_default_autoplay: true, loop: nil, use_default_loop: true}] = data.gallery_object_overrides
+
+      element = user |> render_gallery_ref(gallery, data) |> video_element()
+      assert attribute?(element, "autoplay")
+      assert attribute?(element, "controls")
+      refute attribute?(element, "loop")
+    end
+
     test "apply an override stored without a type by id alone", %{user: user} do
       image = Factory.insert(:image, creator: user, title: "Image default")
       gallery = gallery_with([{:image, image}])
