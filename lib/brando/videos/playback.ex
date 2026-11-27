@@ -197,7 +197,9 @@ defmodule Brando.Videos.Playback do
   end
 
   defp mp4_url(%Video{type: :bunny} = video, resolution), do: bunny_url(video, "play_#{resolution}p.mp4")
-  defp mp4_url(%Video{type: :mux} = video, resolution), do: "https://stream.mux.com/#{mux_playback_id(video)}/#{resolution}p.mp4"
+
+  defp mp4_url(%Video{type: :mux} = video, resolution),
+    do: "https://stream.mux.com/#{mux_playback_id(video)}/#{resolution}p.mp4"
 
   defp mux_playback_id(%Video{meta: meta}), do: get_in(meta, ["mux", "playback_id"])
 
