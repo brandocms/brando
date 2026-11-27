@@ -1,0 +1,1 @@
+- The two install templates pin `@brandocms/jupiter` 5.0.0-beta.24. BrandoJS and the E2E applications stay on 5.0.0-beta.21.

@@ -169,6 +169,7 @@ mix ecto.create > "$smoke_root/logs/database-create.log" 2>&1
 mix ecto.migrate > "$smoke_root/logs/framework-migrations.log" 2>&1
 mix run "$framework_dir/scripts/igniter_smoke/seed.exs" > "$smoke_root/logs/seed.log" 2>&1
 mix run "$framework_dir/scripts/igniter_smoke/seed_pages.exs" > "$smoke_root/logs/seed-pages.log" 2>&1
+mix run "$framework_dir/scripts/igniter_smoke/seed_video.exs" > "$smoke_root/logs/seed-video.log" 2>&1
 
 mix brando.gen.blueprint Catalog Product --yes > "$smoke_root/logs/blueprint.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/blocks_blueprint.exs"

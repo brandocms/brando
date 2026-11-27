@@ -15,6 +15,7 @@ import {
   MobileMenu,
   Moonwalk,
   FixedHeader,
+  SmartVideo,
   Typography,
 } from '@brandocms/jupiter'
 
@@ -48,6 +49,7 @@ const app = new Application({
 app.registerCallback(Events.APPLICATION_READY, () => {
   app.links = new Links(app)
   app.lazyload = new Lazyload(app, { useNativeLazyloadIfAvailable: false })
+  app.smartVideo = new SmartVideo(app)
 })
 
 app.registerCallback(Events.APPLICATION_PRELUDIUM, () => {
