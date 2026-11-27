@@ -89,6 +89,7 @@ defmodule Brando.Videos.VideoTopicTest do
       assert {:ok, _} = Mux.handle_webhook(%{"type" => "video.asset.errored", "data" => %{"id" => "asset-a"}})
 
       assert_receive {:heard, @production, %Video{title: "Production clip", status: :errored}}
+      settle()
       refute_received {:heard, @staging, _video}
     end
 
@@ -102,6 +103,7 @@ defmodule Brando.Videos.VideoTopicTest do
 
       assert_receive {:heard, @production, %Video{title: "Production clip"}}
       assert_receive {:heard, @staging, %Video{title: "Staging clip"}}
+      settle()
       refute_received {:heard, _prefix, _video}
     end
 
@@ -119,6 +121,7 @@ defmodule Brando.Videos.VideoTopicTest do
       assert {:cancel, :gave_up} = in_fresh_process(fn -> perform_job(Brando.Worker.VimeoStatus, args) end)
 
       assert_receive {:heard, @staging, %Video{title: "Staging clip", status: :errored}}
+      settle()
       refute_received {:heard, @production, _video}
     end
 
@@ -135,6 +138,7 @@ defmodule Brando.Videos.VideoTopicTest do
       assert :ok = in_fresh_process(fn -> perform_job(Brando.Worker.VideoMetadata, args) end)
 
       assert_receive {:heard, @staging, %Video{title: "Staging clip"}}
+      settle()
       refute_received {:heard, @production, _video}
     end
 
@@ -151,6 +155,7 @@ defmodule Brando.Videos.VideoTopicTest do
 
       assert_receive {:heard, @production, %Video{title: "Production clip"}}
       assert_receive {:heard, @staging, %Video{title: "Staging clip"}}
+      settle()
       refute_received {:heard, _prefix, _video}
     end
 
@@ -168,6 +173,7 @@ defmodule Brando.Videos.VideoTopicTest do
                Tenant.with_prefix(@staging, fn -> Videos.Uploader.complete_client_upload(staging) end)
 
       assert_receive {:heard, @staging, %Video{title: "Staging clip", status: :processing}}
+      settle()
       refute_received {:heard, @production, _video}
     end
   end
@@ -321,7 +327,7 @@ defmodule Brando.Videos.VideoTopicTest do
   defp follow(prefix, id) do
     test = self()
 
-    {:ok, _pid} =
+    {:ok, pid} =
       Task.start_link(fn ->
         Tenant.with_prefix(prefix, fn -> Phoenix.PubSub.subscribe(Brando.pubsub(), Videos.video_topic(id)) end)
         send(test, {:following, prefix})
@@ -329,6 +335,7 @@ defmodule Brando.Videos.VideoTopicTest do
       end)
 
     assert_receive {:following, ^prefix}
+    Process.put(:followers, [pid | Process.get(:followers, [])])
   end
 
   defp forward(test, prefix) do
@@ -336,6 +343,21 @@ defmodule Brando.Videos.VideoTopicTest do
       {video, [:video, :updated]} ->
         send(test, {:heard, prefix, video})
         forward(test, prefix)
+
+      {:settle, ref} ->
+        send(test, {:settled, ref})
+        forward(test, prefix)
+    end
+  end
+
+  # A broadcast has reached every follower's mailbox once it returns; a
+  # follower answers :settle after forwarding what came before it, so a
+  # refute_received after settle/0 sees every update a follower got
+  defp settle do
+    for pid <- Process.get(:followers, []) do
+      ref = make_ref()
+      send(pid, {:settle, ref})
+      assert_receive {:settled, ^ref}
     end
   end
 
