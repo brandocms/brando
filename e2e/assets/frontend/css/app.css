@@ -165,12 +165,33 @@ p {
 /** Smart video **/
 [data-smart-video] {
   position: relative;
+  display: grid;
+  grid-template-columns: 100%;
   opacity: 0;
   visibility: hidden;
-  aspect-ratio: var(--aspect-ratio-division);
-  background-color: #000000;
-  overflow: hidden;
-  transition: background-color 350ms ease;
+
+  /* The black box the video fades in over */
+  &::before {
+    content: '';
+    background-color: #000000;
+    transition: background-color 350ms ease;
+  }
+
+  /* The video, its cover and play button share the first row, so the cover
+     and button sit on the video and a caption goes below it. Vidstack wraps
+     the video in a media-player. */
+  &::before,
+  media-player,
+  video,
+  noscript,
+  [data-cover],
+  .video-play-button-wrapper {
+    grid-area: 1 / 1 / 2 / 2;
+  }
+
+  figcaption {
+    grid-row: 2;
+  }
 
   &[data-play-button],
   &[data-progress] {
@@ -185,7 +206,7 @@ p {
     }
   }
 
-  &[data-playing] {
+  &[data-playing]::before {
     background-color: transparent;
   }
 
@@ -225,6 +246,7 @@ p {
     top: 50%;
     left: 50%;
     position: absolute;
+    z-index: 3;
     color: white;
     transform: translate(-50%, -50%);
     opacity: 1;
@@ -246,7 +268,16 @@ p {
     }
   }
 
+  /* Native controls are the video's own play button, and a cover would hide them */
+  &[data-controls] [data-cover] {
+    display: none;
+  }
+
   &[data-playing] {
+    [data-cover] {
+      visibility: hidden;
+    }
+
     .video-play-button-wrapper {
       opacity: 0;
     }
@@ -268,6 +299,7 @@ p {
   }
 
   video {
+    aspect-ratio: var(--aspect-ratio-division);
     opacity: 0;
     transition: opacity 550ms ease;
   }

@@ -37,6 +37,9 @@ defmodule E2EFixtureController do
         "template-video-page" ->
           create_template_video_page()
 
+        "captioned-video-page" ->
+          create_captioned_video_page()
+
         # The E2E admin itself in Norwegian, so it still sees what it owns
         # (assistant proposals, drafts). Rolled back with the sandbox.
         "admin-language-no" ->
@@ -945,6 +948,86 @@ defmodule E2EFixtureController do
       })
 
     publish_block!(module, block, user, "Template video", "template-video")
+    user
+  end
+
+  # A published page (`/captioned-video`) whose block shows a video file
+  # through a video ref, with a cover, a play button and a caption
+  defp create_captioned_video_page do
+    user = get_admin_user()
+    file = "videos/e2e-captioned-video.mp4"
+    path = Path.join(Brando.config(:media_path), file)
+    File.mkdir_p!(Path.dirname(path))
+    File.cp!(Path.expand("../../playwright/fixtures/video.mp4", __DIR__), path)
+
+    video =
+      Brando.Repo.insert!(%Brando.Videos.Video{
+        type: :external_file,
+        source_url: Brando.Utils.media_url(file),
+        width: 1920,
+        height: 1080,
+        creator_id: user.id
+      })
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        %{
+          name: %{"en" => "Captioned video", "no" => "Video med bildetekst"},
+          namespace: %{"en" => "Content"},
+          help_text: %{},
+          class: "captioned-video",
+          code: ~s(<div class="captioned-video">{% ref refs.clip %}</div>),
+          refs: [
+            %{name: "clip", uid: Brando.Utils.generate_uid(), data: %{type: "video", data: %{}}}
+          ]
+        },
+        user
+      )
+
+    block =
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "creator_id" => user.id,
+          "source" => to_string(Brando.Pages.Page.Blocks),
+          "refs" => [
+            %{
+              "uid" => Brando.Utils.generate_uid(),
+              "name" => "clip",
+              "video_id" => video.id,
+              "data" => %{
+                "type" => "video",
+                "data" => %{
+                  "play_button" => true,
+                  "cover" => "svg",
+                  "title" => "<p>A caption</p>"
+                }
+              }
+            }
+          ]
+        },
+        user
+      )
+      |> Brando.Repo.insert!()
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Captioned video",
+        uri: "captioned-video",
+        language: :en,
+        status: :published,
+        template: "default.html",
+        creator_id: user.id
+      })
+
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
+    )
+
+    {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
     user
   end
 
@@ -2020,7 +2103,9 @@ defmodule E2EFixtureController do
     key =
       Plug.Crypto.KeyGenerator.generate(
         String.duplicate("another installation", 3),
-        "brando encrypted value", length: 32)
+        "brando encrypted value",
+        length: 32
+      )
 
     foreign = fn plaintext, context ->
       Plug.Crypto.MessageEncryptor.encrypt(plaintext, context, key, "")
