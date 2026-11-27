@@ -10836,7 +10836,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp provider_video_upload_ready(socket, edit_video, %{video: video} = result, filename, request_ref) do
     # Subscribe to video updates
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Videos.video_topic(video.id), link: true)
 
     # Update edit_video with the created video
     edit_video = Map.put(edit_video, :video, video)

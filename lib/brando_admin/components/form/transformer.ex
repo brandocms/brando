@@ -1231,7 +1231,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
            file_meta: %{name: filename, size: size, type: mime_type}
          ) do
       {:ok, %{video: video} = result} ->
-        Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
+        Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Videos.video_topic(video.id), link: true)
         socket = place_video_upload(socket, request_ref, video)
 
         {:noreply,

@@ -14,7 +14,7 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
   creator's action, and their role may have changed since the upload, or they
   may be gone), runs the creator's completed callback when
   the video has just become ready, and broadcasts the result to subscribers of
-  `"brando:video:<id>"` and to the editors following it
+  `Brando.Videos.video_topic/1` and to the editors following it
   (`Brando.Assets.ProcessingStatus`). Returns `{:ok, video}` or the error from the update.
   """
   def update_video(video, params) do
@@ -58,16 +58,13 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
   def put_dimensions(params, _source), do: params
 
   @doc """
-  Tells the open admin forms following `video` (`"brando:video:<id>"`) and
-  its editors (`Brando.Assets.ProcessingStatus`) that it changed.
+  Tells the open admin forms following `video` (`Brando.Videos.video_topic/1`)
+  and its editors (`Brando.Assets.ProcessingStatus`) that it changed. Call it
+  under the video's own tenant prefix: both topics are scoped to it.
   """
   def broadcast(video) do
     Brando.Assets.ProcessingStatus.broadcast(:video, video, Brando.Assets.ProcessingStatus.video_state(video))
 
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:video:#{video.id}",
-      {video, [:video, :updated]}
-    )
+    Phoenix.PubSub.broadcast(Brando.pubsub(), Videos.video_topic(video.id), {video, [:video, :updated]})
   end
 end

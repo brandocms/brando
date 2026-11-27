@@ -463,6 +463,28 @@ defmodule BrandoAdmin.TransformerSaveTest.AlbumFormLive do
   end
 end
 
+defmodule BrandoAdmin.TransformerSaveTest.ShowreelFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.TransformerSaveTest.Showreel
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="showreel_form"
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Showreel</:header>
+    </.live_component>
+    """
+  end
+end
+
 defmodule BrandoAdmin.TransformerSaveTest.ReelFormLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.TransformerSaveTest.Reel
@@ -648,6 +670,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/albums/update/:entry_id", BrandoAdmin.TransformerSaveTest.AlbumFormLive, :update
     live "/reels/create", BrandoAdmin.TransformerSaveTest.ReelFormLive, :create
     live "/reels/update/:entry_id", BrandoAdmin.TransformerSaveTest.ReelFormLive, :update
+    live "/showreels/update/:entry_id", BrandoAdmin.TransformerSaveTest.ShowreelFormLive, :update
     live "/rich-notes/update/:entry_id", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :default
     live "/rich-notes/update/:entry_id/omitted", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :omitted
     live "/rich-notes/update/:entry_id/plain", BrandoAdmin.RichTextDefaultFormTest.NoteFormLive, :plain
