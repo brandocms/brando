@@ -48,6 +48,12 @@ permission to create videos.
 
 Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification. They read at most 1 MiB of it and answer 413 for a larger body.
 
+A webhook names the provider's video, not a site. With tenancy, the plug
+updates the video in every environment holding it, of every active site (in
+single-site mode, of the configured site), and tells the editors following it
+there. A soft-deleted copy stays as it is. When one environment's update
+fails, the others are still updated and the plug answers with an error.
+
 #### Mux
 
 ```elixir
