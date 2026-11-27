@@ -355,7 +355,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
       <Input.text field={block_data[:cover]} label={gettext("Cover")} />
       <Input.number field={block_data[:opacity]} label={gettext("Opacity")} />
       <Input.toggle field={block_data[:autoplay]} label={gettext("Autoplay")} />
-      <Input.toggle field={block_data[:preload]} label={gettext("Preload")} />
+      <Input.toggle field={block_data[:preload]} label={gettext("Lazy load")} />
       <Input.toggle field={block_data[:play_button]} label={gettext("Play button")} />
       <Input.toggle field={block_data[:progress]} label={gettext("Progress bar")} />
       <Input.text
@@ -506,7 +506,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
     <.inputs_for :let={tpl_data} field={@field}>
       <Input.number field={tpl_data[:opacity]} label={gettext("Opacity")} />
       <Input.toggle field={tpl_data[:autoplay]} label={gettext("Autoplay")} />
-      <Input.toggle field={tpl_data[:preload]} label={gettext("Preload")} />
+      <Input.toggle field={tpl_data[:preload]} label={gettext("Lazy load")} />
       <Input.toggle field={tpl_data[:play_button]} label={gettext("Play button")} />
       <Input.toggle field={tpl_data[:progress]} label={gettext("Progress bar")} />
       <Input.toggle field={tpl_data[:controls]} label={gettext("Show native player controls")} />

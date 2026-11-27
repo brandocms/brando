@@ -34,6 +34,9 @@ defmodule E2EFixtureController do
         "single-datasource-modules" ->
           create_single_datasource_modules()
 
+        "template-video-page" ->
+          create_template_video_page()
+
         # The E2E admin itself in Norwegian, so it still sees what it owns
         # (assistant proposals, drafts). Rolled back with the sandbox.
         "admin-language-no" ->
@@ -910,6 +913,38 @@ defmodule E2EFixtureController do
     )
 
     Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+    user
+  end
+
+  # A published page (`/template-video`) whose module renders a video file
+  # with `{% video %}` and no options, rendered as a save would
+  defp create_template_video_page do
+    user = get_admin_user()
+    file = "videos/e2e-template-video.mp4"
+    path = Path.join(Brando.config(:media_path), file)
+    File.mkdir_p!(Path.dirname(path))
+    File.cp!(Path.expand("../../playwright/fixtures/video.mp4", __DIR__), path)
+
+    module =
+      Brando.Repo.insert!(%Brando.Content.Module{
+        uid: Ecto.UUID.generate(),
+        type: :liquid,
+        name: %{"en" => "Template video", "no" => "Malvideo"},
+        class: "template-video",
+        namespace: %{"en" => "Content"},
+        help_text: %{},
+        code: ~s(<div class="template-video">{% video "#{Brando.Utils.media_url(file)}" %}</div>)
+      })
+
+    block =
+      Brando.Repo.insert!(%Brando.Content.Block{
+        type: :module,
+        module_id: module.id,
+        uid: Brando.Utils.generate_uid(),
+        creator_id: user.id
+      })
+
+    publish_block!(module, block, user, "Template video", "template-video")
     user
   end
 

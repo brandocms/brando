@@ -118,6 +118,15 @@ defmodule Brando.Videos.Video do
     end
   end
 
+  # A playback setting's choices, as in the video drawer: Default leaves it
+  # empty, for the page's or Brando's default. Strings, since a boolean
+  # attribute value renders as a bare `value`.
+  @flag_options [
+    %{label: t("Default"), value: ""},
+    %{label: t("On"), value: "true"},
+    %{label: t("Off"), value: "false"}
+  ]
+
   forms do
     form do
       tab t("Content") do
@@ -149,11 +158,11 @@ defmodule Brando.Videos.Video do
 
         fieldset do
           size :half
-          input :autoplay, :toggle, label: t("Autoplay")
-          input :preload, :toggle, label: t("Preload")
-          input :loop, :toggle, label: t("Loop")
-          input :controls, :toggle, label: t("Controls")
-          input :muted, :toggle, label: t("Muted")
+          input :autoplay, :radios, label: t("Autoplay"), options: @flag_options
+          input :preload, :radios, label: t("Lazy load"), options: @flag_options
+          input :loop, :radios, label: t("Loop"), options: @flag_options
+          input :controls, :radios, label: t("Controls"), options: @flag_options
+          input :muted, :radios, label: t("Muted"), options: @flag_options
 
           input :quality, :select,
             label: t("Quality"),

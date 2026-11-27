@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
               {@form[:loop], gettext("Loop"), @video.loop || false},
               {@form[:muted], gettext("Muted"), Map.get(@video, :muted, false)},
               {@form[:controls], gettext("Controls"), @video.controls || false},
-              {@form[:preload], gettext("Preload"), @video.preload || false}
+              {@form[:preload], gettext("Lazy load"), @video.preload != false}
             ]}
             target={@myself}
           />

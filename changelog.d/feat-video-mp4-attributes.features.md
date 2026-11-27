@@ -1,0 +1,1 @@
+- A Bunny or Mux video's wrapper carries its resolved quality (`data-quality`), its MP4 resolutions (`data-mp4-resolutions`) and a URL template for them (`data-mp4-src-template`), so a site script can upgrade an automatic video to a larger MP4 that exists.

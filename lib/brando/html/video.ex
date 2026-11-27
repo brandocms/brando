@@ -1,6 +1,7 @@
 defmodule Brando.HTML.Video do
   use Phoenix.Component
   alias Brando.Captions
+  alias Brando.Videos.Playback
   alias Brando.Videos.Video
   alias Brando.Villain.InertLiquid
 
@@ -21,7 +22,13 @@ defmodule Brando.HTML.Video do
     - `controls`
     - `loop`
     - `muted` -> forced on whenever `autoplay` is on, see Precedence
-    - `preload`
+    - `lazy` -> on by default: the source goes in `data-src` on the wrapper
+      and the `<video>`, for the frontend's script to set, so the browser
+      downloads nothing until it does. `lazy: false` puts it in the `<video>`'s
+      `src`, so the download starts as the page is parsed. A visitor without
+      JavaScript gets the `<noscript>` video of a lazy one. `preload` is the
+      older name and still works (`preload: true` is lazy); with both, `lazy`
+      wins
     - `aspect_ratio`
     - `caption` -> `true` resolves to `opts[:title]`, then the record's caption
       or title, which print as text or sanitized rich text; a string, like
@@ -37,10 +44,12 @@ defmodule Brando.HTML.Video do
 
   ### Precedence
 
-  `autoplay`, `controls`, `loop`, `muted`, `preload`, `width`, `height` and
+  `autoplay`, `controls`, `loop`, `muted`, `width`, `height` and
   `aspect_ratio` are also fields on `%Brando.Videos.Video{}`, set by the editor
-  in the admin. An opt passed here is an override and wins; without one, the
-  record's value is used; failing both, the built-in default.
+  in the admin, and so is `lazy`, as the `preload` column. An opt passed here
+  is an override and wins; without one, the record's value is used; failing
+  both, the built-in default. A `lazy` or `preload` of `nil` counts as not
+  passed.
 
   `cover`, `opacity`, `progress` and `play_button` resolve the same way, but
   their second step is a virtual field: they are block-level presentation
@@ -127,7 +136,8 @@ defmodule Brando.HTML.Video do
       class: "video-bunny",
       src: src,
       poster: Brando.Videos.Helpers.bunny_thumbnail_url(video),
-      aspect_ratio: "16/9"
+      aspect_ratio: "16/9",
+      playback: playback_attributes(video, opts)
     )
   end
 
@@ -151,7 +161,8 @@ defmodule Brando.HTML.Video do
       class: "video-mux",
       src: src,
       poster: "https://image.mux.com/#{playback_id}/thumbnail.jpg",
-      aspect_ratio: mux_meta_aspect_ratio(meta)
+      aspect_ratio: mux_meta_aspect_ratio(meta),
+      playback: playback_attributes(video, opts)
     )
   end
 
@@ -303,6 +314,7 @@ defmodule Brando.HTML.Video do
       |> assign(:video_cover, get_video_cover(cover, cover_size({width, height}, aspect_ratio), opacity))
       |> assign(:caption, caption(opts, video))
       |> assign_new(:cover, fn -> nil end)
+      |> assign(:playback, Keyword.get(provider, :playback, []))
 
     ~H"""
     <div
@@ -312,6 +324,7 @@ defmodule Brando.HTML.Video do
       data-progress={@progress}
       data-preload={@preload && @src}
       data-src={@src}
+      {@playback}
       data-autoplay={@autoplay}
       data-controls={@controls}
       style={@aspect_ratio}
@@ -334,16 +347,18 @@ defmodule Brando.HTML.Video do
         src={!@preload && @src}
       >{"\n  "}</video>
 
-      <noscript>
+      <noscript :if={@preload}>
         <video
           width={@width}
           height={@height}
           alt=""
           tabindex="0"
           preload="metadata"
+          autoplay={@autoplay}
           muted={@autoplay || @muted}
           loop={@loop}
           playsinline
+          controls={@controls}
           src={@src}
         >{"\n    "}</video>
       </noscript>
@@ -362,6 +377,19 @@ defmodule Brando.HTML.Video do
       <.figcaption_tag :if={@caption} caption={@caption} />
     </div>
     """
+  end
+
+  # What a Bunny or Mux video's wrapper says of its renditions, for a site
+  # script choosing another MP4: the resolved quality, and the MP4s there are
+  # and how to build their URLs, left off when there are none
+  defp playback_attributes(video, opts) do
+    resolutions = Playback.mp4_resolutions(video)
+
+    [
+      "data-quality": Playback.quality(video, Keyword.get(opts, :quality)),
+      "data-mp4-resolutions": resolutions != [] && Enum.join(resolutions, ","),
+      "data-mp4-src-template": Playback.mp4_src_template(video)
+    ]
   end
 
   # Precedence: an explicit opt at the call site, then the editor's setting on
@@ -405,9 +433,15 @@ defmodule Brando.HTML.Video do
   defp or_default(nil, default), do: default
   defp or_default(value, _default), do: value
 
-  # `preload` resolves like any other setting, but `true` is shorthand for the
-  # HTML attribute value rather than a value in its own right.
-  defp setting_preload(video, opts), do: setting(opts, video, :preload, false)
+  # Whether the frontend sets the source: `lazy`, then the legacy `preload`
+  # with the meaning it has always had, then the record's `preload` column,
+  # then lazy. Unlike the other settings, a nil opt asks the next layer.
+  # `true` is shorthand for the HTML attribute value rather than a value in its
+  # own right.
+  defp setting_preload(video, opts) do
+    [Keyword.get(opts, :lazy), Keyword.get(opts, :preload), video && video.preload]
+    |> Enum.find(true, &(not is_nil(&1)))
+  end
 
   defp preload_value(true), do: "auto"
   defp preload_value(preload), do: preload
