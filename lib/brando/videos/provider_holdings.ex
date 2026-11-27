@@ -97,15 +97,19 @@ defmodule Brando.Videos.ProviderHoldings do
   def live_records(path, remote_id) do
     if Tenant.enabled?() do
       with {:ok, holders} <- environments_holding(path, [remote_id], webhook_sites()) do
-        records =
-          for {_site_id, prefix, false} <- holders |> Map.get(remote_id, []) |> Enum.sort(),
-              video = Tenant.with_prefix(prefix, fn -> recorded_here(path, remote_id) end),
-              do: {prefix, video}
-
-        {:ok, records}
+        {:ok, holders |> Map.get(remote_id, []) |> Enum.sort() |> Enum.flat_map(&live_record(&1, path, remote_id))}
       end
     else
       {:ok, for(video <- [recorded_here(path, remote_id)], video, do: {nil, video})}
+    end
+  end
+
+  defp live_record({_site_id, _prefix, true = _deleted?}, _path, _remote_id), do: []
+
+  defp live_record({_site_id, prefix, false}, path, remote_id) do
+    case Tenant.with_prefix(prefix, fn -> recorded_here(path, remote_id) end) do
+      nil -> []
+      video -> [{prefix, video}]
     end
   end
 
