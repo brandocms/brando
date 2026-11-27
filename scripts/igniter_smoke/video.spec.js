@@ -75,5 +75,6 @@ test('a video block with native controls shows them, not its cover', async ({ pa
   await expect(wrapper).toHaveCSS('opacity', '1')
   await expect(video).toHaveJSProperty('controls', true)
   await expect(video).toHaveJSProperty('paused', true)
+  await expect(wrapper.locator('[data-cover]')).toHaveCount(1)
   await expect(wrapper.locator('[data-cover]')).toBeHidden()
 })
