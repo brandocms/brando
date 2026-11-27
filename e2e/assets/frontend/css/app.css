@@ -178,8 +178,10 @@ p {
   }
 
   /* The video, its cover and play button share the first row, so the cover
-     and button sit on the video and a caption goes below it */
+     and button sit on the video and a caption goes below it. Vidstack wraps
+     the video in a media-player. */
   &::before,
+  media-player,
   video,
   noscript,
   [data-cover],
