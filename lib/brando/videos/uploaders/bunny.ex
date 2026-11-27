@@ -111,7 +111,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
 
     with true <- to_string(library_id) == to_string(configured_library_id),
          {:ok, [_ | _] = holders} <- ProviderHoldings.live_records("bunny.video_guid", video_guid) do
-      ProviderUpdate.in_each(holders, status_update(status, video_guid))
+      ProviderUpdate.in_each(holders, status_update(status, video_guid, holders))
     else
       false ->
         Logger.warning("Bunny webhook library_id mismatch: #{library_id}")
@@ -274,18 +274,24 @@ defmodule Brando.Videos.Uploaders.Bunny do
   end
 
   # Bunny's details of a finished video are read once, and every environment
-  # holding it stores the same playback data
-  defp status_update(@status_finished, video_guid) do
+  # holding it stores the same playback data. Errored videos stay errored,
+  # so for them nothing is read.
+  defp status_update(@status_finished, video_guid, holders) do
     details =
-      with {:error, reason} = error <- fetch_video_details(video_guid) do
-        Logger.error("Failed to fetch Bunny video details: #{inspect(reason)}")
-        error
-      end
+      if Enum.any?(holders, fn {_prefix, video} -> video.status != :errored end),
+        do: finished_details(video_guid)
 
     &finish(&1, details)
   end
 
-  defp status_update(status, _video_guid), do: &process_status_update(&1, status)
+  defp status_update(status, _video_guid, _holders), do: &process_status_update(&1, status)
+
+  defp finished_details(video_guid) do
+    with {:error, reason} = error <- fetch_video_details(video_guid) do
+      Logger.error("Failed to fetch Bunny video details: #{inspect(reason)}")
+      error
+    end
+  end
 
   defp finish(%Videos.Video{status: :errored} = video, _details), do: {:ok, video}
   defp finish(video, {:ok, bunny_video}), do: update_video_with_details(video, bunny_video)

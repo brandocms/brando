@@ -1,0 +1,1 @@
+- In a multi-site installation, Bunny and Cloudflare Stream webhooks update the video in every environment holding it, instead of failing with a missing tenant error.
