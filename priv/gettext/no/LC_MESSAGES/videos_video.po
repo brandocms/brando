@@ -44,8 +44,18 @@ msgstr "Kontroller"
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
+msgid "Default"
+msgstr "Standard"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
 msgid "Height"
 msgstr "Høyde"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Lazy load"
+msgstr "Lat innlasting"
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
@@ -64,8 +74,13 @@ msgstr "Ikke i bruk"
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
-msgid "Preload"
-msgstr "Forhåndslasting"
+msgid "Off"
+msgstr "Av"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "On"
+msgstr "På"
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format

@@ -11497,6 +11497,15 @@ msgstr ""
 msgid "Latitude"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
+#: lib/brando_admin/components/form/input/blocks/video_block.ex
+#: lib/brando_admin/components/form/input/gallery/video_config.ex
+#: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Lazy load"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Lazyload"
@@ -15896,15 +15905,6 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Poster"
-msgstr ""
-
-#: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
-#: lib/brando_admin/components/form/input/blocks/video_block.ex
-#: lib/brando_admin/components/form/input/gallery/video_config.ex
-#: lib/brando_admin/components/form/module_props/ref_block_form.ex
-#: lib/brando_admin/components/form/video_drawer.ex
-#, elixir-autogen, elixir-format
-msgid "Preload"
 msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex

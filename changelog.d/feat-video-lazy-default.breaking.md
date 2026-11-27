@@ -1,0 +1,6 @@
+- `<.video>` and `{% video %}` render a video lazy by default, as video blocks do, with its source in `data-src` and no `src` on the `<video>` until the site's video script sets it; `lazy: false` renders it eager, and `preload`, its older name, keeps working.
+  A site whose frontend expects `src` on the `<video>`: pass `lazy: false` where it needs it, or let its script read `el.closest('[data-smart-video]').dataset.src`.
+  Run `mix brando.gen.migrations` for `brando_254`, then `mix brando.migrate` before the new release starts.
+  In a release, run `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` from the new release.
+  `brando_254` clears every stored `preload = false` on videos, in every environment: the old Edit video form stored it on every save. Blocks and gallery objects that leave the setting to the video turn lazy with it. To keep a video eager, set Lazy load to Off on it again after the upgrade. Run the migration once: an Off set after rolling it back is cleared again by a second run.
+  Published entries keep the markup they rendered until they are rendered again (their next save, or a save of a module they use). `mix brando.entries.resave`, which the 0.55 upgrade runs, renders them all; in a release, `bin/my_app rpc "Brando.Content.Resave.run()"`.

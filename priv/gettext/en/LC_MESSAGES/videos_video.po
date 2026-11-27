@@ -44,7 +44,17 @@ msgstr ""
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
+msgid "Default"
+msgstr ""
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
 msgid "Height"
+msgstr ""
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Lazy load"
 msgstr ""
 
 #: lib/brando/videos/video.ex
@@ -64,7 +74,12 @@ msgstr ""
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
-msgid "Preload"
+msgid "Off"
+msgstr ""
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "On"
 msgstr ""
 
 #: lib/brando/videos/video.ex

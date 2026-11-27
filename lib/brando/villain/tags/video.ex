@@ -1,6 +1,10 @@
 defmodule Brando.Villain.Tags.Video do
   @moduledoc """
   {% video entry.video { autoplay: true } %}
+
+  Renders `Brando.HTML.Video.video/1`, whose doc lists the options. A video
+  rendered as `<video>` is lazy unless the record or the tag says otherwise:
+  `{% video entry.video { lazy: false } %}` sets its source at once.
   """
   @behaviour Liquex.Tag
 
@@ -17,11 +21,14 @@ defmodule Brando.Villain.Tags.Video do
   def parse, do: TagGrammar.parse(:video)
 
   @impl true
+  def render([source: source], context), do: render([source: source, args: []], context)
+
   def render([source: source, args: args], context) do
     allowed_atoms = [
       :aspect_ratio,
       :autoplay,
       :controls,
+      :lazy,
       :loop,
       :muted,
       :preload,
