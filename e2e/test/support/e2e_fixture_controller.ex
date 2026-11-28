@@ -133,6 +133,9 @@ defmodule E2EFixtureController do
         "gallery-repeated-image" ->
           create_repeated_gallery_page()
 
+        "gallery-video-playback" ->
+          create_gallery_video_page()
+
         "gallery-preview" ->
           {_filename, image} = create_directory_avatar()
           [gallery | _] = Brando.Repo.all(Brando.Galleries.Gallery)
@@ -2194,19 +2197,7 @@ defmodule E2EFixtureController do
   # A page whose gallery block holds one image twice, each placement with its
   # own caption (#3617).
   defp create_repeated_gallery_page do
-    user = get_admin_user()
     {_filename, image} = create_directory_avatar()
-    module = Brando.Repo.get_by!(Brando.Content.Module, class: "gallery-controls")
-
-    gallery =
-      Brando.Repo.insert!(%Brando.Galleries.Gallery{
-        config_target: "ref:gallery",
-        gallery_objects:
-          for(
-            sequence <- 0..1,
-            do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence}
-          )
-      })
 
     overrides =
       for {placement, caption} <- [{0, "First placement"}, {1, "Second placement"}] do
@@ -2219,10 +2210,49 @@ defmodule E2EFixtureController do
         }
       end
 
+    objects = for sequence <- 0..1, do: %Brando.Galleries.GalleryObject{image_id: image.id, sequence: sequence}
+    insert_gallery_page("Repeated gallery", "repeated-gallery", objects, overrides)
+  end
+
+  # A gallery block's video with Loop set On and Controls Off; the rest are
+  # Default (#4020)
+  defp create_gallery_video_page do
+    video =
+      Brando.Repo.insert!(%Brando.Videos.Video{
+        title: "Harbour at dusk",
+        type: :external_file,
+        source_url: "https://example.com/harbour.mp4",
+        config_target: "default",
+        width: 1920,
+        height: 1080,
+        status: :ready,
+        creator_id: get_admin_user().id
+      })
+
+    overrides = [
+      %{
+        "object_id" => to_string(video.id),
+        "object_type" => "video",
+        "loop" => true,
+        "use_default_loop" => false,
+        "controls" => false,
+        "use_default_controls" => false
+      }
+    ]
+
+    objects = [%Brando.Galleries.GalleryObject{video_id: video.id, sequence: 0}]
+    insert_gallery_page("Gallery video", "gallery-video", objects, overrides)
+  end
+
+  defp insert_gallery_page(title, uri, gallery_objects, overrides) do
+    user = get_admin_user()
+    module = Brando.Repo.get_by!(Brando.Content.Module, class: "gallery-controls")
+    gallery = Brando.Repo.insert!(%Brando.Galleries.Gallery{config_target: "ref:gallery", gallery_objects: gallery_objects})
+
     page =
       Brando.Repo.insert!(%Brando.Pages.Page{
-        title: "Repeated gallery",
-        uri: "repeated-gallery",
+        title: title,
+        uri: uri,
         language: :en,
         status: :published,
         template: "default.html",

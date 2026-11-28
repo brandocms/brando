@@ -67,34 +67,72 @@ defmodule Brando.Villain.Blocks.GalleryObjectOverride do
   # stored before placements existed keep their captions.
 
   @text_fields ~w(title credits alt caption)
+  @playback_fields ~w(autoplay loop muted controls preload)
+
+  # Posted by the override form's Default / On / Off playback controls. A
+  # form rendered before them had an on/off switch for each, which posted an
+  # untouched one as Off; replayed by form recovery after an upgrade, those
+  # values are not choices.
+  @playback_marker "playback_flags"
 
   @doc """
   Casts an override from editor params.
 
-  The editor submits only the texts; an empty text inherits the media's own.
-  Each `use_default_*` flag is derived from its text when the params carry the
-  text but not the flag, so the flag the renderer reads always agrees with what
-  the editor shows. Params that set a flag explicitly keep it.
+  The editor submits the texts and the playback settings, not the flags. An
+  empty text inherits the media's own, and so does a playback setting left at
+  Default (blank). Each `use_default_*` flag is derived from its value when the
+  params carry the value but not the flag, so the flag the renderer reads
+  always agrees with what the editor shows. Params that set a flag explicitly
+  keep it.
+
+  Playback values without their flags count only from the form's Default /
+  On / Off controls, which post `"playback_flags"` with them; without it
+  they are left out and the setting follows the video.
   """
   def cast_override(override, params) do
+    params = drop_unmarked_playback(params)
+
     override
     |> changeset(params)
     |> derive_use_default(params)
   end
 
+  defp drop_unmarked_playback(params) when is_map(params) do
+    if Map.has_key?(params, @playback_marker) do
+      params
+    else
+      @playback_fields
+      |> Enum.reject(&param?(params, "use_default_" <> &1))
+      |> Enum.reduce(params, &Map.drop(&2, [&1, String.to_existing_atom(&1)]))
+    end
+  end
+
+  defp drop_unmarked_playback(params), do: params
+
   defp derive_use_default(changeset, params) when is_map(params) do
-    Enum.reduce(@text_fields, changeset, fn field, acc ->
+    changeset =
+      derive_flags(changeset, params, @text_fields, fn field ->
+        not Brando.Captions.present?(param(params, field))
+      end)
+
+    derive_flags(changeset, params, @playback_fields, fn field ->
+      is_nil(Ecto.Changeset.get_field(changeset, String.to_existing_atom(field)))
+    end)
+  end
+
+  defp derive_use_default(changeset, _params), do: changeset
+
+  defp derive_flags(changeset, params, fields, use_default?) do
+    Enum.reduce(fields, changeset, fn field, acc ->
       flag = "use_default_" <> field
 
       if param?(params, field) and not param?(params, flag) do
-        Ecto.Changeset.put_change(acc, String.to_existing_atom(flag), not Brando.Captions.present?(param(params, field)))
+        Ecto.Changeset.put_change(acc, String.to_existing_atom(flag), use_default?.(field))
       else
         acc
       end
     end)
   end
-
-  defp derive_use_default(changeset, _params), do: changeset
 
   defp param?(params, key), do: Map.has_key?(params, key) or Map.has_key?(params, String.to_existing_atom(key))
   defp param(params, key), do: Map.get(params, key, Map.get(params, String.to_existing_atom(key)))

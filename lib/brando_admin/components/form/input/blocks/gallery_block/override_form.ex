@@ -5,16 +5,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
   Uses the unified override convention: nil = use default from media record.
   Shows reset icons when values differ from defaults. The `use_default_*` flags
   are not inputs: `GalleryObjectOverride.cast_override/2` derives each from its
-  text. An image's caption is its `title`; a video's is its `caption`, and its
-  `title` (plain) names the player. Captions are rich text.
+  text or playback setting. An image's caption is its `title`; a video's is its
+  `caption`, and its `title` (plain) names the player. Captions are rich text.
 
   Text field resets use client-side JS (clearing the input and dispatching a
-  change event). Toggle fields are standard toggles — users toggle them directly.
+  change event). A video's playback settings are Default / On / Off
+  (`PlaybackFlag`): Default stores nil and leaves the setting to the video.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.PlaybackFlag
   alias BrandoAdmin.Components.Form.Input.VideoQuality
 
   @caption_opts [extensions: ~w(p bold italic link)]
@@ -71,11 +73,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <%= if @override_info.object_type == :video do %>
         <div class="video-config-section">
           <h4>{gettext("Video playback")}</h4>
-          <Input.toggle tiny field={@form[:autoplay]} label={gettext("Autoplay")} />
-          <Input.toggle tiny field={@form[:loop]} label={gettext("Loop")} />
-          <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
-          <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
-          <Input.toggle tiny field={@form[:preload]} label={gettext("Lazy load")} />
+          <.playback_flags form={@form} />
           <VideoQuality.select
             field={@form[:quality]}
             choices={Map.get(@override_info, :quality_choices, [])}
@@ -133,11 +131,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <% end %>
 
       <%= if @override_info.object_type == :video do %>
-        <Input.toggle tiny field={@form[:autoplay]} label={gettext("Autoplay")} />
-        <Input.toggle tiny field={@form[:loop]} label={gettext("Loop")} />
-        <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
-        <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
-        <Input.toggle tiny field={@form[:preload]} label={gettext("Lazy load")} />
+        <.playback_flags form={@form} />
         <VideoQuality.select
           field={@form[:quality]}
           choices={Map.get(@override_info, :quality_choices, [])}
@@ -146,5 +140,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <% end %>
     </div>
     """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+
+  # The marker tells these choices from the on/off switches this form had
+  # before (`GalleryObjectOverride.cast_override/2`).
+  defp playback_flags(assigns) do
+    ~H"""
+    <div class="playback-flags">
+      <input type="hidden" name={"#{@form.name}[playback_flags]"} value="true" />
+      <PlaybackFlag.choice field={playback_field(@form, :autoplay)} label={gettext("Autoplay")} />
+      <PlaybackFlag.choice field={playback_field(@form, :loop)} label={gettext("Loop")} />
+      <PlaybackFlag.choice field={playback_field(@form, :muted)} label={gettext("Muted")} />
+      <PlaybackFlag.choice field={playback_field(@form, :controls)} label={gettext("Controls")} />
+      <PlaybackFlag.choice field={playback_field(@form, :preload)} label={gettext("Lazy load")} />
+    </div>
+    """
+  end
+
+  # A value whose `use_default_*` flag is on shows as Default, as the site
+  # ignores it: the switches this form had before stored one for every
+  # override without clearing the flag.
+  defp playback_field(form, field) do
+    if form[:"use_default_#{field}"].value in [true, "true"],
+      do: %{form[field] | value: nil},
+      else: form[field]
   end
 end

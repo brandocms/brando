@@ -167,6 +167,94 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
     end
   end
 
+  describe "a video's playback settings" do
+    @playback ~w(autoplay loop muted controls preload)
+
+    defp render_video_override(ctx, playback) do
+      video_override = struct(override(ctx.shared_id, :video, "Video caption"), playback)
+      socket = update_gallery_block(ctx.gallery, [hd(ctx.overrides), video_override])
+
+      render_component(&render_objects/1, Map.put(socket.assigns, :myself, %Phoenix.LiveComponent.CID{cid: 1}))
+    end
+
+    # What the video override's form posts: each checked choice and the marker
+    defp posted_playback(html) do
+      inputs = html |> Floki.parse_fragment!() |> Floki.find("input[name*='[gallery_object_overrides]']")
+
+      for input <- inputs,
+          [name] = Floki.attribute(input, "name"),
+          [_, field] = Regex.run(~r/\[(\w+)\]$/, name),
+          field in ["playback_flags" | @playback],
+          Floki.attribute(input, "type") != ["radio"] or Floki.attribute(input, "checked") != [],
+          into: %{},
+          do: {field, input |> Floki.attribute("value") |> List.first()}
+    end
+
+    test "an untouched form posts Default for each, which follows the video", ctx do
+      posted = ctx |> render_video_override(%{}) |> posted_playback()
+
+      assert Map.take(posted, @playback) == Map.new(@playback, &{&1, ""})
+
+      override =
+        %GalleryObjectOverride{}
+        |> GalleryObjectOverride.cast_override(Map.merge(posted, %{"object_id" => "1", "object_type" => "video"}))
+        |> Changeset.apply_changes()
+
+      for field <- @playback do
+        assert Map.get(override, String.to_existing_atom(field)) == nil
+        assert Map.get(override, :"use_default_#{field}") == true
+      end
+    end
+
+    test "On and Off post their value, which the override keeps", ctx do
+      posted =
+        ctx
+        |> render_video_override(%{autoplay: true, use_default_autoplay: false, loop: false, use_default_loop: false})
+        |> posted_playback()
+
+      assert %{"autoplay" => "true", "loop" => "false", "muted" => ""} = posted
+
+      override =
+        %GalleryObjectOverride{}
+        |> GalleryObjectOverride.cast_override(Map.merge(posted, %{"object_id" => "1", "object_type" => "video"}))
+        |> Changeset.apply_changes()
+
+      assert %{autoplay: true, use_default_autoplay: false, loop: false, use_default_loop: false} = override
+      assert %{muted: nil, use_default_muted: true} = override
+    end
+
+    # Stored by the on/off switches the form had before, an untouched one as
+    # Off, with the flag left on: the site follows the video there
+    test "a setting stored with its use_default flag on shows Default", ctx do
+      posted =
+        ctx
+        |> render_video_override(%{
+          autoplay: false,
+          use_default_autoplay: true,
+          controls: true,
+          use_default_controls: true
+        })
+        |> posted_playback()
+
+      assert %{"autoplay" => "", "controls" => ""} = posted
+    end
+
+    # The site applies a value whose flag is unset, so the form shows it and
+    # an unrelated save keeps it
+    test "a setting stored with no use_default flag shows its value", ctx do
+      posted = ctx |> render_video_override(%{loop: true, use_default_loop: nil}) |> posted_playback()
+
+      assert %{"loop" => "true"} = posted
+
+      override =
+        %GalleryObjectOverride{}
+        |> GalleryObjectOverride.cast_override(Map.merge(posted, %{"object_id" => "1", "object_type" => "video"}))
+        |> Changeset.apply_changes()
+
+      assert %{loop: true, use_default_loop: false} = override
+    end
+  end
+
   describe "GalleryBlock grid" do
     defp block_socket_for(ctx) do
       ctx.gallery
