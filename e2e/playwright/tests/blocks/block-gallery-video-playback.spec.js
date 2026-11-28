@@ -45,43 +45,49 @@ test('a gallery video plays in the live preview as its playback settings say', a
   await page.locator('#video-picker').getByRole('button', { name: 'Close', exact: true }).click()
   await expect(gallery.locator('.gallery-object')).toHaveCount(1)
 
-  // Reopened, the preview renders the entry as the form holds it. An open
-  // preview keeps a booted player as it is while its source is unchanged
-  // (`block_patch.js`), so a playback change shows from the next render.
-  const previewAutoplay = async () => {
-    await toggleLivePreview(page)
-    await toggleLivePreview(page)
-    await waitForPreviewReady(page)
-    return frame.locator('[data-gallery] [data-smart-video]').first()
-  }
+  // The open preview follows each change: a booted player is kept only while
+  // its source and playback settings are unchanged (`block_patch.js`).
+  const player = frame.locator('[data-gallery] [data-smart-video]').first()
+  const playerVideo = player.locator('video[data-video]')
 
   const dialog = page.getByRole('dialog').filter({ has: page.getByRole('group', { name: 'Autoplay' }) })
-  const autoplay = dialog.getByRole('group', { name: 'Autoplay' })
 
-  const choose = async choice => {
+  const choose = async (setting, choice) => {
+    const group = dialog.getByRole('group', { name: setting })
     await gallery.locator('.gallery-object').getByRole('button', { name: 'Configure' }).click()
-    await autoplay.getByText(choice, { exact: true }).click()
+    await group.getByText(choice, { exact: true }).click()
     await syncLV(page)
-    await expect(autoplay.getByRole('radio', { name: choice })).toBeChecked()
+    await expect(group.getByRole('radio', { name: choice })).toBeChecked()
     await dialog.getByRole('button', { name: 'Close dialog' }).click()
   }
 
-  await expect(await previewAutoplay()).toHaveAttribute('data-autoplay')
+  await expect(player).toHaveAttribute('data-autoplay')
+  await expect(player).toHaveAttribute('data-booted')
 
   await gallery.locator('.gallery-object').getByRole('button', { name: 'Configure' }).click()
-  await expect(autoplay.getByRole('radio', { name: 'Default' })).toBeChecked()
+  await expect(dialog.getByRole('group', { name: 'Autoplay' }).getByRole('radio', { name: 'Default' })).toBeChecked()
   await dialog.getByRole('button', { name: 'Close dialog' }).click()
 
-  await choose('Off')
-  await expect(await previewAutoplay()).not.toHaveAttribute('data-autoplay')
+  await choose('Autoplay', 'Off')
+  await expect(player).not.toHaveAttribute('data-autoplay')
 
-  await choose('On')
-  await expect(await previewAutoplay()).toHaveAttribute('data-autoplay')
+  await choose('Autoplay', 'On')
+  await expect(player).toHaveAttribute('data-autoplay')
 
-  await choose('Off')
-  await expect(await previewAutoplay()).not.toHaveAttribute('data-autoplay')
+  await choose('Autoplay', 'Off')
+  await expect(player).not.toHaveAttribute('data-autoplay')
 
   // Default follows the video, which autoplays
-  await choose('Default')
-  await expect(await previewAutoplay()).toHaveAttribute('data-autoplay')
+  await choose('Autoplay', 'Default')
+  await expect(player).toHaveAttribute('data-autoplay')
+
+  // Settings the renderer puts on the `<video>` only
+  await choose('Controls', 'On')
+  await expect(playerVideo).toHaveAttribute('controls')
+  await choose('Controls', 'Off')
+  await expect(playerVideo).not.toHaveAttribute('controls')
+
+  await expect(playerVideo).toHaveAttribute('loop')
+  await choose('Loop', 'Off')
+  await expect(playerVideo).not.toHaveAttribute('loop')
 })

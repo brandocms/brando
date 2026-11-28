@@ -280,6 +280,33 @@ window.BrandoBlockPatch = (function () {
       fromEl.getAttribute('data-lp-preserve') === toEl.getAttribute('data-lp-preserve')
   }
 
+  // How the renderer says a video plays: on its container, and on its `<video>`
+  // (`Brando.HTML.Video`), which a player mounting there may replace.
+  const PLAYER_ATTRIBUTES = ['data-src', 'data-autoplay', 'data-controls', 'data-preload', 'data-progress']
+  const VIDEO_ATTRIBUTES = ['autoplay', 'loop', 'muted', 'controls']
+
+  /**
+   * A booted video player showing what the new HTML says: the same source,
+   * played the same way. It is kept as it is; a changed source or playback
+   * setting replaces it. The `<video>` is compared only while it is still the
+   * server's.
+   * @param {Element} fromEl - The element in the page
+   * @param {Element} toEl - The element in the new HTML
+   * @returns {boolean}
+   */
+  function isUnchangedPlayer(fromEl, toEl) {
+    if (!fromEl.hasAttribute('data-smart-video') ||
+        !(fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) ||
+        PLAYER_ATTRIBUTES.some(name => fromEl.getAttribute(name) !== toEl.getAttribute(name))) {
+      return false
+    }
+
+    const fromVideo = fromEl.querySelector('video[data-video]')
+    const toVideo = toEl.querySelector('video[data-video]')
+    return !fromVideo || !toVideo ||
+      VIDEO_ATTRIBUTES.every(name => fromVideo.hasAttribute(name) === toVideo.hasAttribute(name))
+  }
+
   /**
    * Creates a reusable morphdom configuration
    * @param {boolean} childrenOnly - Whether to only update children
@@ -297,18 +324,17 @@ window.BrandoBlockPatch = (function () {
       },
 
       skipFromChildren(fromEl, toEl) {
-        // Preserve a live video player's internals when its source is unchanged.
-        // A container counts as booted if EITHER the live-preview stub (data-booted)
-        // OR the host frontend's real player (data-view-type, set by SmartVideo on
-        // init) has claimed it. The frontend boots on full load and marks the
-        // container with data-view-type — NOT data-booted — so a full-body rerender
-        // that only checked data-booted would re-morph the container, tear out the
-        // mounted player, and leave a gray box. Checking both markers keeps booted
-        // videos intact across rerender while still re-rendering ones whose source
-        // actually changed.
-        if (fromEl.hasAttribute('data-smart-video') &&
-            (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
-            fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
+        // Preserve a live video player's internals while it shows what the new
+        // HTML says (`isUnchangedPlayer`). A container counts as booted if EITHER
+        // the live-preview stub (data-booted) OR the host frontend's real player
+        // (data-view-type, set by SmartVideo on init) has claimed it. The frontend
+        // boots on full load and marks the container with data-view-type — NOT
+        // data-booted — so a full-body rerender that only checked data-booted
+        // would re-morph the container, tear out the mounted player, and leave a
+        // gray box. Checking both markers keeps booted videos intact across
+        // rerender while still re-rendering ones whose source or playback
+        // settings actually changed.
+        if (isUnchangedPlayer(fromEl, toEl)) {
           return true
         }
         // Iframes are opaque — never morph their children
@@ -327,17 +353,15 @@ window.BrandoBlockPatch = (function () {
           return false
         }
 
-        // Preserve a live video player ENTIRELY when its source is unchanged.
-        // The host frontend mounts Vidstack on full load and marks the container
-        // with data-view-type (the stub marks it data-booted). Morphing the
-        // container at all — even just its attributes — detaches the player and
-        // strips the data-view-type marker, leaving a gray box. So a booted player
-        // whose source hasn't changed must be a no-op for both the element and its
-        // subtree. A genuine source change has no marker match (different data-src)
-        // and falls through to re-render normally.
-        if (fromEl.hasAttribute('data-smart-video') &&
-            (fromEl.hasAttribute('data-booted') || fromEl.hasAttribute('data-view-type')) &&
-            fromEl.getAttribute('data-src') === toEl.getAttribute('data-src')) {
+        // Preserve a live video player ENTIRELY while its source and playback
+        // settings are unchanged. The host frontend mounts Vidstack on full load
+        // and marks the container with data-view-type (the stub marks it
+        // data-booted). Morphing the container at all — even just its
+        // attributes — detaches the player and strips the data-view-type marker,
+        // leaving a gray box. So an unchanged booted player must be a no-op for
+        // both the element and its subtree; a changed one falls through to
+        // re-render normally.
+        if (isUnchangedPlayer(fromEl, toEl)) {
           return false
         }
 
