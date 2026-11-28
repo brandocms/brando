@@ -170,8 +170,8 @@ importers:
         specifier: link:../../../assets
         version: link:../../../assets
       '@brandocms/jupiter':
-        specifier: 5.0.0-beta.21
-        version: 5.0.0-beta.21
+        specifier: 5.0.0-beta.24
+        version: 5.0.0-beta.24
     devDependencies:
       '@brandocms/europacss-cli':
         specifier: 0.1.0-beta.2
@@ -235,8 +235,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@brandocms/jupiter@5.0.0-beta.21':
-    resolution: {integrity: sha512-DdAUu++waObs3a99m1nI+SEatUK0t2+C4TdlYQUpILI3FlrUYe3vPBpO7wacLRyFlBxnklZnHLuZ+FbbRT1Q9g==}
+  '@brandocms/jupiter@5.0.0-beta.24':
+    resolution: {integrity: sha512-qRI4wyMUsMpEF5WQ2AbHW88mwn0VQylMlHlShWgkWOhrhTfaNBhDUKrBDjRu+0TqhU5I6jiqDs44t+z6McnpGg==}
 
   '@brandocms/vite-plugin-europacss@0.1.0-beta.2':
     resolution: {integrity: sha512-aSiqIa338t+OXjQ52azUfkOqSUF+wYTBkmX3PKiyFP7MQJKJ3+dFtraQhZUnTc9/eH+Ced2F5uRGO9or/mtgdQ==}
@@ -443,6 +443,9 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  hls.js@1.7.4:
+    resolution: {integrity: sha512-3GlxGdPvT2YHvQYOt+yOzT/DEior/qJVNIylHA77kgeoBTdQQqi70GwefNEUmHQeNGyjC8U62+bruqW/Tpm+tg==}
 
   is-reference@3.0.3:
     resolution: {integrity: sha512-ixkJoqQvAP88E6wLydLGGqCJsrFUnqoH6HnaczB8XmDH1oaWU+xxdptvikTgaEhtZ53Ky6YXiBuUI2WXLMCwjw==}
@@ -680,10 +683,12 @@ snapshots:
   '@brandocms/europacss-win32-x64@0.1.0-beta.2':
     optional: true
 
-  '@brandocms/jupiter@5.0.0-beta.21':
+  '@brandocms/jupiter@5.0.0-beta.24':
     dependencies:
+      hls.js: 1.7.4
       lodash.defaultsdeep: 4.6.1
       motion: 12.43.0
+      motion-dom: 12.43.0
     transitivePeerDependencies:
       - '@emotion/is-prop-valid'
       - react
@@ -809,6 +814,8 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  hls.js@1.7.4: {}
 
   is-reference@3.0.3:
     dependencies:
