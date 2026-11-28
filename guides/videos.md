@@ -801,6 +801,12 @@ turns autoplay off on a record that has it on, and a block that sets `loop: fals
 beats a record with `loop: true`. Only `nil` means "I have no opinion, ask the
 next layer".
 
+The answers show on the `<video>` and on its `[data-smart-video]` wrapper,
+which carries `data-autoplay`, `data-controls`, `data-loop` and `data-muted`
+for each setting that is on. A script that replaces the `<video>` with its own
+player can read them from the wrapper, and so does the live preview, to tell
+whether a setting changed.
+
 #### Lazy loading
 
 A video rendered as `<video>` is lazy unless something says otherwise: its

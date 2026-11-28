@@ -68,6 +68,16 @@ test('a gallery video plays in the live preview as its playback settings say', a
   await expect(dialog.getByRole('group', { name: 'Autoplay' }).getByRole('radio', { name: 'Default' })).toBeChecked()
   await dialog.getByRole('button', { name: 'Close dialog' }).click()
 
+  // The site's player has replaced the server's `<video>` (Vidstack does), so
+  // only the container says how the video plays: Loop and Muted are on it too
+  await expect(player).toHaveAttribute('data-loop')
+  await expect(player).toHaveAttribute('data-muted')
+  await choose('Loop', 'Off')
+  await expect(player).not.toHaveAttribute('data-loop')
+  await expect(playerVideo).not.toHaveAttribute('loop')
+  await choose('Loop', 'Default')
+  await expect(playerVideo).toHaveAttribute('loop')
+
   await choose('Autoplay', 'Off')
   await expect(player).not.toHaveAttribute('data-autoplay')
 

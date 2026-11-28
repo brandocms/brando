@@ -402,7 +402,7 @@ defmodule Brando.HTMLTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"landscape\" data-preload=\"https://src.vid\" data-src=\"https://src.vid\" data-autoplay style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\">\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\" data-src=\"https://src.vid\">\n  </video>\n\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" autoplay muted loop playsinline src=\"https://src.vid\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"400\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"landscape\" data-preload=\"https://src.vid\" data-src=\"https://src.vid\" data-autoplay data-loop data-muted style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\">\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\" data-src=\"https://src.vid\">\n  </video>\n\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" autoplay muted loop playsinline src=\"https://src.vid\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"400\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
   end
 
   test "video_tag with valid poster" do
@@ -423,7 +423,7 @@ defmodule Brando.HTMLTest do
     """
 
     assert rendered_to_string(comp) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"landscape\" data-preload=\"https://src.vid\" data-src=\"https://src.vid\" data-autoplay style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\">\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"/images/my_poster.jpg\" style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\" data-src=\"https://src.vid\">\n  </video>\n\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" autoplay muted loop playsinline src=\"https://src.vid\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"400\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"landscape\" data-preload=\"https://src.vid\" data-src=\"https://src.vid\" data-autoplay data-loop data-muted style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\">\n  <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video poster=\"/images/my_poster.jpg\" style=\"--aspect-ratio: 0.75; --aspect-ratio-division: 400/300;\" data-src=\"https://src.vid\">\n  </video>\n\n  <noscript>\n    <video width=\"400\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" autoplay muted loop playsinline src=\"https://src.vid\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"400\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27400%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0.5%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
   end
 
   test "video_tag draws the svg placeholder for a cover string it does not know" do
@@ -654,6 +654,24 @@ defmodule Brando.HTMLTest do
 
       refute render_video(video, autoplay: false) =~ "data-autoplay"
       refute render_video(video, controls: false) =~ "controls"
+    end
+
+    test "the wrapper says how the video plays, as the <video> does" do
+      # The live preview reads these to see a changed setting after the site's
+      # player has replaced the `<video>`
+      wrapper = fn html -> html |> String.split("<video", parts: 2) |> hd() end
+
+      on = render_video(mux_video(autoplay: false, controls: true, loop: true, muted: true), [])
+      assert wrapper.(on) =~ "data-controls"
+      assert wrapper.(on) =~ "data-loop"
+      assert wrapper.(on) =~ "data-muted"
+      refute wrapper.(on) =~ "data-autoplay"
+
+      off = render_video(mux_video(autoplay: false, controls: false, loop: false, muted: false), [])
+      refute wrapper.(off) =~ ~r/data-(autoplay|controls|loop|muted)/
+
+      # Autoplay is muted whatever the setting says, on the wrapper too
+      assert render_video(mux_video(autoplay: true, muted: false), []) |> wrapper.() =~ "data-muted"
     end
 
     test "a record that turns a setting off beats the built-in default" do
