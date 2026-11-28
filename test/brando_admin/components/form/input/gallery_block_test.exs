@@ -238,6 +238,21 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
 
       assert %{"autoplay" => "", "controls" => ""} = posted
     end
+
+    # The site applies a value whose flag is unset, so the form shows it and
+    # an unrelated save keeps it
+    test "a setting stored with no use_default flag shows its value", ctx do
+      posted = ctx |> render_video_override(%{loop: true, use_default_loop: nil}) |> posted_playback()
+
+      assert %{"loop" => "true"} = posted
+
+      override =
+        %GalleryObjectOverride{}
+        |> GalleryObjectOverride.cast_override(Map.merge(posted, %{"object_id" => "1", "object_type" => "video"}))
+        |> Changeset.apply_changes()
+
+      assert %{loop: true, use_default_loop: false} = override
+    end
   end
 
   describe "GalleryBlock grid" do

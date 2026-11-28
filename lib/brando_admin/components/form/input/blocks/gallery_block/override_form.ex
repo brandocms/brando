@@ -163,8 +163,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
   # ignores it: the switches this form had before stored one for every
   # override without clearing the flag.
   defp playback_field(form, field) do
-    if form[:"use_default_#{field}"].value in [false, "false"],
-      do: form[field],
-      else: %{form[field] | value: nil}
+    if form[:"use_default_#{field}"].value in [true, "true"],
+      do: %{form[field] | value: nil},
+      else: form[field]
   end
 end
