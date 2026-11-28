@@ -308,6 +308,17 @@ window.BrandoBlockPatch = (function () {
   }
 
   /**
+   * The server's `<video>` of a player, played differently in the new HTML.
+   * @param {Element} fromEl - The element in the page
+   * @param {Element} toEl - The element in the new HTML
+   * @returns {boolean}
+   */
+  function isChangedVideo(fromEl, toEl) {
+    return fromEl.tagName === 'VIDEO' && fromEl.hasAttribute('data-video') &&
+      VIDEO_ATTRIBUTES.some(name => fromEl.hasAttribute(name) !== toEl.hasAttribute(name))
+  }
+
+  /**
    * Creates a reusable morphdom configuration
    * @param {boolean} childrenOnly - Whether to only update children
    * @returns {Object} - Morphdom configuration object
@@ -337,8 +348,10 @@ window.BrandoBlockPatch = (function () {
         if (isUnchangedPlayer(fromEl, toEl)) {
           return true
         }
-        // Iframes are opaque — never morph their children
-        if (fromEl.tagName === 'IFRAME') {
+        // Iframes are opaque — never morph their children. A `<noscript>` is
+        // text in the page but parsed elements in the new HTML, so morphing
+        // its children would put a live `<video src>` in it, and it would load.
+        if (fromEl.tagName === 'IFRAME' || fromEl.tagName === 'NOSCRIPT') {
           return true
         }
         if (isPreserved(fromEl, toEl)) {
@@ -379,6 +392,14 @@ window.BrandoBlockPatch = (function () {
         // (`prepareMorph`), so an unchanged one compared equal above.
         if (fromEl.dataset.src && toEl.dataset.src) {
           toEl.src = toEl.dataset.src
+        }
+
+        // A `<video>` reads autoplay and muted only when it loads, so a video
+        // whose playback settings changed is replaced, not updated in place:
+        // a playing video would otherwise keep playing with Autoplay off
+        if (isChangedVideo(fromEl, toEl)) {
+          fromEl.replaceWith(toEl.cloneNode(true))
+          return false
         }
 
         return true

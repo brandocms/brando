@@ -71,8 +71,15 @@ test('a gallery video plays in the live preview as its playback settings say', a
   await choose('Autoplay', 'Off')
   await expect(player).not.toHaveAttribute('data-autoplay')
 
+  // A `<video>` reads autoplay and muted only when it loads, so a changed
+  // one is a new element, not the paused one with an attribute more. (The
+  // site's own player replaced the first `<video>`; the change above put the
+  // server's back.)
+  await playerVideo.evaluate(video => { video.e2eSeen = true })
   await choose('Autoplay', 'On')
   await expect(player).toHaveAttribute('data-autoplay')
+  await expect(playerVideo).toHaveAttribute('autoplay')
+  expect(await playerVideo.evaluate(video => video.e2eSeen)).toBeUndefined()
 
   await choose('Autoplay', 'Off')
   await expect(player).not.toHaveAttribute('data-autoplay')
