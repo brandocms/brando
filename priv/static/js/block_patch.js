@@ -280,9 +280,13 @@ window.BrandoBlockPatch = (function () {
       fromEl.getAttribute('data-lp-preserve') === toEl.getAttribute('data-lp-preserve')
   }
 
-  // How the renderer says a video plays: on its container, and on its `<video>`
-  // (`Brando.HTML.Video`), which a player mounting there may replace.
-  const PLAYER_ATTRIBUTES = ['data-src', 'data-autoplay', 'data-controls', 'data-preload', 'data-progress']
+  // How the renderer says a video plays: on its container, which a player
+  // mounting there keeps, and on its `<video>` (`Brando.HTML.Video`), which it
+  // may replace. The container carries every setting, so a change shows after
+  // the site's player has replaced the `<video>` too.
+  const PLAYER_ATTRIBUTES = [
+    'data-src', 'data-autoplay', 'data-controls', 'data-loop', 'data-muted', 'data-preload', 'data-progress',
+  ]
   const VIDEO_ATTRIBUTES = ['autoplay', 'loop', 'muted', 'controls']
 
   /**

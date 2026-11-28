@@ -1,0 +1,1 @@
+- A video's `[data-smart-video]` wrapper carries `data-loop` and `data-muted` too, beside `data-autoplay` and `data-controls`, so a script that replaces the `<video>` can still read them.

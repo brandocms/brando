@@ -327,6 +327,8 @@ defmodule Brando.HTML.Video do
       {@playback}
       data-autoplay={@autoplay}
       data-controls={@controls}
+      data-loop={@loop}
+      data-muted={@autoplay || @muted}
       style={@aspect_ratio}
     >
       <video
