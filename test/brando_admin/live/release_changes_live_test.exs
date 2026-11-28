@@ -789,6 +789,126 @@ defmodule BrandoAdmin.ReleaseChangesLiveTest do
       assert text(c).code =~ "here"
       refute has_element?(view, "[data-testid=release-row][data-uid=#{c.text_module.uid}]")
     end
+
+    test "kept here with an apply, both are recorded", %{conn: conn} = c do
+      release_template!(c, "case", "<div class=\"case v2\">{{ heading }}</div>")
+
+      manual(fn ->
+        {:ok, view, _html} = live(conn, @path)
+        keep_text_here_and_confirm(view, c)
+        view |> element("[data-testid=release-confirm-apply]") |> render_click()
+
+        assert case_module(c).code =~ "v2"
+        assert text(c).code =~ "here"
+        assert %DefinitionApply{action: :kept} = latest_apply(c.text_module.uid)
+        assert [%{"uid" => uid}] = Batches.pending().definitions["items"]
+        assert uid == c.case_module.uid
+        refute has_element?(view, "#release-confirm[data-open=true]")
+        refute has_element?(view, "[data-testid=release-row][data-uid=#{c.text_module.uid}]")
+      end)
+    end
+
+    test "a refused apply keeps no version here: edited here since the dialog opened", %{conn: conn} = c do
+      release_template!(c, "case", "<div class=\"case v2\">{{ heading }}</div>")
+
+      assert_refused_keeps_nothing(conn, c, fn ->
+        case_module(c) |> Changeset.change(code: case_module(c).code <> "<!-- here -->") |> Repo.update!()
+      end)
+    end
+
+    test "a refused apply keeps no version here: the removals changed", %{conn: conn} = c do
+      block = stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      assert_refused_keeps_nothing(conn, c, fn -> Repo.delete!(wide(block)) end, drop?: true)
+    end
+
+    test "a refused apply keeps no version here: the drop went over the limit", %{conn: conn} = c do
+      stale_block!(c, c.case_module, "wide")
+      remove_wide!(c)
+
+      assert_refused_keeps_nothing(conn, c, fn -> hold_wide_over_the_limit!(c) end, drop?: true)
+    end
+
+    test "a refused apply keeps no version here: the renames changed", %{conn: conn} = c do
+      block = stale_block!(c, c.case_module, "wide")
+      exs = Path.join(c.path, "content/case.exs")
+      source = File.read!(exs)
+
+      renamed =
+        String.replace(source, ~s(var "wide", "boolean" do\n), ~s(var "full", "boolean" do\n      renamed_from "wide"\n))
+
+      assert renamed != source
+      File.write!(exs, renamed)
+
+      assert_refused_keeps_nothing(conn, c, fn ->
+        File.write!(exs, String.replace(renamed, ~s(\n      renamed_from "wide"), ""))
+      end)
+
+      assert wide(block)
+    end
+
+    test "a later version kept here that is refused leaves the earlier ones unkept", %{conn: conn} = c do
+      # The Case module in conflict too; its row comes before the Text module's
+      release_template!(c, "case", "<div class=\"case v2\">{{ heading }}</div>")
+      {:ok, _} = Release.apply([c.case_module.uid], user: c.user.id, wait: false)
+      {:ok, _} = Batches.keep(Batches.pending(), c.user)
+      case_module(c) |> Changeset.change(code: "<div class=\"case here\">{{ heading }}</div>") |> Repo.update!()
+      release_template!(c, "case", "<div class=\"case v3\">{{ heading }}</div>")
+
+      {:ok, view, _html} = live(conn, @path)
+      before = apply_rows()
+
+      for uid <- [c.case_module.uid, c.text_module.uid] do
+        view |> element("[data-testid=release-row][data-uid=#{uid}]") |> render_click()
+        view |> element("[data-testid=release-choice-here]") |> render_click()
+      end
+
+      view |> element("[data-testid=release-apply]") |> render_click()
+      # The Text module's edit is undone elsewhere: it is no longer in conflict
+      text(c) |> Changeset.change(code: "<p class=\"v2\">{{ heading }}</p>{% ref refs.body %}") |> Repo.update!()
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+
+      assert has_element?(view, "#release-confirm[data-open=true] .release-confirm-warning")
+      assert apply_rows() == before
+      assert c.case_module.uid in conflicts(c)
+    end
+  end
+
+  defp keep_text_here_and_confirm(view, c) do
+    view |> element("[data-testid=release-row][data-uid=#{c.text_module.uid}]") |> render_click()
+    view |> element("[data-testid=release-choice-here]") |> render_click()
+    view |> element("[data-testid=release-apply]") |> render_click()
+  end
+
+  # The "keep here" choice and an apply refused because of what `change`
+  # does after the dialog opened: no version is kept, and the conflicts are
+  # those before the click
+  defp assert_refused_keeps_nothing(conn, c, change, opts \\ []) do
+    manual(fn ->
+      {:ok, view, _html} = live(conn, @path)
+      keep_text_here_and_confirm(view, c)
+      if opts[:drop?], do: view |> drop_box() |> render_click()
+      change.()
+      before = {apply_rows(), conflicts(c)}
+
+      view |> element("[data-testid=release-confirm-apply]") |> render_click()
+
+      assert has_element?(view, "#release-confirm[data-open=true] .release-confirm-warning")
+      refute Batches.pending()
+      assert {apply_rows(), conflicts(c)} == before
+      assert c.text_module.uid in conflicts(c)
+    end)
+  end
+
+  defp apply_rows, do: Repo.all(from(a in DefinitionApply, order_by: a.id, select: {a.id, a.uid, a.action}))
+
+  defp latest_apply(uid),
+    do: Repo.one(from(a in DefinitionApply, where: a.uid == ^uid, order_by: [desc: a.id], limit: 1))
+
+  defp conflicts(c) do
+    {:ok, report} = Release.plan(user: c.user.id, adopt: false)
+    for item <- report.items, item.action == :conflict, do: item.uid
   end
 
   test "a definition never applied from files needs Replace", %{conn: conn} = c do

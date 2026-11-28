@@ -287,9 +287,11 @@ Some need something first:
 - **Conflict** (changed here and in the release): a three-way view of the
   version last applied, the one edited here (who and when) and the
   release's. **Keep the version edited here** leaves the module out and
-  records the release's file as applied; Block modules marks the file out of
-  date until a developer exports the module (**Block modules → Export**, or
-  `mix brando.modules export`) and commits it to `priv/modules`. **Use the
+  records the release's file as applied, in one transaction with the apply: an
+  apply that is refused records none of these choices. Block modules marks
+  the file out of date until a developer exports the module (**Block
+  modules → Export**, or `mix brando.modules export`) and commits it to
+  `priv/modules`. **Use the
   release's version** replaces the edit, which the apply's record keeps.
 - **Never applied** from files: **Replace with the release's version**.
 - **Needs a migration**: shown, locked, with what blocks it.

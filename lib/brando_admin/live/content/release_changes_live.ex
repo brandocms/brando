@@ -450,8 +450,7 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     {rows, keep_here, _excluded} = scope(socket.assigns)
 
     with :ok <- Release.authorize(user),
-         :ok <- keep_versions_here(keep_here, user),
-         {:ok, applied} <- apply_rows(rows, socket.assigns, user) do
+         {:ok, applied} <- keep_and_apply(keep_here, rows, socket.assigns, user) do
       {:noreply,
        socket
        |> assign(confirm?: false, selected: nil, choices: %{}, replace: MapSet.new(), drop: nil, drop?: false)
@@ -585,6 +584,19 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
       end
 
     {apply_rows, keep_here, excluded}
+  end
+
+  # The versions kept here are recorded with the apply, before it plans, so
+  # a definition they settle can be part of it; a refused apply keeps none
+  defp keep_and_apply(keep_here, rows, assigns, user) do
+    Brando.Repo.transaction(fn ->
+      with :ok <- keep_versions_here(keep_here, user),
+           {:ok, applied} <- apply_rows(rows, assigns, user) do
+        applied
+      else
+        {:error, reason} -> Brando.Repo.rollback(reason)
+      end
+    end)
   end
 
   defp keep_versions_here([], _user), do: :ok
