@@ -17,6 +17,12 @@
     <meta :if={@current_user} name="user_id" content={@current_user.id} />
     <meta :if={@current_user} name="user_token" content={BrandoAdmin.UserAuth.socket_token(@conn)} />
     <meta :if={@current_user} name="realtime_scope" content={Brando.Authorization.Realtime.token(@current_user)} />
+    <%!-- The site and environment the sticky views run in, see Brando.Tenant.LiveView --%>
+    <meta
+      :if={@current_user && Brando.Tenant.enabled?()}
+      name="brando_context"
+      content={Brando.Tenant.LiveView.page_context(@conn)}
+    />
     <script>
       (function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)
     </script>

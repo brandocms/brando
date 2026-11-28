@@ -13,10 +13,17 @@ defmodule Brando.Tenant.LiveView do
   shared library), and everyone their own password. From any other screen
   whoever may read the sites screen is sent there, and everyone else to the
   access-denied page.
+
+  The Chrome, the navigation and the upload manager are sticky LiveViews:
+  they keep the site and environment of the page load across live
+  navigation. The page load names it in the root layout's `brando_context`
+  meta, which the browser sends back when it joins a page it navigated to,
+  and a live navigation into another site or environment loads the page, so
+  that they follow it.
   """
 
   import Phoenix.Component, only: [assign: 2, assign: 3]
-  import Phoenix.LiveView, only: [attach_hook: 4, redirect: 2]
+  import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, get_connect_params: 1, redirect: 2]
 
   alias Brando.Authorization.{Engine, Scope}
   alias Brando.Tenant
@@ -37,13 +44,53 @@ defmodule Brando.Tenant.LiveView do
           })
           |> ensure_content_language()
           |> attach_context_hooks()
+          |> follow_page_context(params, context(site, environment))
 
         {:cont, socket}
 
       nil ->
         Tenant.put_prefix(nil)
-        socket = assign(socket, %{current_site: nil, current_environment: nil, tenant_prefix: nil})
+
+        socket =
+          socket
+          |> assign(%{current_site: nil, current_environment: nil, tenant_prefix: nil})
+          |> follow_page_context(params, context(nil, nil))
+
         if Tenant.mode() == :multi, do: without_site(socket, params), else: {:cont, socket}
+    end
+  end
+
+  @doc "The site and environment a page was loaded in, as its `brando_context` meta names them."
+  def context(%{key: site_key}, %{key: environment_key}), do: "#{site_key}/#{environment_key}"
+  def context(_site, _environment), do: ""
+
+  @doc """
+  The context of the page `conn` loads, for the root layout's
+  `brando_context` meta: resolved from the page's query and the session, as
+  the page's LiveView and its sticky views resolve it, and not from the
+  session alone, as `Brando.Plug.AdminTenant` does.
+  """
+  def page_context(%Plug.Conn{} = conn) do
+    case AdminContext.resolve(conn.params, Plug.Conn.get_session(conn), conn.assigns[:current_user]) do
+      {site, environment} -> context(site, environment)
+      nil -> context(nil, nil)
+    end
+  end
+
+  defp follow_page_context(socket, :not_mounted_at_router, _context), do: socket
+
+  # The browser sends `_live_referer` only when it joins a page it navigated to
+  defp follow_page_context(socket, _params, context) do
+    case connected?(socket) && get_connect_params(socket) do
+      %{"_live_referer" => referer, "brando_context" => loaded}
+      when is_binary(referer) and is_binary(loaded) and loaded != context ->
+        attach_hook(socket, :brando_tenant_page_load, :handle_params, fn _params, uri, socket ->
+          %URI{path: path, query: query} = URI.parse(uri)
+          {:halt, redirect(socket, to: URI.to_string(%URI{path: path, query: query}))}
+        end)
+
+      _ ->
+        socket
     end
   end
 

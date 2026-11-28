@@ -98,8 +98,14 @@ export default (hooks) => {
   let liveSocket = new LiveSocket('/live', Socket, {
     hooks: hooks,
     // A function, so every join (a reconnect, a live navigation) sends the
-    // tab as it is now.
-    params: () => ({ _csrf_token: csrfToken, brando_tab: tab, brando_tab_seq: nextSeq() }),
+    // tab as it is now. brando_context: the site and environment of the page
+    // load, which the sticky views keep (Brando.Tenant.LiveView)
+    params: () => ({
+      _csrf_token: csrfToken,
+      brando_tab: tab,
+      brando_tab_seq: nextSeq(),
+      brando_context: document.querySelector('meta[name="brando_context"]')?.content,
+    }),
     timeout: 70000,
     dom: {
       onBeforeElUpdated(from, to) {

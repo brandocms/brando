@@ -10,7 +10,7 @@ defmodule Brando.Assets.ProcessingStatus do
   asset, so that any form showing the asset can follow it, not only the form
   that uploaded it.
 
-  The older `"brando:image:<id>"` and `Brando.Videos.video_topic/1` topics
+  The older `Brando.Images.image_topic/1` and `Brando.Videos.video_topic/1` topics
   carry the uploading form's own delivery: they hold the field path it queued
   the job with, and the form that uploaded subscribes to them. This topic carries only
   the asset, and a form subscribes to it while one of its fields, refs or vars

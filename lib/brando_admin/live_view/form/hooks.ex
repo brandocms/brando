@@ -387,7 +387,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # `job.attempt >= job.max_attempts`, so an intermediate attempt that later
   # succeeds never reaches this clause.
   defp handle_hooks_image_info({%Brando.Images.Image{id: id}, [:image, :error], _path}, socket) do
-    PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+    PubSub.unsubscribe(Brando.pubsub(), Brando.Images.image_topic(id))
     {:cont, socket}
   end
 
@@ -473,7 +473,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  # Every form-side subscribe to "brando:image:<id>" sits immediately before a
+  # Every form-side subscribe to `Brando.Images.image_topic/1` sits immediately before a
   # processing round is queued (the form's upload, focal re-crop and block
   # re-crop paths, and `deliver_asset/3` on upload completion). So the
   # subscription is dropped once that round finishes, and a later round started
@@ -492,7 +492,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # broadcasts `:updated` for the freshly uploaded, still-UNPROCESSED image, and
   # unsubscribing there would drop the notification the form is waiting for.
   defp maybe_unsubscribe_from_image(%{id: id, status: :processed}) do
-    PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+    PubSub.unsubscribe(Brando.pubsub(), Brando.Images.image_topic(id))
   end
 
   defp maybe_unsubscribe_from_image(_image), do: :ok
@@ -643,7 +643,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     asset = refresh_processed_image(asset)
 
     if asset_type == :image do
-      PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+      PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(asset.id))
     end
 
     send_update(BrandoAdmin.Components.Form.Input.RenderVar,
@@ -675,7 +675,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       expected_asset_id: target["expected_asset_id"]
     )
 
-    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
 
     send(
       self(),
@@ -720,7 +720,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # before this refresh, so an image processed in between is still listed.
   defp deliver_asset(%{"kind" => "image_picker", "component_id" => component_id}, %Brando.Images.Image{} = image, _socket)
        when is_binary(component_id) do
-    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
     send_update(BrandoAdmin.Components.ImagePicker, id: component_id, refresh_images: true)
   end
 
@@ -756,7 +756,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   # The transformer takes the image id immediately — the card renders its
-  # placeholder while processing — and the "brando:image:<id>" machinery swaps in
+  # placeholder while processing — and the `Brando.Images.image_topic/1` machinery swaps in
   # the processed struct when the sizes are done.
   defp deliver_asset(
          %{"kind" => "transformer_image", "component_id" => component_id} = target,
@@ -764,7 +764,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
          _socket
        )
        when is_binary(component_id) do
-    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
 
     send_update(BrandoAdmin.Components.Form.Transformer,
       id: component_id,
@@ -798,7 +798,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
          _socket
        )
        when is_binary(component_id) do
-    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
 
     send_update(BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock,
       id: component_id,
@@ -842,11 +842,11 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         _ -> :file
       end
 
-    # processed-image updates ride the existing "brando:image:<id>" machinery
+    # processed-image updates ride the existing `Brando.Images.image_topic/1` machinery
     # (config_target "image:Schema:field" routes image_processed +
     # update_entry_relation back to the form)
     if asset_type == :image do
-      PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+      PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(asset.id))
     end
 
     # Inline-Oban / fast-queue race (same recovery block refs get via
@@ -877,7 +877,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
        when is_binary(field) do
     singular = socket.assigns.schema.__naming__().singular
 
-    PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(image.id))
 
     send_update(BrandoAdmin.Components.Form,
       id: "#{singular}_form",
@@ -919,7 +919,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(module, id: component_id, event: "upload_complete", asset: refresh_processed_image(asset))
 
     if is_struct(asset, Brando.Images.Image) do
-      PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+      PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(asset.id))
       send(self(), {:register_pending_block_image, asset.id, {module, component_id}})
       maybe_forward_already_processed(asset, module, component_id)
     end

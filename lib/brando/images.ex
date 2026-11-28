@@ -148,6 +148,15 @@ defmodule Brando.Images do
   end
 
   @doc """
+  The topic that carries `image_id`'s processing and CDN upload results, with
+  the field path the job was queued with (`{image, [:image, status], path}`),
+  to the admin views that started them, scoped to the current environment:
+  image ids repeat across environments.
+  """
+  @spec image_topic(id) :: binary
+  def image_topic(image_id), do: Brando.Tenant.Topic.scoped("brando:image:#{image_id}")
+
+  @doc """
   An earlier image of the same file as `image` (the same `content_hash`) made
   for the same image config, not deleted, or nil. Only uploads have a hash, so
   copies made with "Duplicate" are never offered in place of an upload. One

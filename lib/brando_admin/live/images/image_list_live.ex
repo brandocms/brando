@@ -242,7 +242,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   @impl true
   def handle_info({:asset_ready, %{"kind" => "asset_library"}, image}, socket) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Images.image_topic(image.id))
     AssetListHelpers.update_list_entries(socket.assigns.schema)
 
     socket =
@@ -256,7 +256,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   def handle_info({%Image{} = image, [:image, :updated], _path}, socket) do
-    if image.status == :processed, do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    if image.status == :processed, do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), Images.image_topic(image.id))
     AssetListHelpers.update_list_entries(socket.assigns.schema)
     {:noreply, refresh(socket)}
   end

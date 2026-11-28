@@ -133,11 +133,7 @@ defmodule Brando.Worker.ImageUploader do
   def timeout(%Oban.Job{args: args}), do: :timer.seconds(180) * max(args["files"] || 1, 1)
 
   defp broadcast_status(image, path, status) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      "brando:image:#{image.id}",
-      {image, [:image, status], path}
-    )
+    Phoenix.PubSub.broadcast(Brando.pubsub(), Images.image_topic(image.id), {image, [:image, status], path})
 
     {:ok, image}
   end

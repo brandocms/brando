@@ -6986,7 +6986,7 @@ defmodule BrandoAdmin.Components.Form do
         # Subscribe to PubSub BEFORE queuing processing so inline Oban
         # broadcasts aren't missed. Always subscribe — both block and non-block
         # paths need processing notifications to update their UI.
-        Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+        Phoenix.PubSub.subscribe(Brando.pubsub(), Images.image_topic(updated_image.id))
 
         if block_target do
           send(self(), {:register_pending_block_image, updated_image.id, block_target})
@@ -9637,7 +9637,7 @@ defmodule BrandoAdmin.Components.Form do
     # editor opened since left it
     edit_image = socket.assigns[:image_editor_copy_of] || copy_destination(socket, image_editor_target(socket))
 
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Images.image_topic(updated_image.id))
 
     if block_target = Map.get(edit_image, :block_target) do
       send(self(), {:register_pending_block_image, updated_image.id, block_target})
@@ -10706,7 +10706,7 @@ defmodule BrandoAdmin.Components.Form do
       entry_with_relation(entry || struct(schema), updated_changeset, field_full_path, &drawer_image(&1, image))
 
     # Subscribe parent live view to changes to this image
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Images.image_topic(image.id))
 
     target_field_name =
       Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])

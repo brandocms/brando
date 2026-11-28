@@ -114,6 +114,14 @@ defmodule Brando.Files do
   end
 
   @doc """
+  The topic that carries `file_id`'s CDN upload result, with the field path
+  the job was queued with (`{file, [:file, :updated], path}`), scoped to the
+  current environment: file ids repeat across environments.
+  """
+  @spec file_topic(id) :: binary
+  def file_topic(file_id), do: Brando.Tenant.Topic.scoped("brando:file:#{file_id}")
+
+  @doc """
   Delete `ids` from database
   """
   def delete_files(ids) when is_list(ids) do

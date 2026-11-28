@@ -39,6 +39,8 @@ defmodule BrandoAdmin.UploadManager do
   end
 
   on_mount({BrandoAdmin.UserAuth, :mount_current_user})
+  # Uploads are stored, processed and reported in the editor's environment
+  on_mount({Brando.Tenant.LiveView, :default})
 
   @doc "How many files the manager's queue takes at once."
   def max_entries, do: @max_entries
@@ -585,7 +587,7 @@ defmodule BrandoAdmin.UploadManager do
   defp matches_intake(_entry, _item), do: {:error, gettext("The file does not match the one that was checked.")}
 
   defp track_stored_asset(socket, %{asset_type: :image} = item, asset, user) do
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Images.image_topic(asset.id))
 
     Brando.Images.Processing.queue_processing(asset, user, image_field_path(item.target), silent: true)
 
@@ -771,7 +773,7 @@ defmodule BrandoAdmin.UploadManager do
     :ok
   end
 
-  ## Oban ImageProcessor broadcasts on "brando:image:<id>" — flip :processing → :done.
+  ## Oban ImageProcessor broadcasts on `Brando.Images.image_topic/1` — flip :processing → :done.
 
   def handle_info({%Brando.Images.Image{id: id}, [:image, :updated], _path}, socket) do
     socket =
@@ -784,7 +786,7 @@ defmodule BrandoAdmin.UploadManager do
 
     # Per-image subscriptions would otherwise accumulate for the whole admin
     # session — the manager is sticky and never dies on navigation.
-    Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+    Phoenix.PubSub.unsubscribe(Brando.pubsub(), Brando.Images.image_topic(id))
 
     {:noreply, socket}
   end
@@ -799,7 +801,7 @@ defmodule BrandoAdmin.UploadManager do
         update_item(socket, ref, %{status: :error, error: gettext("Image processing failed")})
       end)
 
-    Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{id}")
+    Phoenix.PubSub.unsubscribe(Brando.pubsub(), Brando.Images.image_topic(id))
 
     {:noreply, socket}
   end

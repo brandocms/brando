@@ -5,7 +5,7 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatch do
   uploaded them.
 
   The uploading form learns that its own upload is processed through
-  `"brando:image:<id>"`, which it subscribes to when the upload is delivered.
+  `Brando.Images.image_topic/1`, which it subscribes to when the upload is delivered.
   Another editor never subscribed there: it got the asset's id through field
   sync, the edit session or a reload, and kept showing "Processing image…"
   until it reloaded the page.
