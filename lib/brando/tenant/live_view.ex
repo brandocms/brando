@@ -64,6 +64,19 @@ defmodule Brando.Tenant.LiveView do
   def context(%{key: site_key}, %{key: environment_key}), do: "#{site_key}/#{environment_key}"
   def context(_site, _environment), do: ""
 
+  @doc """
+  The context of the page `conn` loads, for the root layout's
+  `brando_context` meta: resolved from the page's query and the session, as
+  the page's LiveView and its sticky views resolve it, and not from the
+  session alone, as `Brando.Plug.AdminTenant` does.
+  """
+  def page_context(%Plug.Conn{} = conn) do
+    case AdminContext.resolve(conn.params, Plug.Conn.get_session(conn), conn.assigns[:current_user]) do
+      {site, environment} -> context(site, environment)
+      nil -> context(nil, nil)
+    end
+  end
+
   defp follow_page_context(socket, :not_mounted_at_router, _context), do: socket
 
   # The browser sends `_live_referer` only when it joins a page it navigated to

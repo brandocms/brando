@@ -21,7 +21,7 @@
     <meta
       :if={@current_user && Brando.Tenant.enabled?()}
       name="brando_context"
-      content={Brando.Tenant.LiveView.context(assigns[:current_site], assigns[:current_environment])}
+      content={Brando.Tenant.LiveView.page_context(@conn)}
     />
     <script>
       (function(C){C.remove('no-js');C.add('js');C.add('moonwalk')})(document.documentElement.classList)

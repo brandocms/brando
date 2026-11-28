@@ -222,6 +222,12 @@ defmodule Brando.Assets.AssetTopicTest do
       assert ["assettopic/production"] =
                html |> Floki.parse_document!() |> Floki.attribute(~s(meta[name="brando_context"]), "content")
 
+      # A query that names another environment wins over the session, in the meta too
+      html = conn |> get("/admin/pages?brando_environment_key=staging") |> html_response(200)
+
+      assert ["assettopic/staging"] =
+               html |> Floki.parse_document!() |> Floki.attribute(~s(meta[name="brando_context"]), "content")
+
       # A link to a page in production from a page opened in staging, against the session
       from_staging = navigated_from(conn, "/admin/pages?brando_environment_key=staging", "assettopic/staging")
       assert {:error, {:redirect, %{to: ^path}}} = live(from_staging, path)
