@@ -5,8 +5,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
   Uses the unified override convention: nil = use default from media record.
   Shows reset icons when values differ from defaults. The `use_default_*` flags
   are not inputs: `GalleryObjectOverride.cast_override/2` derives each from its
-  text. An image's caption is its `title`; a video's is its `caption`, and its
-  `title` (plain) names the player. Captions are rich text.
+  text or playback setting. An image's caption is its `title`; a video's is its
+  `caption`, and its `title` (plain) names the player. Captions are rich text.
 
   Text field resets use client-side JS (clearing the input and dispatching a
   change event). A video's playback settings are Default / On / Off
