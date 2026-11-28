@@ -46,6 +46,7 @@ defmodule Brando.Content.Definitions.Release do
 
   use Gettext, backend: Brando.Gettext
 
+  import Ecto.Query, only: [from: 2]
   import Kernel, except: [apply: 2]
 
   alias Brando.Authorization.{Boundary, Engine}
@@ -430,6 +431,20 @@ defmodule Brando.Content.Definitions.Release do
       Definitions.changed()
       {:ok, row}
     end
+  end
+
+  @doc """
+  Undoes `keep_here/2` for the rows it returned, for a caller whose next step
+  was refused: the rows are deleted, so their definitions are in conflict
+  again, and open screens plan again.
+  """
+  def unkeep([]), do: :ok
+
+  def unkeep(rows) do
+    ids = Enum.map(rows, & &1.id)
+    Brando.Repo.delete_all(from(a in DefinitionApply, where: a.id in ^ids and a.action == :kept))
+    Definitions.changed()
+    :ok
   end
 
   defp conflict_item(report, uid) do

@@ -586,30 +586,32 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
     {apply_rows, keep_here, excluded}
   end
 
-  # The versions kept here are recorded with the apply, before it plans, so
-  # a definition they settle can be part of it; a refused apply keeps none
+  # The versions kept here are recorded before the apply plans, so a
+  # definition they settle can be part of it; a refusal undoes the ones this
+  # click recorded
   defp keep_and_apply(keep_here, rows, assigns, user) do
-    Brando.Repo.transaction(fn ->
-      with :ok <- keep_versions_here(keep_here, user),
-           {:ok, applied} <- apply_rows(rows, assigns, user) do
-        applied
-      else
-        {:error, reason} -> Brando.Repo.rollback(reason)
+    with {:ok, kept} <- keep_versions_here(keep_here, user) do
+      case apply_rows(rows, assigns, user) do
+        {:ok, applied} -> {:ok, applied}
+        {:error, _} = error -> unkeep(kept, error)
       end
-    end)
+    end
   end
-
-  defp keep_versions_here([], _user), do: :ok
 
   defp keep_versions_here(rows, user) do
     rows
     |> Enum.flat_map(fn row -> for item <- row.items, item.action == :conflict, do: item.uid end)
-    |> Enum.reduce_while(:ok, fn uid, :ok ->
+    |> Enum.reduce_while({:ok, []}, fn uid, {:ok, kept} ->
       case Release.keep_here(uid, user: user.id) do
-        {:ok, _} -> {:cont, :ok}
-        {:error, _} = error -> {:halt, error}
+        {:ok, row} -> {:cont, {:ok, [row | kept]}}
+        {:error, _} = error -> {:halt, unkeep(kept, error)}
       end
     end)
+  end
+
+  defp unkeep(kept, error) do
+    :ok = Release.unkeep(kept)
+    error
   end
 
   defp apply_rows([], _assigns, _user), do: {:ok, nil}

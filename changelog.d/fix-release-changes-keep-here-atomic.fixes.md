@@ -1,1 +1,1 @@
-- Block modules → Release changes: an apply that is refused no longer records the "Keep the version edited here" choices made with it; they are recorded only when the apply goes through.
+- Block modules → Release changes: an apply that is refused now undoes the "Keep the version edited here" choices made with it, so those rows wait again on the retry.
